@@ -697,6 +697,77 @@ textarea {
   transition: border-color 220ms ease, transform 220ms ease, background 220ms ease;
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.language-menu {
+  position: relative;
+}
+
+.language-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 0 13px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.language-trigger span {
+  color: #7b3dff;
+  font-size: 15px;
+}
+
+.language-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 158px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(5, 5, 7, 0.88);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.language-menu:hover .language-dropdown,
+.language-menu:focus-within .language-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.language-dropdown button {
+  border: 0;
+  padding: 10px 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.68);
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+}
+
+.language-dropdown button:hover,
+.language-dropdown button.active {
+  color: #fff;
+  background: rgba(123, 61, 255, 0.16);
+}
+
 .publish-link span,
 .violet-button span,
 .purple-link span {
@@ -727,9 +798,9 @@ textarea {
   inset: 0 calc(50% - 50vw);
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.38) 38%, rgba(0, 0, 0, 0.08) 66%, rgba(0, 0, 0, 0.48) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.68) 0%, rgba(0, 0, 0, 0.28) 38%, rgba(0, 0, 0, 0.04) 66%, rgba(0, 0, 0, 0.42) 100%),
     radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.18), transparent 22rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.56));
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.48));
 }
 
 .hero-background {
@@ -740,7 +811,7 @@ textarea {
   height: 100% !important;
   object-fit: cover;
   object-position: center;
-  filter: grayscale(1) contrast(1.12) brightness(0.82);
+  filter: grayscale(1) contrast(1.14) brightness(0.94);
 }
 
 .hero-copy {
@@ -1452,6 +1523,10 @@ textarea {
   .hero-aside,
   .publish-link {
     display: none;
+  }
+
+  .nav-actions {
+    gap: 8px;
   }
 
   .orbital-note {
