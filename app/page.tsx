@@ -22,7 +22,7 @@ export default async function Home() {
     <main className="site-shell home-shell">
       <nav className="nav cinematic-nav">
         <Link href="/" className="brand logo-brand" aria-label="OFF inicio">
-          <img src="/logo/logo-off.svg" alt="OFF" width={104} height={42} />
+          <Image src="/logo/logo-off.svg" alt="OFF" width={104} height={42} priority />
         </Link>
         <div className="nav-links">
           <a href="#inicio">Inicio</a>
@@ -39,15 +39,15 @@ export default async function Home() {
         <div className="hero-copy">
           <p className="eyebrow">Editorial psicológica / OFF</p>
           <h1>
-            Todo parece
-            <br />
-            avanzar.
-            <br />
-            <em>Pero algo dentro</em>
-            <br />
-            <em>
-              de ti sigue <span>apagado.</span>
-            </em>
+            <span className="hero-title-line">Todo parece avanzar.</span>
+            <span className="hero-title-line">
+              <em>Pero algo dentro de ti</em>
+            </span>
+            <span className="hero-title-line">
+              <em>
+                sigue <span>apagado.</span>
+              </em>
+            </span>
           </h1>
           <p>
             OFF es una plataforma editorial psicológica creada para personas que están construyendo éxito mientras
@@ -189,7 +189,7 @@ export default async function Home() {
 
       <footer className="off-footer" id="suscripcion">
         <div className="footer-logo">
-          <img src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
+          <Image src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
         </div>
         <div>
           <h2>
