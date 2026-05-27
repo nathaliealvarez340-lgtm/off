@@ -43,7 +43,7 @@ const copy = {
   es: {
     nav: ["Inicio", "Artículos", "Sobre OFF", "Impacto"],
     login: "Login",
-    eyebrow: "Editorial psicológica / OFF",
+    eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Todo parece", "avanzar.", "Pero algo dentro", "de ti sigue", "apagado."],
     subtitle:
       "OFF es una plataforma editorial psicológica creada para personas que están construyendo éxito mientras intentan no perderse a sí mismas.",
@@ -87,7 +87,7 @@ const copy = {
   en: {
     nav: ["Home", "Articles", "About OFF", "Impact"],
     login: "Login",
-    eyebrow: "Psychological editorial / OFF",
+    eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Everything seems", "to move forward.", "But something inside", "you still feels", "switched off."],
     subtitle:
       "OFF is a psychological editorial platform for people building success while trying not to lose themselves.",
@@ -131,7 +131,7 @@ const copy = {
   it: {
     nav: ["Inizio", "Articoli", "Su OFF", "Impatto"],
     login: "Login",
-    eyebrow: "Editoriale psicologica / OFF",
+    eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Tutto sembra", "andare avanti.", "Ma qualcosa dentro", "di te resta", "spento."],
     subtitle:
       "OFF è una piattaforma editoriale psicologica per chi sta costruendo successo senza volersi perdere.",
@@ -175,7 +175,7 @@ const copy = {
   pt: {
     nav: ["Início", "Artigos", "Sobre OFF", "Impacto"],
     login: "Login",
-    eyebrow: "Editorial psicológica / OFF",
+    eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Tudo parece", "avançar.", "Mas algo dentro", "de você segue", "apagado."],
     subtitle:
       "OFF é uma plataforma editorial psicológica para pessoas construindo sucesso enquanto tentam não se perder.",
@@ -233,6 +233,7 @@ function formatDate(date: string | null, lang: Lang) {
 
 export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
   const [lang, setLang] = useState<Lang>("es");
+  const [languageOpen, setLanguageOpen] = useState(false);
   const t = copy[lang];
   const featured = useMemo(() => articles.find((article) => article.featured) ?? articles[0], [articles]);
 
@@ -244,6 +245,7 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
   function chooseLanguage(nextLang: Lang) {
     setLang(nextLang);
     window.localStorage.setItem("off-language", nextLang);
+    setLanguageOpen(false);
   }
 
   return (
@@ -259,10 +261,15 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
           <a href="#suscripcion">{t.nav[3]}</a>
         </div>
         <div className="nav-actions">
-          <div className="language-menu">
-            <button className="language-trigger" type="button" aria-label="Cambiar idioma">
-              <span aria-hidden="true">◎</span>
-              {lang.toUpperCase()}
+          <div className={`language-menu ${languageOpen ? "open" : ""}`}>
+            <button
+              className="language-trigger"
+              type="button"
+              aria-expanded={languageOpen}
+              aria-label="Cambiar idioma"
+              onClick={() => setLanguageOpen((open) => !open)}
+            >
+              <span aria-hidden="true">🌐</span>
             </button>
             <div className="language-dropdown">
               {languages.map((language) => (
@@ -293,7 +300,8 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
             <span className="hero-title-line">{t.hero[2]}</span>
             <span className="hero-title-line">{t.hero[3]}</span>
             <span className="hero-title-line">
-              <em>{t.hero[4]}</em>
+              <em>{t.hero[4].replace(/\.$/, "")}</em>
+              {t.hero[4].endsWith(".") ? "." : ""}
             </span>
           </h1>
           <p>{t.subtitle}</p>

@@ -653,9 +653,14 @@ textarea {
 }
 
 .cinematic-nav {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 30;
   width: min(1120px, calc(100% - 56px));
   padding: 24px 0 12px;
-  backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
 }
 
 .logo-brand {
@@ -711,12 +716,13 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  width: 34px;
   min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 999px;
-  padding: 0 13px;
-  background: rgba(255, 255, 255, 0.025);
-  color: rgba(255, 255, 255, 0.86);
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: #fff;
   cursor: pointer;
   font-size: 11px;
   font-weight: 900;
@@ -724,8 +730,8 @@ textarea {
 }
 
 .language-trigger span {
-  color: #7b3dff;
-  font-size: 15px;
+  color: #fff;
+  font-size: 17px;
 }
 
 .language-dropdown {
@@ -733,11 +739,13 @@ textarea {
   top: calc(100% + 10px);
   right: 0;
   z-index: 20;
-  display: grid;
-  min-width: 158px;
-  padding: 8px;
+  display: flex;
+  gap: 4px;
+  min-width: auto;
+  padding: 7px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(5, 5, 7, 0.88);
+  border-radius: 999px;
+  background: rgba(5, 5, 7, 0.72);
   backdrop-filter: blur(18px);
   opacity: 0;
   pointer-events: none;
@@ -745,8 +753,7 @@ textarea {
   transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.language-menu:hover .language-dropdown,
-.language-menu:focus-within .language-dropdown {
+.language-menu.open .language-dropdown {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -754,7 +761,8 @@ textarea {
 
 .language-dropdown button {
   border: 0;
-  padding: 10px 12px;
+  border-radius: 999px;
+  padding: 8px 10px;
   background: transparent;
   color: rgba(255, 255, 255, 0.68);
   cursor: pointer;
@@ -788,7 +796,7 @@ textarea {
   width: min(1120px, calc(100% - 56px));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 70px 0 64px;
+  padding: 108px 0 64px;
   overflow: visible;
 }
 
@@ -798,9 +806,9 @@ textarea {
   inset: 0 calc(50% - 50vw);
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.68) 0%, rgba(0, 0, 0, 0.28) 38%, rgba(0, 0, 0, 0.04) 66%, rgba(0, 0, 0, 0.42) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0.22) 38%, rgba(0, 0, 0, 0.03) 66%, rgba(0, 0, 0, 0.35) 100%),
     radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.18), transparent 22rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.48));
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.4));
 }
 
 .hero-background {
@@ -811,7 +819,7 @@ textarea {
   height: 100% !important;
   object-fit: cover;
   object-position: center;
-  filter: grayscale(1) contrast(1.14) brightness(0.94);
+  filter: grayscale(1) contrast(1.12) brightness(1.08);
 }
 
 .hero-copy {
@@ -860,6 +868,12 @@ textarea {
   line-height: 1.68;
 }
 
+.hero-copy > .eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.74);
+}
+
 .violet-button {
   min-height: 46px;
   border-radius: 0;
@@ -893,8 +907,8 @@ textarea {
 
 .hero-aside {
   position: absolute;
-  right: 28px;
-  bottom: 35vh;
+  right: 34px;
+  top: 34%;
   z-index: 2;
   display: grid;
   grid-template-columns: 58px max-content;
@@ -925,8 +939,8 @@ textarea {
 
 .orbital-note {
   position: absolute;
-  right: 24px;
-  bottom: 64px;
+  right: 34px;
+  top: 54%;
   display: grid;
   place-items: center;
   width: 156px;
