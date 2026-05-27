@@ -1,0 +1,9 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#0D0A13"/>
+  <rect x="80" y="76" width="1040" height="648" rx="34" fill="white" fill-opacity=".055" stroke="white" stroke-opacity=".15"/>
+  <circle cx="530" cy="390" r="260" fill="#5B2CCF" opacity=".26"/>
+  <path d="M175 190C300 280 400 250 525 342C672 450 811 422 1026 594" stroke="#FBFAFC" stroke-opacity=".24" stroke-width="3"/>
+  <text x="118" y="176" fill="#C9BAFF" font-family="Arial, sans-serif" font-size="20" letter-spacing="8">CAPÍTULO 2 / MENTALIDAD</text>
+  <text x="118" y="560" fill="white" font-family="Georgia, serif" font-size="80" letter-spacing="-4">No estás cansado...</text>
+  <text x="118" y="650" fill="white" font-family="Georgia, serif" font-size="80" letter-spacing="-4">estás desconectado</text>
+</svg>

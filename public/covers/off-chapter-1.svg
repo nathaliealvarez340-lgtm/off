@@ -1,0 +1,10 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#08070B"/>
+  <circle cx="890" cy="170" r="310" fill="#5B2CCF" opacity=".34"/>
+  <circle cx="250" cy="610" r="280" fill="#241142" opacity=".82"/>
+  <path d="M92 104H1108V696H92V104Z" stroke="white" stroke-opacity=".16"/>
+  <text x="92" y="228" fill="white" font-family="Georgia, serif" font-size="132" letter-spacing="-8">OFF</text>
+  <text x="94" y="322" fill="#C9BAFF" font-family="Arial, sans-serif" font-size="22" letter-spacing="8">CAPÍTULO 1 / VIDA</text>
+  <text x="94" y="598" fill="white" font-family="Georgia, serif" font-size="78" letter-spacing="-4">Se ve bien...</text>
+  <text x="94" y="684" fill="white" font-family="Georgia, serif" font-size="78" letter-spacing="-4">pero se siente OFF</text>
+</svg>

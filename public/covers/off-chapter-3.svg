@@ -1,0 +1,16 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#07060A"/>
+  <circle cx="980" cy="610" r="360" fill="#5B2CCF" opacity=".28"/>
+  <circle cx="250" cy="170" r="220" fill="#FBFAFC" opacity=".06"/>
+  <g opacity=".24">
+    <path d="M118 250H1082" stroke="white"/>
+    <path d="M118 400H1082" stroke="white"/>
+    <path d="M118 550H1082" stroke="white"/>
+    <path d="M300 120V690" stroke="white"/>
+    <path d="M600 120V690" stroke="white"/>
+    <path d="M900 120V690" stroke="white"/>
+  </g>
+  <text x="118" y="152" fill="#C9BAFF" font-family="Arial, sans-serif" font-size="20" letter-spacing="8">CAPÍTULO 3 / CARRERA</text>
+  <text x="118" y="505" fill="white" font-family="Georgia, serif" font-size="72" letter-spacing="-4">Sigues avanzando...</text>
+  <text x="118" y="590" fill="white" font-family="Georgia, serif" font-size="72" letter-spacing="-4">pero aún no llegas</text>
+</svg>
