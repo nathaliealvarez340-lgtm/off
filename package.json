@@ -22,5 +22,8 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "typescript": "latest"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }
