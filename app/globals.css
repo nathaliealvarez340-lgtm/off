@@ -715,38 +715,48 @@ textarea {
   grid-template-columns: minmax(340px, 0.92fr) minmax(440px, 1.18fr) minmax(150px, 0.34fr);
   align-items: center;
   width: min(1120px, calc(100% - 56px));
-  min-height: 610px;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 42px 0 64px;
+  padding: 70px 0 64px;
   overflow: visible;
 }
 
 .hero-cinema::before {
   content: "";
   position: absolute;
-  top: -110px;
-  left: 61%;
-  width: 86px;
-  height: 790px;
-  background: linear-gradient(180deg, transparent, rgba(120, 50, 255, 0.82), transparent);
-  filter: blur(22px);
-  opacity: 0.62;
-  transform: translateX(-50%);
-  animation: slowGlow 8s ease-in-out infinite alternate;
+  inset: 0 calc(50% - 50vw);
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.66) 38%, rgba(0, 0, 0, 0.34) 66%, rgba(0, 0, 0, 0.78) 100%),
+    radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.2), transparent 22rem),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.84));
+}
+
+.hero-background {
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: 0;
+  width: 100vw !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center;
+  filter: grayscale(1) contrast(1.08) brightness(0.46);
 }
 
 .hero-copy {
+  position: relative;
   z-index: 2;
-  max-width: 540px;
+  max-width: 500px;
 }
 
 .hero-copy h1 {
-  margin: 18px 0 20px;
+  margin: 14px 0 18px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(4rem, 7vw, 7rem);
   font-weight: 500;
-  letter-spacing: -0.05em;
-  line-height: 0.92;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
+  color: #fff;
 }
 
 .hero-title-line {
@@ -759,7 +769,6 @@ textarea {
   font-weight: 400;
 }
 
-.hero-copy h1 span,
 .section-kicker span,
 .philosophy-band span,
 .off-footer h2 span {
@@ -767,11 +776,17 @@ textarea {
   text-shadow: 0 0 34px rgba(139, 61, 255, 0.34);
 }
 
+.hero-copy h1 em {
+  color: #7b3dff;
+  font-style: italic;
+  text-shadow: none;
+}
+
 .hero-copy p {
-  max-width: 390px;
+  max-width: 380px;
   color: rgba(255, 255, 255, 0.68);
-  font-size: 16px;
-  line-height: 1.72;
+  font-size: 15px;
+  line-height: 1.68;
 }
 
 .violet-button {
@@ -807,14 +822,14 @@ textarea {
 
 .hero-aside {
   position: absolute;
-  right: 52px;
-  bottom: 255px;
+  right: 28px;
+  bottom: 35vh;
   z-index: 2;
   display: grid;
-  grid-template-columns: 54px max-content;
-  gap: 18px;
+  grid-template-columns: 58px max-content;
+  gap: 16px;
   align-items: start;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .hero-aside span {
@@ -827,21 +842,27 @@ textarea {
   margin: 0;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.22em;
   line-height: 1.75;
   text-transform: uppercase;
 }
 
+.hero-aside strong {
+  color: #7b3dff;
+  font-weight: inherit;
+}
+
 .orbital-note {
   position: absolute;
-  right: 44px;
-  bottom: 52px;
+  right: 24px;
+  bottom: 64px;
   display: grid;
   place-items: center;
-  width: 150px;
-  height: 150px;
+  width: 156px;
+  height: 156px;
   border-radius: 50%;
   overflow: visible;
+  z-index: 2;
 }
 
 .orbital-note span {
@@ -850,12 +871,12 @@ textarea {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: #8b3dff;
+  background: #7b3dff;
 }
 
 .orbital-note svg {
-  width: 150px;
-  height: 150px;
+  width: 156px;
+  height: 156px;
   overflow: visible;
   transform-origin: center center;
   animation: spin 18s linear infinite;
@@ -872,7 +893,7 @@ textarea {
 .archive-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   min-height: 42px;
   padding: 0 min(7vw, 72px);
   background: linear-gradient(90deg, #1b063f, #35106f, #180530);
@@ -884,11 +905,6 @@ textarea {
   font-size: 11px;
   letter-spacing: 0.48em;
   text-transform: uppercase;
-}
-
-.archive-strip span {
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 22px;
 }
 
 .about-cinema,
@@ -922,20 +938,20 @@ textarea {
 .about-image {
   position: relative;
   min-height: 315px;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   background: #050506;
   box-shadow:
     inset 0 0 58px rgba(0, 0, 0, 0.95),
     0 0 80px rgba(0, 0, 0, 0.42);
-  mask-image:
-    linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%);
-  mask-composite: intersect;
 }
 
 .about-image img {
   z-index: 1;
+  mask-image:
+    linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  mask-composite: intersect;
 }
 
 .about-image::after {
@@ -952,13 +968,14 @@ textarea {
 
 .purple-block {
   position: absolute;
-  right: -58px;
-  bottom: 56px;
-  z-index: 2;
-  width: 178px;
-  height: 92px;
-  background: linear-gradient(135deg, rgba(124, 44, 255, 0.74), rgba(75, 15, 148, 0.45));
-  filter: blur(0.2px);
+  right: -112px;
+  bottom: 58px;
+  z-index: 4;
+  width: 224px;
+  height: 96px;
+  background: #7b3dff;
+  opacity: 0.26;
+  backdrop-filter: blur(8px);
 }
 
 .purple-link {
@@ -1143,6 +1160,111 @@ textarea {
   line-height: 0.8;
 }
 
+.impact-cinema {
+  display: grid;
+  grid-template-columns: 1.05fr repeat(4, 1fr);
+  gap: 0;
+  width: min(1120px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 64px 0 58px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 18% 50%, rgba(123, 61, 255, 0.13), transparent 18rem),
+    rgba(255, 255, 255, 0.01);
+}
+
+.impact-title,
+.impact-stat {
+  padding: 0 clamp(18px, 2.8vw, 34px);
+}
+
+.impact-title h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+}
+
+.impact-title em {
+  color: #7b3dff;
+  font-style: italic;
+}
+
+.impact-stat {
+  min-height: 132px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.impact-stat strong {
+  display: block;
+  margin-bottom: 18px;
+  font-family: Georgia, serif;
+  font-size: clamp(36px, 4.5vw, 56px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.impact-stat strong::after {
+  content: "";
+  color: #7b3dff;
+}
+
+.impact-stat span {
+  display: block;
+  max-width: 190px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1.7;
+  text-transform: uppercase;
+}
+
+.linkedin-cinema {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: clamp(32px, 8vw, 100px);
+  align-items: center;
+  width: min(1120px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 70px 0;
+}
+
+.linkedin-cinema h2 {
+  margin: 0 0 18px;
+  font-family: Georgia, serif;
+  font-size: clamp(42px, 6vw, 76px);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+}
+
+.linkedin-cinema h2 em {
+  color: #7b3dff;
+  font-style: italic;
+}
+
+.linkedin-cinema p {
+  max-width: 450px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.linkedin-badge-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at center, rgba(123, 61, 255, 0.14), transparent 16rem),
+    rgba(255, 255, 255, 0.025);
+}
+
 .off-footer {
   display: grid;
   grid-template-columns: 180px 1fr minmax(320px, 0.9fr);
@@ -1239,13 +1361,12 @@ textarea {
 @media (max-width: 960px) {
   .hero-cinema {
     grid-template-columns: 1fr;
-    min-height: auto;
-    padding: 34px 0 46px;
+    min-height: 100vh;
+    padding: 94px 0 46px;
   }
 
   .hero-cinema::before {
-    left: 70%;
-    height: 620px;
+    inset: 0 calc(50% - 50vw);
   }
 
   .hero-portrait {
@@ -1256,8 +1377,8 @@ textarea {
   }
 
   .hero-copy {
-    grid-row: 2;
-    margin-top: -76px;
+    grid-row: auto;
+    margin-top: 0;
   }
 
   .hero-copy h1 {
@@ -1265,7 +1386,7 @@ textarea {
   }
 
   .hero-title-line {
-    white-space: normal;
+    white-space: nowrap;
   }
 
   .hero-aside,
@@ -1292,6 +1413,8 @@ textarea {
   .about-cinema,
   .article-grid,
   .philosophy-band,
+  .impact-cinema,
+  .linkedin-cinema,
   .off-footer {
     grid-template-columns: 1fr;
   }
@@ -1315,6 +1438,26 @@ textarea {
 
   .philosophy-band {
     padding: 34px 28px;
+  }
+
+  .impact-cinema,
+  .linkedin-cinema {
+    width: min(100% - 32px, 1120px);
+  }
+
+  .impact-title,
+  .impact-stat {
+    padding: 24px 0;
+  }
+
+  .impact-stat {
+    min-height: auto;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .linkedin-badge-wrap {
+    min-height: 260px;
   }
 
   .philosophy-band blockquote {
@@ -1347,7 +1490,7 @@ textarea {
   .archive-strip p {
     max-width: 260px;
     text-align: center;
-    letter-spacing: 0.28em;
+    letter-spacing: 0.22em;
   }
 
   .hero-copy p,

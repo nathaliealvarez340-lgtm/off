@@ -1,6 +1,7 @@
 import type { Article } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { formatDate, getFeaturedArticle, getPublishedArticles } from "@/lib/articles";
 
@@ -20,6 +21,7 @@ export default async function Home() {
 
   return (
     <main className="site-shell home-shell">
+      <Script src="https://platform.linkedin.com/badges/js/profile.js" strategy="afterInteractive" />
       <nav className="nav cinematic-nav">
         <Link href="/" className="brand logo-brand" aria-label="OFF inicio">
           <Image src="/logo/logo-off.svg" alt="OFF" width={104} height={42} priority />
@@ -36,17 +38,23 @@ export default async function Home() {
       </nav>
 
       <section className="hero-cinema" id="inicio">
+        <Image
+          className="hero-background"
+          src="/images/hero-off.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+        />
         <div className="hero-copy">
           <p className="eyebrow">Editorial psicológica / OFF</p>
           <h1>
-            <span className="hero-title-line">Todo parece avanzar.</span>
+            <span className="hero-title-line">Todo parece</span>
+            <span className="hero-title-line">avanzar.</span>
+            <span className="hero-title-line">Pero algo dentro</span>
+            <span className="hero-title-line">de ti sigue</span>
             <span className="hero-title-line">
-              <em>Pero algo dentro de ti</em>
-            </span>
-            <span className="hero-title-line">
-              <em>
-                sigue <span>apagado.</span>
-              </em>
+              <em>apagado.</em>
             </span>
           </h1>
           <p>
@@ -60,22 +68,12 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="hero-portrait" aria-label="Imagen emocional de OFF">
-          <Image
-            src="/images/hero-off.webp"
-            alt="Retrato cinematográfico OFF"
-            fill
-            priority
-            sizes="(max-width: 820px) 100vw, 58vw"
-          />
-        </div>
-
         <div className="hero-aside">
           <span />
           <p>
-            Se ve bien.
+            SE VE BIEN.
             <br />
-            Pero se siente OFF.
+            PERO SE SIENTE <strong>OFF.</strong>
           </p>
         </div>
 
@@ -87,7 +85,7 @@ export default async function Home() {
             </defs>
             <text>
               <textPath href="#off-orbit" startOffset="0%">
-                Sentir · entender · elegir · volver ·
+                SENTIR · ENTENDER · ELEGIR · VOLVER · CONSTRUIR ·
               </textPath>
             </text>
           </svg>
@@ -95,9 +93,7 @@ export default async function Home() {
       </section>
 
       <div className="archive-strip" aria-hidden="true">
-        <span>+</span>
         <p>Un archivo para la generación funcionalmente agotada.</p>
-        <span>+</span>
       </div>
 
       <section className="about-cinema" id="revista">
@@ -185,6 +181,62 @@ export default async function Home() {
         <blockquote>La presión de convertirte en alguien está destruyendo quién eras.</blockquote>
         <blockquote>Muchos están triunfando sin sentirse realmente vivos.</blockquote>
         <blockquote>El problema no era tu disciplina. Era tu desconexión.</blockquote>
+      </section>
+
+      <section className="impact-cinema" aria-label="Resultados e impacto de OFF">
+        <div className="impact-title">
+          <h2>
+            Nuestro
+            <br />
+            <em>impacto</em>
+          </h2>
+        </div>
+        <div className="impact-stat">
+          <strong>2.3K+</strong>
+          <span>Lectores alcanzados</span>
+        </div>
+        <div className="impact-stat">
+          <strong>1.8K+</strong>
+          <span>Personas que decidieron elegirse a sí mismas</span>
+        </div>
+        <div className="impact-stat">
+          <strong>700+</strong>
+          <span>Historias compartidas en la comunidad</span>
+        </div>
+        <div className="impact-stat">
+          <strong>2K+</strong>
+          <span>Jóvenes que sienten cambios y OFF les ha funcionado</span>
+        </div>
+      </section>
+
+      <section className="linkedin-cinema" aria-label="Conoce más">
+        <div>
+          <h2>
+            Conoce <em>más</em>
+          </h2>
+          <p>Detrás de OFF hay alguien que también está en construcción.</p>
+          <a className="purple-link text-link" href="https://mx.linkedin.com/in/nathaliegarciaa" target="_blank">
+            Conecta en LinkedIn. <span>→</span>
+          </a>
+        </div>
+        <div className="linkedin-badge-wrap">
+          <div
+            className="badge-base LI-profile-badge"
+            data-locale="es_ES"
+            data-size="medium"
+            data-theme="dark"
+            data-type="VERTICAL"
+            data-vanity="nathaliegarciaa"
+            data-version="v1"
+          >
+            <a
+              className="badge-base__link LI-simple-link"
+              href="https://mx.linkedin.com/in/nathaliegarciaa?trk=profile-badge"
+            >
+              ɴᴀᴛʜᴀʟɪᴇ ɢᴀʀᴄɪᴀ
+            </a>
+          </div>
+        </div>
       </section>
 
       <footer className="off-footer" id="suscripcion">
