@@ -7,11 +7,33 @@ Plataforma editorial tipo revista digital para publicar capítulos, captar suscr
 ```bash
 npm install
 npx prisma generate
+npx prisma migrate deploy
 npm run seed
 npm run dev
 ```
 
 La app corre en `http://localhost:3000` por defecto.
+
+## Producción en Vercel con Neon
+
+1. Crea una base PostgreSQL en Neon.
+2. Copia el connection string pooled o directo de Neon.
+3. En Vercel, ve a `Project Settings > Environment Variables`.
+4. Agrega `DATABASE_URL` con formato:
+
+```bash
+postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require
+```
+
+5. Agrega también `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` y `FROM_EMAIL`.
+6. Vercel ejecutará `npm run build`, que corre:
+
+```bash
+prisma generate
+prisma migrate deploy
+prisma db seed
+next build
+```
 
 ## Admin
 
@@ -27,7 +49,7 @@ Cambia estos valores en `.env` antes de publicar.
 ## Variables de entorno
 
 ```bash
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
 ADMIN_EMAIL="nathalie@example.com"
 ADMIN_PASSWORD="change-this-password"
 ADMIN_SESSION_SECRET="change-this-long-random-secret"
@@ -36,7 +58,7 @@ RESEND_API_KEY=""
 FROM_EMAIL="OFF <hola@off.editorial>"
 ```
 
-Resend queda preparado. Cuando agregues `RESEND_API_KEY` y `FROM_EMAIL`, al publicar un capítulo se intentará enviar el correo a los suscriptores.
+En Vercel usa una `DATABASE_URL` de Neon/PostgreSQL, no SQLite. Resend queda preparado. Cuando agregues `RESEND_API_KEY` y `FROM_EMAIL`, al publicar un capítulo se intentará enviar el correo a los suscriptores.
 
 ## Contenido editorial
 
