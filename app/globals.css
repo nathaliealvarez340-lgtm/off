@@ -727,9 +727,9 @@ textarea {
   inset: 0 calc(50% - 50vw);
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.48) 38%, rgba(0, 0, 0, 0.14) 66%, rgba(0, 0, 0, 0.58) 100%),
-    radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.16), transparent 22rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.68));
+    linear-gradient(90deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.38) 38%, rgba(0, 0, 0, 0.08) 66%, rgba(0, 0, 0, 0.48) 100%),
+    radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.18), transparent 22rem),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.56));
 }
 
 .hero-background {
@@ -740,7 +740,7 @@ textarea {
   height: 100% !important;
   object-fit: cover;
   object-position: center;
-  filter: grayscale(1) contrast(1.08) brightness(0.68);
+  filter: grayscale(1) contrast(1.12) brightness(0.82);
 }
 
 .hero-copy {
@@ -752,7 +752,7 @@ textarea {
 .hero-copy h1 {
   margin: 14px 0 18px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(4rem, 7vw, 7rem);
+  font-size: clamp(3.75rem, 6.45vw, 6.55rem);
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 0.9;
