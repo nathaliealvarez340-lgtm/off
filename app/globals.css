@@ -661,7 +661,7 @@ textarea {
 .logo-brand {
   width: 92px;
   height: auto;
-  filter: drop-shadow(0 0 18px rgba(130, 70, 255, 0.18));
+  filter: none;
 }
 
 .logo-brand img,
@@ -727,9 +727,9 @@ textarea {
   inset: 0 calc(50% - 50vw);
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.66) 38%, rgba(0, 0, 0, 0.34) 66%, rgba(0, 0, 0, 0.78) 100%),
-    radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.2), transparent 22rem),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.84));
+    linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.48) 38%, rgba(0, 0, 0, 0.14) 66%, rgba(0, 0, 0, 0.58) 100%),
+    radial-gradient(circle at 60% 22%, rgba(123, 61, 255, 0.16), transparent 22rem),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.68));
 }
 
 .hero-background {
@@ -740,7 +740,7 @@ textarea {
   height: 100% !important;
   object-fit: cover;
   object-position: center;
-  filter: grayscale(1) contrast(1.08) brightness(0.46);
+  filter: grayscale(1) contrast(1.08) brightness(0.68);
 }
 
 .hero-copy {
@@ -1226,7 +1226,7 @@ textarea {
 
 .linkedin-cinema {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) minmax(520px, 0.95fr);
   gap: clamp(32px, 8vw, 100px);
   align-items: center;
   width: min(1120px, calc(100% - 56px));
@@ -1258,11 +1258,71 @@ textarea {
 .linkedin-badge-wrap {
   display: grid;
   place-items: center;
-  min-height: 300px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
+.social-badges {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) minmax(230px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.instagram-card {
+  display: grid;
+  align-content: space-between;
+  min-height: 250px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(circle at center, rgba(123, 61, 255, 0.14), transparent 16rem),
-    rgba(255, 255, 255, 0.025);
+    radial-gradient(circle at 75% 10%, rgba(123, 61, 255, 0.2), transparent 12rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+    #050506;
+  color: #fff;
+  transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
+}
+
+.instagram-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(123, 61, 255, 0.48);
+}
+
+.instagram-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(123, 61, 255, 0.56);
+  border-radius: 50%;
+  color: #7b3dff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.instagram-card strong {
+  display: block;
+  margin-top: 36px;
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.instagram-card p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 14px;
+}
+
+.instagram-link {
+  color: #9b66ff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .off-footer {
@@ -1274,7 +1334,7 @@ textarea {
 
 .footer-logo {
   width: 132px;
-  filter: drop-shadow(0 0 36px rgba(124, 44, 255, 0.48));
+  filter: none;
 }
 
 .off-footer h2 {
@@ -1445,6 +1505,10 @@ textarea {
     width: min(100% - 32px, 1120px);
   }
 
+  .social-badges {
+    grid-template-columns: 1fr;
+  }
+
   .impact-title,
   .impact-stat {
     padding: 24px 0;
@@ -1457,7 +1521,7 @@ textarea {
   }
 
   .linkedin-badge-wrap {
-    min-height: 260px;
+    min-height: 0;
   }
 
   .philosophy-band blockquote {

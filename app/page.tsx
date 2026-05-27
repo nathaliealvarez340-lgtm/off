@@ -24,7 +24,7 @@ export default async function Home() {
       <Script src="https://platform.linkedin.com/badges/js/profile.js" strategy="afterInteractive" />
       <nav className="nav cinematic-nav">
         <Link href="/" className="brand logo-brand" aria-label="OFF inicio">
-          <Image src="/logo/logo-off.svg" alt="OFF" width={104} height={42} priority />
+          <img src="/logo/logo-off.svg" alt="OFF" width={104} height={42} />
         </Link>
         <div className="nav-links">
           <a href="#inicio">Inicio</a>
@@ -219,29 +219,40 @@ export default async function Home() {
             Conecta en LinkedIn. <span>→</span>
           </a>
         </div>
-        <div className="linkedin-badge-wrap">
-          <div
-            className="badge-base LI-profile-badge"
-            data-locale="es_ES"
-            data-size="medium"
-            data-theme="dark"
-            data-type="VERTICAL"
-            data-vanity="nathaliegarciaa"
-            data-version="v1"
-          >
-            <a
-              className="badge-base__link LI-simple-link"
-              href="https://mx.linkedin.com/in/nathaliegarciaa?trk=profile-badge"
+        <div className="social-badges">
+          <div className="linkedin-badge-wrap">
+            <div
+              className="badge-base LI-profile-badge"
+              data-locale="es_ES"
+              data-size="medium"
+              data-theme="dark"
+              data-type="VERTICAL"
+              data-vanity="nathaliegarciaa"
+              data-version="v1"
             >
-              ɴᴀᴛʜᴀʟɪᴇ ɢᴀʀᴄɪᴀ
-            </a>
+              <a
+                className="badge-base__link LI-simple-link"
+                href="https://mx.linkedin.com/in/nathaliegarciaa?trk=profile-badge"
+              >
+                ɴᴀᴛʜᴀʟɪᴇ ɢᴀʀᴄɪᴀ
+              </a>
+            </div>
           </div>
+
+          <a className="instagram-card" href="https://www.instagram.com/nathalie.garciaa" target="_blank">
+            <span className="instagram-mark">IG</span>
+            <div>
+              <strong>Nathalie Garcia</strong>
+              <p>@nathalie.garciaa</p>
+            </div>
+            <span className="instagram-link">Ver Instagram</span>
+          </a>
         </div>
       </section>
 
       <footer className="off-footer" id="suscripcion">
         <div className="footer-logo">
-          <Image src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
+          <img src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
         </div>
         <div>
           <h2>
