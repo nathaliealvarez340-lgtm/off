@@ -718,6 +718,7 @@ textarea {
   min-height: 610px;
   margin: 0 auto;
   padding: 42px 0 64px;
+  overflow: visible;
 }
 
 .hero-cinema::before {
@@ -742,7 +743,7 @@ textarea {
 .hero-copy h1 {
   margin: 26px 0 28px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(58px, 7.2vw, 104px);
+  font-size: clamp(4.5rem, 8vw, 8.5rem);
   font-weight: 500;
   letter-spacing: -0.055em;
   line-height: 0.88;
@@ -778,7 +779,7 @@ textarea {
   font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 18px 48px rgba(103, 39, 230, 0.32);
+  box-shadow: none;
 }
 
 .hero-portrait {
@@ -800,54 +801,67 @@ textarea {
 }
 
 .hero-aside {
-  position: relative;
+  position: absolute;
+  right: 52px;
+  bottom: 255px;
   z-index: 2;
-  align-self: center;
   display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 24px;
-  color: rgba(255, 255, 255, 0.88);
+  grid-template-columns: 54px max-content;
+  gap: 18px;
+  align-items: start;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .hero-aside span {
   height: 1px;
-  margin-top: 11px;
-  background: rgba(255, 255, 255, 0.7);
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .hero-aside p {
   margin: 0;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.2em;
-  line-height: 1.8;
+  letter-spacing: 0.24em;
+  line-height: 1.75;
   text-transform: uppercase;
 }
 
 .orbital-note {
   position: absolute;
-  right: 32px;
-  bottom: 88px;
+  right: 44px;
+  bottom: 52px;
   display: grid;
   place-items: center;
-  width: 138px;
-  height: 138px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 9px;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
+  overflow: visible;
 }
 
 .orbital-note span {
-  color: #8b3dff;
-  font-size: 20px;
+  position: absolute;
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #8b3dff;
 }
 
-.orbital-note p {
-  position: absolute;
-  margin: 0;
-  animation: rotateText 18s linear infinite;
+.orbital-note svg {
+  width: 150px;
+  height: 150px;
+  overflow: visible;
+  transform-origin: center center;
+  animation: spin 18s linear infinite;
+}
+
+.orbital-note text {
+  fill: rgba(255, 255, 255, 0.66);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.27em;
+  text-transform: uppercase;
 }
 
 .archive-strip {
@@ -903,13 +917,32 @@ textarea {
 .about-image {
   position: relative;
   min-height: 315px;
-  overflow: visible;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #08080a;
+  overflow: hidden;
+  border: 0;
+  background: #050506;
+  box-shadow:
+    inset 0 0 58px rgba(0, 0, 0, 0.95),
+    0 0 80px rgba(0, 0, 0, 0.42);
+  mask-image:
+    linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%),
+    linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  mask-composite: intersect;
 }
 
 .about-image img {
   z-index: 1;
+}
+
+.about-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 55% 45%, transparent 36%, rgba(0, 0, 0, 0.44) 78%),
+    linear-gradient(90deg, rgba(3, 3, 4, 0.78), transparent 18%, transparent 82%, rgba(3, 3, 4, 0.76));
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.82);
 }
 
 .purple-block {
@@ -1189,7 +1222,10 @@ textarea {
   }
 }
 
-@keyframes rotateText {
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
   to {
     transform: rotate(360deg);
   }
@@ -1220,13 +1256,28 @@ textarea {
   }
 
   .hero-copy h1 {
-    font-size: clamp(48px, 14vw, 78px);
+    font-size: clamp(3.3rem, 12vw, 5.8rem);
   }
 
   .hero-aside,
-  .orbital-note,
   .publish-link {
     display: none;
+  }
+
+  .orbital-note {
+    right: 12px;
+    bottom: 26px;
+    width: 112px;
+    height: 112px;
+  }
+
+  .orbital-note svg {
+    width: 112px;
+    height: 112px;
+  }
+
+  .orbital-note text {
+    font-size: 8px;
   }
 
   .about-cinema,

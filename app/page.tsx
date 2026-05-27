@@ -17,13 +17,12 @@ function editorialImage(article: Article) {
 export default async function Home() {
   const articles = await getPublishedArticles();
   const featured = getFeaturedArticle(articles);
-  const rest = articles.filter((article) => article.id !== featured?.id);
 
   return (
     <main className="site-shell home-shell">
       <nav className="nav cinematic-nav">
         <Link href="/" className="brand logo-brand" aria-label="OFF inicio">
-          <Image src="/logo/logo-off.svg" alt="OFF" width={104} height={42} priority />
+          <img src="/logo/logo-off.svg" alt="OFF" width={104} height={42} />
         </Link>
         <div className="nav-links">
           <a href="#inicio">Inicio</a>
@@ -31,9 +30,9 @@ export default async function Home() {
           <a href="#revista">Sobre OFF</a>
           <a href="#suscripcion">Impacto</a>
         </div>
-        <a className="publish-link" href="#suscripcion">
-          Publicar <span>→</span>
-        </a>
+        <Link className="publish-link" href="/admin">
+          Login <span>→</span>
+        </Link>
       </nav>
 
       <section className="hero-cinema" id="inicio">
@@ -62,7 +61,13 @@ export default async function Home() {
         </div>
 
         <div className="hero-portrait" aria-label="Imagen emocional de OFF">
-          <Image src="/images/hero-off.webp" alt="Retrato cinematográfico OFF" fill priority sizes="(max-width: 820px) 100vw, 58vw" />
+          <Image
+            src="/images/hero-off.webp"
+            alt="Retrato cinematográfico OFF"
+            fill
+            priority
+            sizes="(max-width: 820px) 100vw, 58vw"
+          />
         </div>
 
         <div className="hero-aside">
@@ -75,8 +80,17 @@ export default async function Home() {
         </div>
 
         <div className="orbital-note" aria-hidden="true">
-          <span>●</span>
-          <p>Sentir · entender · elegir · volver ·</p>
+          <span />
+          <svg viewBox="0 0 160 160">
+            <defs>
+              <path id="off-orbit" d="M80 80 m -58 0 a 58 58 0 1 1 116 0 a 58 58 0 1 1 -116 0" />
+            </defs>
+            <text>
+              <textPath href="#off-orbit" startOffset="0%">
+                Sentir · entender · elegir · volver ·
+              </textPath>
+            </text>
+          </svg>
         </div>
       </section>
 
@@ -88,7 +102,9 @@ export default async function Home() {
 
       <section className="about-cinema" id="revista">
         <div className="about-copy">
-          <p className="section-kicker">Qué es <span>OFF</span></p>
+          <p className="section-kicker">
+            Qué es <span>OFF</span>
+          </p>
           <p>
             No es motivación. Es claridad.
             <br />
@@ -96,15 +112,18 @@ export default async function Home() {
             <br />
             No es éxito vacío. Es reconexión.
           </p>
-          <p>
-            OFF es el espacio donde la generación que aprendió a rendir, finalmente puede aprender a sentirse.
-          </p>
+          <p>OFF es el espacio donde la generación que aprendió a rendir, finalmente puede aprender a sentirse.</p>
           <a className="text-link purple-link" href="#capitulos">
             Leer manifiesto <span>→</span>
           </a>
         </div>
         <div className="about-image">
-          <Image src="/images/off-quees.webp" alt="Imagen editorial sobre qué es OFF" fill sizes="(max-width: 820px) 100vw, 62vw" />
+          <Image
+            src="/images/off-quees.webp"
+            alt="Imagen editorial sobre qué es OFF"
+            fill
+            sizes="(max-width: 820px) 100vw, 62vw"
+          />
           <div className="purple-block" />
         </div>
       </section>
@@ -170,7 +189,7 @@ export default async function Home() {
 
       <footer className="off-footer" id="suscripcion">
         <div className="footer-logo">
-          <Image src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
+          <img src="/logo/logo-off.svg" alt="OFF" width={132} height={54} />
         </div>
         <div>
           <h2>
