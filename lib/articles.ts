@@ -7,7 +7,7 @@ export type EditorialBlock =
   | { type: "h2" | "h3"; text: string }
   | { type: "quote"; text: string }
   | { type: "divider" }
-  | { type: "image"; src: string; alt: string }
+  | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" }
   | {
       type: "special";
       label: "Reality Check" | "Reflexión" | "Estrategia" | "Acción";

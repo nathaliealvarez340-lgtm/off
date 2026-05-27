@@ -18,6 +18,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email");
   const password = stringValue(formData, "password");
   const next = stringValue(formData, "next") || "/";
+
   const db = getDb();
   let user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
 
@@ -127,57 +128,156 @@ async function saveCoverImage(formData: FormData, fallback: string) {
   return `/uploads/${safeName}`;
 }
 
-export async function saveArticleAction(formData: FormData) {
-  await requireAdmin();
+async function saveUploadedFile(file: File) {
+  const extension = path.extname(file.name) || ".png";
+  const safeName = `${Date.now()}-${slugify(file.name.replace(extension, ""))}${extension}`;
+  const uploadDir = path.join(process.cwd(), "public", "uploads");
+  await mkdir(uploadDir, { recursive: true });
+  const bytes = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(uploadDir, safeName), bytes);
+  return `/uploads/${safeName}`;
+}
 
-  const id = stringValue(formData, "id");
-  const title = stringValue(formData, "title");
-  const excerpt = stringValue(formData, "excerpt");
-  const category = stringValue(formData, "category");
-  const readTime = stringValue(formData, "readTime");
-  const content = stringValue(formData, "content");
-  const status = stringValue(formData, "status") || "draft";
-  const featured = formData.get("featured") === "on";
-  const slug = stringValue(formData, "slug") || slugify(title);
-  const currentCover = stringValue(formData, "coverImage") || "/covers/off-chapter-1.svg";
-  const coverImage = await saveCoverImage(formData, currentCover);
+async function resolveInlineImages(content: string, formData: FormData) {
+  let parsed: unknown;
 
-  if (!title || !slug || !excerpt || !content || !category || !readTime) {
-    throw new Error("Faltan campos obligatorios para guardar el artículo.");
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return content;
   }
 
-  const db = getDb();
-  const data = {
-    title,
-    slug,
-    excerpt,
-    content,
-    coverImage,
-    category,
-    readTime,
-    author: "Nathalie Garcia",
-    status,
-    featured,
-    publishedAt: status === "published" ? new Date() : null,
-  };
+  if (!Array.isArray(parsed)) return content;
 
-  if (featured) {
-    await db.article.updateMany({ data: { featured: false } });
+  const resolved = [];
+
+  for (const block of parsed) {
+    if (
+      block &&
+      typeof block === "object" &&
+      "type" in block &&
+      block.type === "image" &&
+      "src" in block &&
+      typeof block.src === "string" &&
+      block.src.startsWith("__UPLOAD__:")
+    ) {
+      const inputName = block.src.replace("__UPLOAD__:", "");
+      const file = formData.get(inputName);
+      if (file instanceof File && file.size > 0) {
+        resolved.push({ ...block, src: await saveUploadedFile(file) });
+        continue;
+      }
+    }
+
+    resolved.push(block);
   }
 
-  const article = id
-    ? await db.article.update({ where: { id }, data })
-    : await db.article.create({ data });
+  return JSON.stringify(resolved);
+}
 
-  if (status === "published") {
-    const subscribers = await db.subscriber.findMany({ where: { consent: true } });
-    await notifySubscribers(article, subscribers);
+export type SaveArticleState = {
+  ok: boolean;
+  message: string;
+  articleId?: string;
+  slug?: string;
+  status?: string;
+};
+
+export async function saveArticleAction(_: SaveArticleState, formData: FormData): Promise<SaveArticleState> {
+  try {
+    await requireAdmin();
+
+    const id = stringValue(formData, "id");
+    const title = stringValue(formData, "title");
+    const excerpt = stringValue(formData, "excerpt");
+    const category = stringValue(formData, "category");
+    const readTime = stringValue(formData, "readTime");
+    let content = stringValue(formData, "content");
+    const selectedStatus = stringValue(formData, "status") || "draft";
+    const intent = stringValue(formData, "publishIntent");
+    const status = intent === "publish" ? "published" : intent === "draft" ? "draft" : selectedStatus;
+    const featured = formData.get("featured") === "on";
+    const slug = stringValue(formData, "slug") || slugify(title);
+    const currentCover = stringValue(formData, "coverImage");
+    const coverImage = await saveCoverImage(formData, currentCover);
+
+    if (!title || !slug || !excerpt || !content || !category || !readTime) {
+      return { ok: false, message: "Faltan campos obligatorios para guardar el artículo." };
+    }
+
+    content = await resolveInlineImages(content, formData);
+
+    if (content.length > 70000) {
+      return { ok: false, message: "El contenido supera el límite de 70,000 caracteres." };
+    }
+
+    if (!coverImage) {
+      return { ok: false, message: "Agrega una imagen de portada antes de publicar o guardar." };
+    }
+
+    const db = getDb();
+    const articleWithSlug = await db.article.findUnique({ where: { slug } });
+    if (articleWithSlug && articleWithSlug.id !== id) {
+      return { ok: false, message: "Ese slug ya existe. Cambia el slug antes de publicar." };
+    }
+
+    const existingArticle = id ? await db.article.findUnique({ where: { id } }) : null;
+    if (id && !existingArticle) {
+      return { ok: false, message: "No encontramos este artículo para actualizarlo." };
+    }
+
+    const publishedAt = status === "published" ? new Date() : existingArticle?.publishedAt ?? null;
+    const data = {
+      title,
+      slug,
+      excerpt,
+      content,
+      coverImage,
+      category,
+      readTime,
+      author: "Nathalie Garcia",
+      status,
+      featured,
+      publishedAt,
+    };
+
+    if (featured) {
+      await db.article.updateMany({
+        where: id ? { NOT: { id } } : undefined,
+        data: { featured: false },
+      });
+    }
+
+    const article = id
+      ? await db.article.update({ where: { id }, data })
+      : await db.article.create({ data });
+
+    if (status === "published") {
+      const subscribers = await db.subscriber.findMany({ where: { consent: true } });
+      try {
+        await notifySubscribers(article, subscribers);
+      } catch (error) {
+        console.error("No pudimos enviar el newsletter de OFF.", error);
+      }
+    }
+
+    revalidatePath("/");
+    revalidatePath(`/off/${article.slug}`);
+    revalidatePath("/admin");
+
+    return {
+      ok: true,
+      message: status === "published" ? "Artículo publicado correctamente" : "Borrador guardado correctamente",
+      articleId: article.id,
+      slug: article.slug,
+      status: article.status,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "No pudimos guardar el artículo. Intenta de nuevo.",
+    };
   }
-
-  revalidatePath("/");
-  revalidatePath(`/off/${article.slug}`);
-  revalidatePath("/admin");
-  redirect("/admin");
 }
 
 export async function commentAction(formData: FormData) {

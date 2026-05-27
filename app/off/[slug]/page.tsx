@@ -100,7 +100,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             case "divider":
               return <hr key={index} />;
             case "image":
-              return <Image key={index} src={block.src} alt={block.alt} width={900} height={560} />;
+              return (
+                <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
+                  <Image src={block.src} alt={block.alt} width={900} height={560} />
+                  {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                </figure>
+              );
             case "special":
               return (
                 <aside className="special-block" key={index}>
