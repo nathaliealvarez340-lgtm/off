@@ -25,7 +25,7 @@ La app corre en `http://localhost:3000` por defecto.
 postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require
 ```
 
-5. Agrega también `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` y `FROM_EMAIL`.
+5. Agrega también `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` y `FROM_EMAIL`.
 6. Vercel ejecutará `npm run build`, que corre:
 
 ```bash
@@ -52,7 +52,6 @@ Cambia estos valores en `.env` antes de publicar.
 DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
 ADMIN_EMAIL="nathalie@example.com"
 ADMIN_PASSWORD="change-this-password"
-ADMIN_SESSION_SECRET="change-this-long-random-secret"
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 RESEND_API_KEY=""
 FROM_EMAIL="OFF <hola@off.editorial>"

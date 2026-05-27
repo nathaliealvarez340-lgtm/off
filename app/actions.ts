@@ -2,9 +2,10 @@
 
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { clearAdminSession, createAdminSession, isAdminSession, validAdminCredentials } from "@/lib/auth";
+import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { notifySubscribers } from "@/lib/newsletter";
 import { slugify } from "@/lib/slug";
@@ -13,27 +14,72 @@ function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
-async function requireAdmin() {
-  if (!(await isAdminSession())) {
-    redirect("/admin");
-  }
-}
-
 export async function loginAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email");
   const password = stringValue(formData, "password");
+  const next = stringValue(formData, "next") || "/";
+  const db = getDb();
+  let user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
 
-  if (!validAdminCredentials(email, password)) {
-    return { ok: false, message: "Credenciales incorrectas." };
+  if (!user && email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+    user = await db.user.create({
+      data: {
+        name: "Nathalie Garcia",
+        email: email.toLowerCase(),
+        passwordHash: await bcrypt.hash(password, 12),
+        role: "ADMIN",
+      },
+    });
   }
 
-  await createAdminSession();
-  redirect("/admin");
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    return { ok: false, message: "Correo o contraseña incorrectos." };
+  }
+
+  await createSession(user.id);
+
+  if (user.role === "ADMIN") {
+    redirect("/admin");
+  }
+
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+}
+
+export async function registerAction(_: unknown, formData: FormData) {
+  const name = stringValue(formData, "name");
+  const email = stringValue(formData, "email").toLowerCase();
+  const password = stringValue(formData, "password");
+  const next = stringValue(formData, "next") || "/";
+
+  if (!name || !email || password.length < 8) {
+    return { ok: false, message: "Escribe tu nombre, correo y una contraseña de al menos 8 caracteres." };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: "Escribe un correo válido." };
+  }
+
+  try {
+    const user = await getDb().user.create({
+      data: {
+        name,
+        email,
+        passwordHash: await bcrypt.hash(password, 12),
+        role: "USER",
+      },
+    });
+
+    await createSession(user.id);
+  } catch {
+    return { ok: false, message: "Ese correo ya está registrado o no pudimos crear tu cuenta." };
+  }
+
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
 }
 
 export async function logoutAction() {
-  await clearAdminSession();
-  redirect("/admin");
+  await clearSession();
+  redirect("/");
 }
 
 export async function subscribeAction(_: unknown, formData: FormData) {
@@ -132,4 +178,30 @@ export async function saveArticleAction(formData: FormData) {
   revalidatePath(`/off/${article.slug}`);
   revalidatePath("/admin");
   redirect("/admin");
+}
+
+export async function commentAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(stringValue(formData, "articlePath") || "/")}`);
+  }
+
+  const articleId = stringValue(formData, "articleId");
+  const articleSlug = stringValue(formData, "articleSlug");
+  const content = stringValue(formData, "content");
+
+  if (!articleId || !articleSlug || content.length < 2) {
+    return;
+  }
+
+  await getDb().comment.create({
+    data: {
+      articleId,
+      userId: user.id,
+      content,
+      status: "PUBLISHED",
+    },
+  });
+
+  revalidatePath(`/off/${articleSlug}`);
 }

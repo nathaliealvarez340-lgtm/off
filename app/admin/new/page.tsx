@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArticleEditor } from "@/components/ArticleEditor";
-import { isAdminSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export default async function NewArticlePage() {
-  if (!(await isAdminSession())) redirect("/admin");
+  await requireAdmin();
 
   return (
     <main className="admin-page">

@@ -284,7 +284,7 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
               ))}
             </div>
           </div>
-          <Link className="publish-link" href="/admin">
+          <Link className="publish-link" href="/login">
             {t.login} <span>→</span>
           </Link>
         </div>

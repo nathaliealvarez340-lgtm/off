@@ -44,6 +44,13 @@ export async function getPublishedArticles() {
   });
 }
 
+export async function getFirstPublishedArticle() {
+  return getDb().article.findFirst({
+    where: { status: "published" },
+    orderBy: [{ publishedAt: "asc" }, { createdAt: "asc" }],
+  });
+}
+
 export async function getAllArticles() {
   return getDb().article.findMany({
     orderBy: [{ updatedAt: "desc" }],
@@ -60,4 +67,12 @@ export async function getArticleById(id: string) {
 
 export function getFeaturedArticle(articles: Article[]) {
   return articles.find((article) => article.featured) ?? articles[0];
+}
+
+export async function getPublishedComments(articleId: string) {
+  return getDb().comment.findMany({
+    where: { articleId, status: "PUBLISHED" },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  });
 }

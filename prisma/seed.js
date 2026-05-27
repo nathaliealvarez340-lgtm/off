@@ -1,4 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
@@ -116,6 +117,23 @@ const articles = [
 ];
 
 async function main() {
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    await prisma.user.upsert({
+      where: { email: process.env.ADMIN_EMAIL.toLowerCase() },
+      update: {
+        name: "Nathalie Garcia",
+        passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
+        role: "ADMIN",
+      },
+      create: {
+        name: "Nathalie Garcia",
+        email: process.env.ADMIN_EMAIL.toLowerCase(),
+        passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
+        role: "ADMIN",
+      },
+    });
+  }
+
   for (const article of articles) {
     await prisma.article.upsert({
       where: { slug: article.slug },

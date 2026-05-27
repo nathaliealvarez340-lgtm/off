@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ArticleEditor } from "@/components/ArticleEditor";
 import { getArticleById } from "@/lib/articles";
-import { isAdminSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAdminSession())) redirect("/admin");
+  await requireAdmin();
 
   const { id } = await params;
   const article = await getArticleById(id);

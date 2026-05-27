@@ -1,31 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
-import { AdminLoginForm } from "@/components/AdminLoginForm";
 import { formatDate, getAllArticles } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
 
 export default async function AdminPage() {
-  const isAdmin = await isAdminSession();
-
-  if (!isAdmin) {
-    return (
-      <main className="admin-page">
-        <Link href="/" className="brand">
-          <span className="brand-mark">O</span>
-          OFF
-        </Link>
-        <section className="section" style={{ paddingTop: 48 }}>
-          <p className="eyebrow">Panel privado</p>
-          <h1 className="section-title">Entrar al editor OFF</h1>
-          <p style={{ color: "var(--smoke)", maxWidth: 620 }}>
-            Solo el usuario administrador puede crear, editar y publicar capítulos.
-          </p>
-          <div className="admin-panel" style={{ maxWidth: 520, marginTop: 24 }}>
-            <AdminLoginForm />
-          </div>
-        </section>
-      </main>
-    );
+  if (!(await isAdminSession())) {
+    redirect("/login");
   }
 
   const articles = await getAllArticles();
