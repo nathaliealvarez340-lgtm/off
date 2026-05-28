@@ -968,6 +968,24 @@ textarea {
   padding: 8px 10px 70px 0;
 }
 
+.admin-flash {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-flash.success {
+  border-color: rgba(123, 61, 255, 0.38);
+  background: rgba(123, 61, 255, 0.12);
+}
+
+.admin-flash.error {
+  border-color: rgba(255, 142, 142, 0.42);
+  background: rgba(255, 142, 142, 0.08);
+}
+
 .admin-topbar {
   display: flex;
   align-items: center;
@@ -1214,50 +1232,72 @@ textarea {
   white-space: nowrap;
 }
 
-.radar-wrap {
+.scatter-plot {
   position: relative;
-  display: grid;
-  width: 230px;
-  height: 230px;
-  margin: 6px auto 24px;
-  place-items: center;
+  width: min(100%, 340px);
+  height: 260px;
+  margin: 8px auto 24px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 60% 30%, rgba(123, 61, 255, 0.16), transparent 44%),
+    rgba(0, 0, 0, 0.18);
+  background-size: 48px 48px, 48px 48px, auto, auto;
 }
 
-.radar-orbit,
-.radar-shape {
+.scatter-axis-x,
+.scatter-axis-y {
   position: absolute;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.scatter-axis-x {
+  right: 24px;
+  bottom: 38px;
+  left: 42px;
+  height: 1px;
+}
+
+.scatter-axis-y {
+  top: 24px;
+  bottom: 38px;
+  left: 42px;
+  width: 1px;
+}
+
+.scatter-label {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.scatter-label.top {
+  top: 18px;
+  left: 54px;
+}
+
+.scatter-label.bottom {
+  right: 24px;
+  bottom: 14px;
+}
+
+.empty-scatter::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(123, 61, 255, 0.65);
   border-radius: 50%;
-}
-
-.radar-orbit {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.orbit-one {
-  inset: 12px;
-}
-
-.orbit-two {
-  inset: 46px;
-}
-
-.orbit-three {
-  inset: 80px;
-}
-
-.radar-shape {
-  width: 158px;
-  height: 158px;
-  border-radius: 38% 62% 48% 52%;
-  background: radial-gradient(circle at 50% 42%, rgba(123, 61, 255, 0.56), rgba(123, 61, 255, 0.12) 62%, transparent 72%);
-  filter: blur(0.2px);
-  animation: adminPulse 5s ease-in-out infinite;
-}
-
-.empty-radar .radar-shape {
-  opacity: 0.22;
-  background: radial-gradient(circle at 50% 42%, rgba(123, 61, 255, 0.22), rgba(123, 61, 255, 0.06) 62%, transparent 72%);
-  animation: none;
+  content: "";
+  opacity: 0.28;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 42px rgba(123, 61, 255, 0.32);
 }
 
 .topic-list {
@@ -1345,6 +1385,30 @@ textarea {
 .article-actions {
   display: flex;
   gap: 8px;
+}
+
+.delete-button {
+  border: 1px solid rgba(255, 142, 142, 0.34);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: rgba(255, 142, 142, 0.08);
+  color: #ffc7c7;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: 180ms ease;
+}
+
+.delete-button:hover {
+  border-color: rgba(255, 142, 142, 0.62);
+  background: rgba(255, 142, 142, 0.14);
+  color: #fff;
+}
+
+.delete-button.compact {
+  padding: 10px 12px;
 }
 
 .lower-grid {
@@ -1916,11 +1980,6 @@ textarea {
   .topic-row {
     grid-template-columns: 1fr;
     gap: 6px;
-  }
-
-  .radar-wrap {
-    width: 190px;
-    height: 190px;
   }
 
   .editor-topbar,

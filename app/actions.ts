@@ -280,6 +280,28 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
   }
 }
 
+export async function deleteArticleAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = stringValue(formData, "id");
+  if (!id) {
+    redirect("/admin?deleted=error");
+  }
+
+  const db = getDb();
+  const article = await db.article.findUnique({ where: { id } });
+  if (!article) {
+    redirect("/admin?deleted=missing");
+  }
+
+  await db.article.delete({ where: { id } });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath(`/off/${article.slug}`);
+  redirect("/admin?deleted=1");
+}
+
 export async function commentAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) {

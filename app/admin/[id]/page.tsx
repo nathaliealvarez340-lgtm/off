@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleEditor } from "@/components/ArticleEditor";
+import { DeleteArticleButton } from "@/components/DeleteArticleButton";
 import { getArticleById } from "@/lib/articles";
 import { requireAdmin } from "@/lib/auth";
 
@@ -17,8 +18,9 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
       <div className="admin-header">
         <Link href="/admin" className="brand">
           <span className="brand-mark">O</span>
-          Editar capítulo
+          Editar capitulo
         </Link>
+        <DeleteArticleButton articleId={article.id} />
       </div>
       <ArticleEditor article={article} />
     </main>

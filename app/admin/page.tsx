@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import { AdminGreeting } from "@/components/AdminGreeting";
+import { DeleteArticleButton } from "@/components/DeleteArticleButton";
 import { formatDate, getAllArticles } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -11,11 +12,12 @@ function formatCount(value: number) {
   return String(value);
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   if (!(await isAdminSession())) {
     redirect("/login");
   }
 
+  const { deleted } = await searchParams;
   const db = getDb();
   const [articles, users, subscribers, subscriberCount, commentCount, comments] = await Promise.all([
     getAllArticles(),
@@ -86,44 +88,34 @@ export default async function AdminPage() {
     {
       label: "Usuarios registrados",
       value: formatCount(users.length),
-      note: users.length > 0 ? "datos reales" : "Sin datos todavía",
+      note: users.length > 0 ? "datos reales" : "Sin datos todavia",
       icon: "01",
     },
     {
       label: "Nuevos suscriptores",
       value: formatCount(subscriberCount),
-      note: subscriberCount > 0 ? "datos reales" : "Aún no hay suscriptores",
+      note: subscriberCount > 0 ? "datos reales" : "Aun no hay suscriptores",
       icon: "02",
     },
     {
       label: "Articulos publicados",
       value: formatCount(publishedArticles.length),
-      note: publishedArticles.length > 0 ? "datos reales" : "Publica tu primer artículo",
+      note: publishedArticles.length > 0 ? "datos reales" : "Publica tu primer articulo",
       icon: "03",
     },
     {
       label: "Comentarios",
       value: formatCount(commentCount),
-      note: commentCount > 0 ? "datos reales" : "Aún no hay comentarios",
+      note: commentCount > 0 ? "datos reales" : "Aun no hay comentarios",
       icon: "04",
     },
     {
       label: "Articulos guardados",
-      value: "—",
-      note: "Sin tracking todavía",
+      value: "-",
+      note: "Sin tracking todavia",
       icon: "05",
     },
   ];
-
-  const categoryCounts = publishedArticles.reduce<Record<string, number>>((acc, article) => {
-    acc[article.category] = (acc[article.category] ?? 0) + 1;
-    return acc;
-  }, {});
-  const maxCategoryCount = Math.max(0, ...Object.values(categoryCounts));
-  const topics = Object.entries(categoryCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([topic, count]) => [topic, maxCategoryCount > 0 ? Math.round((count / maxCategoryCount) * 100) : 0, count] as const);
 
   return (
     <main className="admin-page admin-dashboard">
@@ -163,6 +155,12 @@ export default async function AdminPage() {
       </aside>
 
       <section className="admin-main" id="dashboard">
+        {deleted ? (
+          <div className={deleted === "1" ? "admin-flash success" : "admin-flash error"}>
+            {deleted === "1" ? "Articulo eliminado correctamente." : "No pudimos eliminar ese articulo."}
+          </div>
+        ) : null}
+
         <header className="admin-topbar">
           <div>
             <p className="eyebrow">OFF Admin</p>
@@ -217,7 +215,7 @@ export default async function AdminPage() {
                 ))
               ) : (
                 <div className="empty-dashboard-state">
-                  Aún no hay actividad. Publica tu primer artículo para comenzar a medir movimiento real.
+                  Aun no hay actividad. Publica tu primer articulo para comenzar a medir movimiento real.
                 </div>
               )}
             </div>
@@ -231,31 +229,17 @@ export default async function AdminPage() {
               </div>
             </div>
 
-            <div className={topics.length > 0 ? "radar-wrap" : "radar-wrap empty-radar"} aria-hidden="true">
-              <div className="radar-orbit orbit-one" />
-              <div className="radar-orbit orbit-two" />
-              <div className="radar-orbit orbit-three" />
-              <div className="radar-shape" />
+            <div className="scatter-plot empty-scatter" aria-label="Grafica de dispersion emocional sin datos suficientes">
+              <span className="scatter-axis-x" />
+              <span className="scatter-axis-y" />
+              <span className="scatter-label top">Interaccion</span>
+              <span className="scatter-label bottom">Lectura real</span>
             </div>
 
             <div className="topic-list">
-              {topics.length > 0 ? (
-                topics.map(([topic, score, count]) => (
-                  <div className="topic-row" key={topic}>
-                    <span>{topic}</span>
-                    <div>
-                      <i style={{ width: `${score}%` }} />
-                    </div>
-                    <em>{count} articulos</em>
-                  </div>
-                ))
-              ) : (
-                <div className="empty-dashboard-state">Aún no hay suficientes datos para generar insights.</div>
-              )}
+              <div className="empty-dashboard-state">Aun no hay suficientes datos de lectura para generar dispersion emocional.</div>
             </div>
-            <p className="insight-note">
-              {topics.length > 0 ? "Insights basados en categorías de artículos publicados." : "La gráfica está lista; aparecerá cuando existan datos reales."}
-            </p>
+            <p className="insight-note">La grafica se activara cuando exista tracking real de lecturas, vistas o guardados.</p>
           </article>
         </section>
 
@@ -299,11 +283,12 @@ export default async function AdminPage() {
                     <Link className="button" href={`/admin/${article.id}`}>
                       Editar
                     </Link>
+                    <DeleteArticleButton articleId={article.id} compact />
                   </div>
                 </article>
               ))
             ) : (
-              <div className="empty-dashboard-state">Todavía no hay artículos. Crea el primer capítulo desde Nuevo artículo.</div>
+              <div className="empty-dashboard-state">Todavia no hay articulos. Crea el primer capitulo desde Nuevo articulo.</div>
             )}
           </div>
         </section>
@@ -330,7 +315,7 @@ export default async function AdminPage() {
                 </div>
               ))}
               {users.length + subscriberCount === 0 ? (
-                <div className="empty-dashboard-state">Aún no hay suscriptores ni usuarios registrados.</div>
+                <div className="empty-dashboard-state">Aun no hay suscriptores ni usuarios registrados.</div>
               ) : null}
             </div>
           </article>
@@ -371,7 +356,7 @@ export default async function AdminPage() {
                   </div>
                 ))
               ) : (
-                <div className="empty-dashboard-state">Aún no hay comentarios.</div>
+                <div className="empty-dashboard-state">Aun no hay comentarios.</div>
               )}
             </div>
           </article>
