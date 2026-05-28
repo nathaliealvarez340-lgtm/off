@@ -1,19 +1,14 @@
-import Link from "next/link";
 import { ArticleEditor } from "@/components/ArticleEditor";
+import { getAllArticles } from "@/lib/articles";
 import { requireAdmin } from "@/lib/auth";
 
 export default async function NewArticlePage() {
   await requireAdmin();
+  const articles = await getAllArticles();
 
   return (
-    <main className="admin-page">
-      <div className="admin-header">
-        <Link href="/admin" className="brand">
-          <span className="brand-mark">O</span>
-          Nuevo capítulo
-        </Link>
-      </div>
-      <ArticleEditor />
+    <main className="admin-page editor-admin-page">
+      <ArticleEditor articles={articles} />
     </main>
   );
 }

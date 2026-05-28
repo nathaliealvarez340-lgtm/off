@@ -202,7 +202,7 @@ function renderPreview(block: EditorBlock) {
   return <p>{block.text || block.url}</p>;
 }
 
-export function ArticleEditor({ article }: { article?: Article | null }) {
+export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
   const [state, formAction, pending] = useActionState(saveArticleAction, initialState);
   const [savedId, setSavedId] = useState(article?.id ?? "");
   const [title, setTitle] = useState(article?.title ?? "");
@@ -296,25 +296,25 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
   }
 
   return (
-    <form action={formAction} className="magazine-editor premium-editor">
+    <form action={formAction} className="magazine-editor premium-editor document-editor-shell">
       <input name="id" type="hidden" value={savedId} />
       <input name="content" type="hidden" value={contentJson} />
       <input name="coverImage" type="hidden" value={cover} />
 
-      <header className="editor-topbar premium-editor-topbar">
+      <header className="editor-topbar premium-editor-topbar document-editor-topbar">
         <div>
-          <p className="eyebrow">OFF Editor</p>
+          <a className="editor-back-link" href="/admin">←</a>
+          <p className="eyebrow">{article ? "Editar articulo" : "Nuevo articulo"}</p>
           <div className="editor-status-row">
             <span>{article?.status ?? "draft"}</span>
             <span>{localSave}</span>
-            <span>{characterCount.toLocaleString()} / {LIMIT.toLocaleString()}</span>
           </div>
         </div>
         <div className="editor-actions">
           <button className="ghost-button" type="button" onClick={() => setPreviewOpen((open) => !open)}>Vista previa</button>
+          <button className="ghost-button" type="button">•••</button>
           <button className="ghost-button" disabled={pending || overLimit} name="publishIntent" type="submit" value="draft">{pending ? "Guardando..." : "Guardar draft"}</button>
           <button className="button" disabled={pending || overLimit} name="publishIntent" type="submit" value="publish">{pending ? "Publicando..." : "Publicar"}</button>
-          <a className="ghost-button" href="/admin">Salir</a>
         </div>
       </header>
 
@@ -325,73 +325,77 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
         </div>
       ) : null}
 
-      <section className="editor-hero-card">
-        <label
-          className={coverPreview ? "cover-dropzone has-cover" : "cover-dropzone"}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            attachCoverFile(event.dataTransfer.files?.[0]);
-          }}
-        >
-          {coverPreview ? <img src={coverPreview} alt="Preview portada" /> : <span>Arrastra o sube una portada cinematografica</span>}
-          <input ref={coverInputRef} name="coverFile" type="file" accept="image/*" onChange={(event) => handleCoverFile(event.target.files?.[0])} />
-        </label>
-        <div className="cover-tools">
-          <input value={cover} placeholder="Ruta actual de portada" onChange={(event) => { setCover(event.target.value); setCoverPreview(event.target.value); }} />
-          <button type="button" onClick={() => { setCover(""); setCoverPreview(""); }}>Eliminar portada</button>
-        </div>
-        <input className="title-input editor-title-hero" name="title" placeholder="Titulo del articulo" value={title} onChange={(event) => handleTitle(event.target.value)} required />
-        <textarea className="excerpt-input editor-excerpt-hero" name="excerpt" placeholder="Subtitulo o extracto editorial" value={excerpt} onChange={(event) => setExcerpt(event.target.value)} required />
-      </section>
+      <div className="document-editor-frame">
+        <aside className="document-left-rail">
+          <div className="document-rail-head">
+            <span>Documentos</span>
+            <a href="/admin/new">+</a>
+          </div>
+          <div className="document-list">
+            {articles.length > 0 ? (
+              articles.slice(0, 10).map((doc) => (
+                <a className={doc.id === savedId ? "document-list-item active" : "document-list-item"} href={`/admin/${doc.id}`} key={doc.id}>
+                  <strong>{doc.title || "Sin titulo"}</strong>
+                  <span><i />{doc.status}</span>
+                </a>
+              ))
+            ) : (
+              <div className="document-list-empty">Aun no hay documentos.</div>
+            )}
+          </div>
+          <a className="new-sheet-button" href="/admin/new">+ Nueva hoja</a>
+        </aside>
 
-      <nav className="editor-command-bar doc-toolbar" aria-label="Toolbar editorial">
-        <div className="doc-toolbar-group">
-          <strong>Formato</strong>
-          <select value={activeBlock?.type ?? "paragraph"} onChange={(event) => activeBlock ? updateBlock(activeBlock.id, { ...defaultBlock(event.target.value as BlockType), id: activeBlock.id, text: activeBlock.text }) : addBlock(event.target.value as BlockType)}>
-            <option value="paragraph">Parrafo</option>
-            <option value="h1">Titulo</option>
-            <option value="h2">Subtitulo</option>
-            <option value="h3">H3</option>
-            <option value="quote">Cita</option>
-            <option value="pullquote">Cita destacada</option>
-            <option value="highlight">Highlight</option>
-            <option value="code">Codigo</option>
-          </select>
-          {(["bold", "italic", "underline", "strike", "highlight"] as const).map((mark) => (
-            <button type="button" onClick={() => activeBlock && applyInline(mark, activeBlock.id)} key={mark}>{mark}</button>
-          ))}
-        </div>
-        <div className="doc-toolbar-group">
-          <strong>Color</strong>
-          {["#ffffff", "#cfc8da", "#7b3dff", "#111111"].map((color) => (
-            <button className="color-dot" style={{ background: color }} type="button" onClick={() => updateActiveBlock({ color })} key={color} aria-label={`Color ${color}`} />
-          ))}
-          <button type="button" onClick={() => updateActiveBlock({ highlightColor: "rgba(123,61,255,.22)" })}>Highlight</button>
-        </div>
-        <div className="doc-toolbar-group">
-          <strong>Alinear</strong>
-          {(["left", "center", "right"] as const).map((align) => (
-            <button type="button" onClick={() => updateActiveBlock({ align })} key={align}>{align}</button>
-          ))}
-        </div>
-        <div className="doc-toolbar-group">
-          <strong>Insertar</strong>
-          <button type="button" onClick={() => addBlock("image", activeBlock?.id)}>Imagen</button>
-          <button type="button" onClick={() => addBlock("list", activeBlock?.id)}>Bullets</button>
-          <button type="button" onClick={() => addBlock("numbered", activeBlock?.id)}>Numerada</button>
-          <button type="button" onClick={() => addBlock("divider", activeBlock?.id)}>Divider</button>
-          <button type="button" onClick={() => addBlock("cta", activeBlock?.id)}>CTA</button>
-          <button type="button" onClick={() => addBlock("subscribe", activeBlock?.id)}>Suscripcion</button>
-          <button type="button" onClick={() => addBlock("insight", activeBlock?.id)}>Nota editorial</button>
-        </div>
-      </nav>
+        <section className="document-workspace">
+          <nav className="editor-command-bar doc-toolbar" aria-label="Toolbar editorial">
+            <div className="doc-toolbar-group">
+              <select value={activeBlock?.type ?? "paragraph"} onChange={(event) => activeBlock ? updateBlock(activeBlock.id, { ...defaultBlock(event.target.value as BlockType), id: activeBlock.id, text: activeBlock.text }) : addBlock(event.target.value as BlockType)}>
+                <option value="paragraph">Parrafo</option>
+                <option value="h1">Titulo</option>
+                <option value="h2">Subtitulo</option>
+                <option value="h3">H3</option>
+                <option value="quote">Cita</option>
+                <option value="pullquote">Cita destacada</option>
+                <option value="highlight">Highlight</option>
+                <option value="code">Codigo</option>
+              </select>
+              {(["bold", "italic", "underline", "strike", "highlight"] as const).map((mark) => (
+                <button type="button" onClick={() => activeBlock && applyInline(mark, activeBlock.id)} key={mark}>{mark === "bold" ? "B" : mark === "italic" ? "I" : mark === "underline" ? "U" : mark === "strike" ? "S" : "H"}</button>
+              ))}
+              <button type="button">🔗</button>
+            </div>
+            <div className="doc-toolbar-group">
+              {["#ffffff", "#cfc8da", "#7b3dff", "#111111"].map((color) => (
+                <button className="color-dot" style={{ background: color }} type="button" onClick={() => updateActiveBlock({ color })} key={color} aria-label={`Color ${color}`} />
+              ))}
+              {(["left", "center", "right"] as const).map((align) => (
+                <button type="button" onClick={() => updateActiveBlock({ align })} key={align}>{align === "left" ? "≡" : align === "center" ? "☰" : "≣"}</button>
+              ))}
+            </div>
+            <div className="doc-toolbar-group">
+              <button type="button" onClick={() => addBlock("list", activeBlock?.id)}>•</button>
+              <button type="button" onClick={() => addBlock("numbered", activeBlock?.id)}>1.</button>
+              <button type="button" onClick={() => addBlock("quote", activeBlock?.id)}>❝</button>
+              <button type="button" onClick={() => addBlock("divider", activeBlock?.id)}>—</button>
+              <button type="button" onClick={() => addBlock("code", activeBlock?.id)}>{"</>"}</button>
+              <button type="button" onClick={() => addBlock("image", activeBlock?.id)}>▧</button>
+              <button type="button" onClick={() => addBlock("embed", activeBlock?.id)}>Embed</button>
+              <button type="button" onClick={() => addBlock("cta", activeBlock?.id)}>CTA</button>
+            </div>
+          </nav>
 
-      <div className="editor-layout premium-editor-layout">
-        <main className="editor-canvas premium-editor-canvas">
-          <div className="block-list">
-            {blocks.map((block) => (
-              <section className={`editor-block premium-block doc-block block-${block.type} ${activeBlock?.id === block.id ? "active" : ""}`} key={block.id} onFocus={() => setActiveBlockId(block.id)}>
+          <main className="editor-canvas premium-editor-canvas document-page">
+            <input className="title-input editor-title-hero document-title" name="title" placeholder="Titulo del articulo" value={title} onChange={(event) => handleTitle(event.target.value)} required />
+            <textarea className="excerpt-input editor-excerpt-hero document-excerpt" name="excerpt" placeholder="Escribe un extracto que abra la tension del articulo..." value={excerpt} onChange={(event) => setExcerpt(event.target.value)} required />
+            <div className="document-meta-line">
+              <span>{article?.status ?? "draft"}</span>
+              <span>{characterCount.toLocaleString()} caracteres</span>
+              <span>{localSave}</span>
+            </div>
+
+            <div className="block-list document-block-list">
+              {blocks.map((block) => (
+                <section className={`editor-block premium-block doc-block block-${block.type} ${activeBlock?.id === block.id ? "active" : ""}`} key={block.id} onFocus={() => setActiveBlockId(block.id)}>
                 <div className="block-controls premium-block-controls">
                   <select value={block.type} onChange={(event) => updateBlock(block.id, { ...defaultBlock(event.target.value as BlockType), id: block.id })}>
                     {[...textBlocks, ...mediaBlocks, ...editorialBlocks].map((item) => <option value={item.type} key={item.type}>{item.label}</option>)}
@@ -480,17 +484,37 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
                   }} />
                 ) : null}
               </section>
-            ))}
-          </div>
-        </main>
+              ))}
+            </div>
+          </main>
+        </section>
 
-        <aside className="editor-sidebar premium-editor-sidebar">
-          <label className="field">Estado<select name="status" defaultValue={article?.status ?? "draft"}><option value="draft">draft</option><option value="published">published</option></select></label>
-          <label className="field">Categoria<input name="category" defaultValue={article?.category ?? "Vida"} required /></label>
-          <label className="field">Slug<input name="slug" value={slug} onChange={(event) => setSlug(event.target.value)} required /></label>
-          <label className="field">Tiempo estimado<input name="readTime" defaultValue={article?.readTime ?? "5 min leer"} required /></label>
-          <label className="checkbox"><input name="featured" type="checkbox" defaultChecked={article?.featured ?? false} /><span>Destacado</span></label>
-          <div className={overLimit ? "character-count over" : "character-count"}>{characterCount.toLocaleString()} / {LIMIT.toLocaleString()} caracteres</div>
+        <aside className="editor-sidebar premium-editor-sidebar document-right-rail">
+          <div className="settings-tabs"><span className="active">Contenido</span><span>Diseño</span></div>
+          <div className="right-panel-group">
+            <strong>Portada</strong>
+            <label
+              className={coverPreview ? "cover-dropzone mini-cover-dropzone has-cover" : "cover-dropzone mini-cover-dropzone"}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                attachCoverFile(event.dataTransfer.files?.[0]);
+              }}
+            >
+              {coverPreview ? <img src={coverPreview} alt="Preview portada" /> : <span>Subir imagen</span>}
+              <input ref={coverInputRef} name="coverFile" type="file" accept="image/*" onChange={(event) => handleCoverFile(event.target.files?.[0])} />
+            </label>
+            <input value={cover} placeholder="Ruta de portada" onChange={(event) => { setCover(event.target.value); setCoverPreview(event.target.value); }} />
+            <button type="button" onClick={() => { setCover(""); setCoverPreview(""); }}>Quitar portada</button>
+          </div>
+          <div className="right-panel-group">
+            <label className="field">Estado<select name="status" defaultValue={article?.status ?? "draft"}><option value="draft">Borrador</option><option value="published">Publicado</option></select></label>
+            <label className="field">Categoria<input name="category" defaultValue={article?.category ?? "Vida"} required /></label>
+            <label className="field">Slug<input name="slug" value={slug} onChange={(event) => setSlug(event.target.value)} required /></label>
+            <label className="field">Tiempo estimado<input name="readTime" defaultValue={article?.readTime ?? "5 min leer"} required /></label>
+            <label className="checkbox"><input name="featured" type="checkbox" defaultChecked={article?.featured ?? false} /><span>Destacado</span></label>
+            <div className={overLimit ? "character-count over" : "character-count"}>{characterCount.toLocaleString()} / {LIMIT.toLocaleString()} caracteres</div>
+          </div>
         </aside>
       </div>
 
