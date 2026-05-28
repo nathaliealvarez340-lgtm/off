@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
+import { AdminGreeting } from "@/components/AdminGreeting";
 import { formatDate, getAllArticles } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
-function compactNumber(value: number, fallback: string) {
-  if (value <= 0) return fallback;
-  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K+`;
-  return `${value}+`;
-}
-
-function readingMinutes(readTime: string) {
-  const match = readTime.match(/\d+/);
-  return match ? Number(match[0]) : 0;
+function formatCount(value: number) {
+  if (value >= 1000) return new Intl.NumberFormat("es-MX", { notation: "compact" }).format(value);
+  return String(value);
 }
 
 export default async function AdminPage() {
@@ -22,7 +17,7 @@ export default async function AdminPage() {
   }
 
   const db = getDb();
-  const [articles, users, subscribers, comments] = await Promise.all([
+  const [articles, users, subscribers, subscriberCount, commentCount, comments] = await Promise.all([
     getAllArticles(),
     db.user.findMany({
       select: {
@@ -46,6 +41,8 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       take: 12,
     }),
+    db.subscriber.count(),
+    db.comment.count(),
     db.comment.findMany({
       include: {
         user: { select: { name: true, email: true } },
@@ -58,14 +55,6 @@ export default async function AdminPage() {
 
   const publishedArticles = articles.filter((article) => article.status === "published");
   const draftArticles = articles.filter((article) => article.status !== "published");
-  const featuredArticles = articles.filter((article) => article.featured);
-  const averageRead =
-    publishedArticles.length > 0
-      ? Math.max(1, Math.round(publishedArticles.reduce((total, article) => total + readingMinutes(article.readTime), 0) / publishedArticles.length))
-      : 9;
-  const userComments = users.reduce((total, user) => total + user._count.comments, 0);
-  const totalReach = users.length + subscribers.length + comments.length * 8 + publishedArticles.length * 140;
-  const registeredReaders = users.filter((user) => user.role === "USER").length;
   const recentActivities = [
     ...users.slice(0, 3).map((user) => ({
       label: "Nuevo registro",
@@ -85,48 +74,56 @@ export default async function AdminPage() {
       detail: comment.article.title,
       date: formatDate(comment.createdAt),
     })),
+    ...publishedArticles.slice(0, 3).map((article) => ({
+      label: "Articulo publicado",
+      title: article.title,
+      detail: article.category,
+      date: formatDate(article.publishedAt),
+    })),
   ].slice(0, 7);
 
   const metrics = [
     {
-      label: "Personas alcanzadas",
-      value: compactNumber(totalReach, "2.3K+"),
-      delta: "+18%",
+      label: "Usuarios registrados",
+      value: formatCount(users.length),
+      note: users.length > 0 ? "datos reales" : "Sin datos todavía",
       icon: "01",
     },
     {
-      label: "Lectores recurrentes",
-      value: compactNumber(registeredReaders + userComments, "1.8K+"),
-      delta: "+11%",
+      label: "Nuevos suscriptores",
+      value: formatCount(subscriberCount),
+      note: subscriberCount > 0 ? "datos reales" : "Aún no hay suscriptores",
       icon: "02",
     },
     {
-      label: "Nuevos suscriptores",
-      value: compactNumber(subscribers.length + registeredReaders, "700+"),
-      delta: "+24%",
+      label: "Articulos publicados",
+      value: formatCount(publishedArticles.length),
+      note: publishedArticles.length > 0 ? "datos reales" : "Publica tu primer artículo",
       icon: "03",
     },
     {
-      label: "Tiempo promedio de lectura",
-      value: `${averageRead}m`,
-      delta: "+6%",
+      label: "Comentarios",
+      value: formatCount(commentCount),
+      note: commentCount > 0 ? "datos reales" : "Aún no hay comentarios",
       icon: "04",
     },
     {
       label: "Articulos guardados",
-      value: compactNumber(featuredArticles.length + comments.length * 2, "2K+"),
-      delta: "+9%",
+      value: "—",
+      note: "Sin tracking todavía",
       icon: "05",
     },
   ];
 
-  const topics = [
-    ["ansiedad funcional", 92],
-    ["proposito", 78],
-    ["presion profesional", 71],
-    ["identidad", 66],
-    ["vacio emocional", 88],
-  ] as const;
+  const categoryCounts = publishedArticles.reduce<Record<string, number>>((acc, article) => {
+    acc[article.category] = (acc[article.category] ?? 0) + 1;
+    return acc;
+  }, {});
+  const maxCategoryCount = Math.max(0, ...Object.values(categoryCounts));
+  const topics = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([topic, count]) => [topic, maxCategoryCount > 0 ? Math.round((count / maxCategoryCount) * 100) : 0, count] as const);
 
   return (
     <main className="admin-page admin-dashboard">
@@ -169,7 +166,7 @@ export default async function AdminPage() {
         <header className="admin-topbar">
           <div>
             <p className="eyebrow">OFF Admin</p>
-            <h1>Buenas noches, Nathalie.</h1>
+            <AdminGreeting />
             <p>Las personas no buscan contenido. Buscan sentirse entendidas.</p>
           </div>
           <div className="admin-top-actions">
@@ -187,7 +184,7 @@ export default async function AdminPage() {
             <article className="metric-card" key={metric.label}>
               <div className="metric-card-head">
                 <span>{metric.icon}</span>
-                <em>{metric.delta}</em>
+                <em>{metric.note}</em>
               </div>
               <strong>{metric.value}</strong>
               <p>{metric.label}</p>
@@ -202,7 +199,7 @@ export default async function AdminPage() {
                 <p className="eyebrow">En vivo</p>
                 <h2>Actividad reciente</h2>
               </div>
-              <span>{recentActivities.length || 5} movimientos</span>
+              <span>{recentActivities.length} movimientos</span>
             </div>
 
             <div className="activity-timeline">
@@ -220,7 +217,7 @@ export default async function AdminPage() {
                 ))
               ) : (
                 <div className="empty-dashboard-state">
-                  Aun no hay actividad suficiente. Cuando entren lectores, comentarios o suscripciones, apareceran aqui.
+                  Aún no hay actividad. Publica tu primer artículo para comenzar a medir movimiento real.
                 </div>
               )}
             </div>
@@ -234,7 +231,7 @@ export default async function AdminPage() {
               </div>
             </div>
 
-            <div className="radar-wrap" aria-hidden="true">
+            <div className={topics.length > 0 ? "radar-wrap" : "radar-wrap empty-radar"} aria-hidden="true">
               <div className="radar-orbit orbit-one" />
               <div className="radar-orbit orbit-two" />
               <div className="radar-orbit orbit-three" />
@@ -242,16 +239,23 @@ export default async function AdminPage() {
             </div>
 
             <div className="topic-list">
-              {topics.map(([topic, score]) => (
-                <div className="topic-row" key={topic}>
-                  <span>{topic}</span>
-                  <div>
-                    <i style={{ width: `${score}%` }} />
+              {topics.length > 0 ? (
+                topics.map(([topic, score, count]) => (
+                  <div className="topic-row" key={topic}>
+                    <span>{topic}</span>
+                    <div>
+                      <i style={{ width: `${score}%` }} />
+                    </div>
+                    <em>{count} articulos</em>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="empty-dashboard-state">Aún no hay suficientes datos para generar insights.</div>
+              )}
             </div>
-            <p className="insight-note">Las personas leen mas sobre vacio emocional entre 11 PM y 2 AM.</p>
+            <p className="insight-note">
+              {topics.length > 0 ? "Insights basados en categorías de artículos publicados." : "La gráfica está lista; aparecerá cuando existan datos reales."}
+            </p>
           </article>
         </section>
 
@@ -269,7 +273,7 @@ export default async function AdminPage() {
 
           <div className="admin-article-list">
             {articles.length > 0 ? (
-              articles.slice(0, 8).map((article, index) => (
+              articles.slice(0, 8).map((article) => (
                 <article className="admin-article-item" key={article.id}>
                   <img src={article.coverImage} alt="" />
                   <div>
@@ -282,8 +286,8 @@ export default async function AdminPage() {
                     <h3>{article.title}</h3>
                     <p>{article.excerpt}</p>
                     <div className="article-analytics">
-                      <span>{compactNumber((index + 1) * 317, "317")} vistas</span>
-                      <span>{compactNumber((index + 1) * 41, "41")} guardados</span>
+                      <span>Lecturas: sin tracking</span>
+                      <span>Guardados: sin tracking</span>
                     </div>
                   </div>
                   <div className="article-actions">
@@ -299,7 +303,7 @@ export default async function AdminPage() {
                 </article>
               ))
             ) : (
-              <div className="empty-dashboard-state">Todavia no hay articulos. Crea el primer capitulo desde Nuevo articulo.</div>
+              <div className="empty-dashboard-state">Todavía no hay artículos. Crea el primer capítulo desde Nuevo artículo.</div>
             )}
           </div>
         </section>
@@ -311,7 +315,7 @@ export default async function AdminPage() {
                 <p className="eyebrow">Comunidad</p>
                 <h2>Suscriptores</h2>
               </div>
-              <span>{users.length + subscribers.length} registros</span>
+              <span>{users.length + subscriberCount} registros</span>
             </div>
 
             <div className="subscriber-list">
@@ -325,8 +329,8 @@ export default async function AdminPage() {
                   <em>{"role" in person ? person.role : person.interest}</em>
                 </div>
               ))}
-              {users.length + subscribers.length === 0 ? (
-                <div className="empty-dashboard-state">Sin registros aun.</div>
+              {users.length + subscriberCount === 0 ? (
+                <div className="empty-dashboard-state">Aún no hay suscriptores ni usuarios registrados.</div>
               ) : null}
             </div>
           </article>
@@ -355,7 +359,7 @@ export default async function AdminPage() {
                 <p className="eyebrow">Moderacion</p>
                 <h2>Comentarios recientes</h2>
               </div>
-              <span>{comments.length} recientes</span>
+              <span>{commentCount} comentarios</span>
             </div>
             <div className="comment-dashboard-list">
               {comments.length > 0 ? (
@@ -367,7 +371,7 @@ export default async function AdminPage() {
                   </div>
                 ))
               ) : (
-                <div className="empty-dashboard-state">Aun no hay comentarios.</div>
+                <div className="empty-dashboard-state">Aún no hay comentarios.</div>
               )}
             </div>
           </article>

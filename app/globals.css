@@ -1254,6 +1254,12 @@ textarea {
   animation: adminPulse 5s ease-in-out infinite;
 }
 
+.empty-radar .radar-shape {
+  opacity: 0.22;
+  background: radial-gradient(circle at 50% 42%, rgba(123, 61, 255, 0.22), rgba(123, 61, 255, 0.06) 62%, transparent 72%);
+  animation: none;
+}
+
 .topic-list {
   display: grid;
   gap: 12px;
@@ -1261,7 +1267,7 @@ textarea {
 
 .topic-row {
   display: grid;
-  grid-template-columns: 150px 1fr;
+  grid-template-columns: 150px 1fr auto;
   gap: 14px;
   align-items: center;
 }
@@ -1270,6 +1276,13 @@ textarea {
   color: rgba(255, 255, 255, 0.68);
   font-size: 12px;
   text-transform: capitalize;
+}
+
+.topic-row em {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
 }
 
 .topic-row div {
