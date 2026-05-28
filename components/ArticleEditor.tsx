@@ -396,7 +396,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
             <div className="block-list document-block-list">
               {blocks.map((block) => (
                 <section className={`editor-block premium-block doc-block block-${block.type} ${activeBlock?.id === block.id ? "active" : ""}`} key={block.id} onFocus={() => setActiveBlockId(block.id)}>
-                <div className="block-controls premium-block-controls">
+                <div className="block-controls premium-block-controls doc-block-floating-controls">
                   <select value={block.type} onChange={(event) => updateBlock(block.id, { ...defaultBlock(event.target.value as BlockType), id: block.id })}>
                     {[...textBlocks, ...mediaBlocks, ...editorialBlocks].map((item) => <option value={item.type} key={item.type}>{item.label}</option>)}
                   </select>
@@ -407,7 +407,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 </div>
 
                 {block.type !== "image" && block.type !== "divider" && block.type !== "gallery" && block.type !== "collage" && block.type !== "video" && block.type !== "embed" && block.type !== "stat" && block.type !== "columns" ? (
-                  <div className="inline-style-bar">
+                  <div className="inline-style-bar doc-inline-style-bar">
                     {(["bold", "italic", "underline", "highlight", "strike"] as const).map((mark) => <button type="button" onClick={() => applyInline(mark, block.id)} key={mark}>{mark}</button>)}
                   </div>
                 ) : null}

@@ -2220,55 +2220,72 @@ textarea {
 }
 
 .doc-block {
-  border-color: transparent;
-  border-radius: 8px;
-  padding: 4px 0;
-  background: transparent;
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  position: relative;
+  border: 0 !important;
+  border-radius: 0;
+  padding: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.doc-block:hover,
-.doc-block.active {
-  border-color: rgba(123, 61, 255, 0.18);
-  background: rgba(123, 61, 255, 0.035);
-}
-
-.premium-block-controls {
-  height: 0;
-  margin: 0;
+.doc-block-floating-controls,
+.doc-inline-style-bar {
+  position: absolute;
+  z-index: 4;
   opacity: 0;
-  overflow: hidden;
-  transition: 160ms ease;
+  pointer-events: none;
+  transition: opacity 140ms ease;
 }
 
-.doc-block:hover .premium-block-controls,
-.doc-block.active .premium-block-controls {
-  height: auto;
-  margin-bottom: 6px;
-  opacity: 0.82;
+.doc-block-floating-controls {
+  top: 8px;
+  left: -58px;
+  display: grid;
+  width: 44px;
+  gap: 6px;
+}
+
+.doc-inline-style-bar {
+  top: -36px;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 5px;
+  background: rgba(8, 8, 10, 0.9);
+  backdrop-filter: blur(14px);
+}
+
+.doc-block:focus-within .doc-block-floating-controls,
+.doc-block:hover .doc-block-floating-controls,
+.doc-block:focus-within .doc-inline-style-bar {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .inline-style-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  margin-bottom: 10px;
-  opacity: 0;
-  transition: 160ms ease;
-}
-
-.doc-block:hover .inline-style-bar,
-.doc-block.active .inline-style-bar {
-  opacity: 1;
+  margin-bottom: 0;
 }
 
 .visual-block-textarea {
   min-height: 84px;
+  border: 0 !important;
   border-radius: 0;
   padding: 8px 0;
+  background: transparent !important;
+  box-shadow: none !important;
   color: rgba(255, 255, 255, 0.88);
   font-size: 22px;
   line-height: 1.75;
+}
+
+.visual-block-textarea:focus {
+  outline: 0;
 }
 
 .block-h1 .visual-block-textarea {
@@ -2290,12 +2307,29 @@ textarea {
 .cta-editor {
   display: grid;
   gap: 12px;
+  border: 0;
+  background: transparent;
 }
 
 .visual-media-editor img {
   width: 100%;
   max-height: 520px;
   object-fit: cover;
+}
+
+.visual-media-editor input,
+.visual-media-editor textarea,
+.visual-media-editor select,
+.stat-editor input,
+.stat-editor textarea,
+.columns-editor textarea,
+.cta-editor input,
+.cta-editor textarea {
+  border: 0 !important;
+  border-radius: 0;
+  padding-inline: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .image-placeholder {
@@ -2502,6 +2536,19 @@ textarea {
   box-shadow: none;
 }
 
+.document-workspace .doc-toolbar button,
+.document-workspace .doc-toolbar select {
+  min-height: 34px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.document-workspace .doc-toolbar button:hover,
+.document-workspace .doc-toolbar select:hover {
+  border-color: rgba(255, 255, 255, 0.11);
+  background: rgba(255, 255, 255, 0.045);
+}
+
 .document-workspace .doc-toolbar-group {
   border-right-color: rgba(255, 255, 255, 0.07);
 }
@@ -2510,15 +2557,19 @@ textarea {
   max-width: 760px;
   min-height: calc(100vh - 140px);
   margin: 0 auto;
-  border: 0;
+  border: 0 !important;
   border-radius: 0;
   padding: clamp(44px, 6vw, 84px) clamp(28px, 5vw, 64px);
-  background: transparent;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: none !important;
+  backdrop-filter: none;
 }
 
 .document-title {
   margin-top: 16px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   font-size: clamp(48px, 6vw, 76px);
   letter-spacing: -0.055em;
 }
@@ -2526,7 +2577,15 @@ textarea {
 .document-excerpt {
   min-height: 54px;
   margin-top: 12px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   font-size: 17px;
+}
+
+.document-title:focus,
+.document-excerpt:focus {
+  outline: 0;
 }
 
 .document-meta-line {
@@ -2539,7 +2598,7 @@ textarea {
 }
 
 .document-block-list {
-  gap: 4px;
+  gap: 0;
 }
 
 .document-right-rail {
