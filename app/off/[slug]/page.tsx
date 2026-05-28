@@ -15,6 +15,15 @@ import {
 } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/g).filter(Boolean);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("_") && part.endsWith("_")) return <em key={index}>{part.slice(1, -1)}</em>;
+    return <span key={index}>{part}</span>;
+  });
+}
+
 export async function generateStaticParams() {
   const articles = await getPublishedArticles();
   return articles.map((article) => ({ slug: article.slug }));
@@ -90,13 +99,27 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {visibleBlocks.map((block, index) => {
           switch (block.type) {
             case "paragraph":
-              return <p key={index}>{block.text}</p>;
+              return <p className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</p>;
+            case "h1":
+              return <h2 className={`reader-h1 align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h2>;
             case "h2":
-              return <h2 key={index}>{block.text}</h2>;
+              return <h2 className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h2>;
             case "h3":
-              return <h3 key={index}>{block.text}</h3>;
+              return <h3 className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h3>;
+            case "highlight":
+              return <p className="reader-highlight" key={index}>{renderInline(block.text)}</p>;
+            case "code":
+              return <pre className="reader-code" key={index}><code>{block.text}</code></pre>;
+            case "list":
+              return <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
+            case "numbered":
+              return <ol key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ol>;
+            case "checklist":
+              return <ul className="reader-checklist" key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
             case "quote":
-              return <blockquote key={index}>{block.text}</blockquote>;
+              return <blockquote key={index}>{renderInline(block.text)}</blockquote>;
+            case "pullquote":
+              return <blockquote className="reader-pullquote" key={index}>{renderInline(block.text)}</blockquote>;
             case "divider":
               return <hr key={index} />;
             case "image":
@@ -105,6 +128,54 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   <Image src={block.src} alt={block.alt} width={900} height={560} />
                   {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                 </figure>
+              );
+            case "gallery":
+            case "collage":
+              return (
+                <div className={`reader-gallery ${block.type}`} key={index}>
+                  {block.images.map((image, imageIndex) => (
+                    <figure key={`${image.src}-${imageIndex}`}>
+                      <Image src={image.src} alt={image.alt ?? "Imagen editorial"} width={700} height={520} />
+                      {image.caption ? <figcaption>{image.caption}</figcaption> : null}
+                    </figure>
+                  ))}
+                </div>
+              );
+            case "embed":
+            case "video":
+              return (
+                <figure className="reader-embed" key={index}>
+                  <a href={block.url} target="_blank">{block.url}</a>
+                  {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                </figure>
+              );
+            case "cta":
+              return (
+                <aside className="reader-cta" key={index}>
+                  <p>{block.text}</p>
+                  <Link className="button violet-button" href={block.url}>{block.label}</Link>
+                </aside>
+              );
+            case "subscribe":
+            case "share":
+              return (
+                <aside className="reader-cta" key={index}>
+                  <p>{block.text}</p>
+                </aside>
+              );
+            case "stat":
+              return (
+                <aside className="reader-stat" key={index}>
+                  <strong>{block.value}</strong>
+                  <span>{block.label}</span>
+                </aside>
+              );
+            case "columns":
+              return (
+                <div className="reader-columns" key={index}>
+                  <p>{renderInline(block.left)}</p>
+                  <p>{renderInline(block.right)}</p>
+                </div>
               );
             case "special":
               return (

@@ -3,16 +3,18 @@ import { getDb } from "./db";
 export { slugify } from "./slug";
 
 export type EditorialBlock =
-  | { type: "paragraph"; text: string }
-  | { type: "h2" | "h3"; text: string }
-  | { type: "quote"; text: string }
+  | { type: "paragraph" | "h1" | "h2" | "h3" | "highlight" | "code"; text: string; align?: "left" | "center" | "right" }
+  | { type: "list" | "numbered" | "checklist"; items: string[] }
+  | { type: "quote" | "pullquote"; text: string }
   | { type: "divider" }
-  | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" }
-  | {
-      type: "special";
-      label: "Reality Check" | "Reflexión" | "Estrategia" | "Acción";
-      text: string;
-    };
+  | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" | "image-left" | "image-right" }
+  | { type: "gallery" | "collage"; images: Array<{ src: string; alt?: string; caption?: string }> }
+  | { type: "embed" | "video"; url: string; caption?: string }
+  | { type: "cta"; text: string; url: string; label: string }
+  | { type: "subscribe" | "share"; text: string }
+  | { type: "stat"; value: string; label: string }
+  | { type: "columns"; left: string; right: string }
+  | { type: "special"; label: "Reality Check" | "Reflexion" | "Estrategia" | "Accion"; text: string };
 
 export function parseArticleContent(content: string): EditorialBlock[] {
   try {
