@@ -155,6 +155,11 @@ function galleryImages(block: EditorBlock) {
   return sources.map((src, index) => ({ src, alt: captions[index] || "Imagen editorial", caption: captions[index] || "" }));
 }
 
+function autoGrow(element: HTMLTextAreaElement) {
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
+}
+
 function toEditorialJson(blocks: EditorBlock[]) {
   return JSON.stringify(
     blocks
@@ -236,6 +241,12 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     }, 1800);
     return () => window.clearTimeout(timeout);
   }, [blocks, cover, excerpt, slug, storageKey, title]);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLTextAreaElement>(".document-page textarea").forEach(autoGrow);
+    });
+  }, [blocks, excerpt]);
 
   function handleTitle(value: string) {
     setTitle(value);
@@ -386,7 +397,15 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
           <main className="editor-canvas premium-editor-canvas document-page">
             <input className="title-input editor-title-hero document-title" name="title" placeholder="Titulo del articulo" value={title} onChange={(event) => handleTitle(event.target.value)} required />
-            <textarea className="excerpt-input editor-excerpt-hero document-excerpt" name="excerpt" placeholder="Escribe un extracto que abra la tension del articulo..." value={excerpt} onChange={(event) => setExcerpt(event.target.value)} required />
+            <textarea
+              className="excerpt-input editor-excerpt-hero document-excerpt"
+              name="excerpt"
+              placeholder="Escribe un extracto que abra la tension del articulo..."
+              value={excerpt}
+              onInput={(event) => autoGrow(event.currentTarget)}
+              onChange={(event) => setExcerpt(event.target.value)}
+              required
+            />
             <div className="document-meta-line">
               <span>{article?.status ?? "draft"}</span>
               <span>{characterCount.toLocaleString()} caracteres</span>
@@ -478,6 +497,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                     style={{ color: block.color, background: block.highlightColor, textAlign: block.align === "center" || block.align === "right" ? block.align : "left" }}
                     value={block.type === "list" || block.type === "numbered" || block.type === "checklist" ? block.items ?? "" : block.text ?? ""}
                     onFocus={() => setActiveBlockId(block.id)}
+                    onInput={(event) => autoGrow(event.currentTarget)}
                     onChange={(event) => {
                     if (block.type === "list" || block.type === "numbered" || block.type === "checklist") updateBlock(block.id, { items: event.target.value });
                     else updateBlock(block.id, { text: event.target.value });

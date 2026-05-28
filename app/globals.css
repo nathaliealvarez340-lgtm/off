@@ -2273,15 +2273,17 @@ textarea {
 }
 
 .visual-block-textarea {
-  min-height: 84px;
+  min-height: 0;
   border: 0 !important;
   border-radius: 0;
-  padding: 8px 0;
+  padding: 6px 0;
   background: transparent !important;
   box-shadow: none !important;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 22px;
-  line-height: 1.75;
+  overflow: hidden;
+  resize: none;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 18px;
+  line-height: 1.8;
 }
 
 .visual-block-textarea:focus {
@@ -2289,16 +2291,27 @@ textarea {
 }
 
 .block-h1 .visual-block-textarea {
-  min-height: 110px;
-  font-size: clamp(46px, 6vw, 82px);
-  line-height: 0.96;
+  min-height: 0;
+  font-size: clamp(2.6rem, 4.4vw, 4.6rem);
+  line-height: 0.98;
 }
 
 .block-highlight .visual-block-textarea,
 .block-pullquote .visual-block-textarea {
   color: #fff;
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 1.02;
+  font-size: clamp(1.8rem, 3vw, 3.2rem);
+  line-height: 1.12;
+}
+
+.block-h2 .visual-block-textarea {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1.12;
+}
+
+.block-h3 .visual-block-textarea,
+.block-quote .visual-block-textarea {
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.35;
 }
 
 .visual-media-editor,
@@ -2415,7 +2428,7 @@ textarea {
 
 .document-editor-frame {
   display: grid;
-  grid-template-columns: 235px minmax(0, 1fr) 320px;
+  grid-template-columns: 235px minmax(720px, 1fr) 320px;
   min-height: calc(100vh - 74px);
 }
 
@@ -2522,6 +2535,7 @@ textarea {
 .document-workspace {
   min-width: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: visible;
 }
 
 .document-workspace .doc-toolbar {
@@ -2554,12 +2568,13 @@ textarea {
 }
 
 .document-page {
-  max-width: 760px;
+  width: min(100%, 980px);
+  max-width: 980px;
   min-height: calc(100vh - 140px);
   margin: 0 auto;
   border: 0 !important;
   border-radius: 0;
-  padding: clamp(44px, 6vw, 84px) clamp(28px, 5vw, 64px);
+  padding: clamp(56px, 7vw, 96px) clamp(48px, 6vw, 92px);
   background: rgba(255, 255, 255, 0.025);
   box-shadow: none !important;
   backdrop-filter: none;
@@ -2570,17 +2585,25 @@ textarea {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  font-size: clamp(48px, 6vw, 76px);
+  min-height: 0;
+  overflow: visible;
+  resize: none;
+  font-size: clamp(3rem, 5vw, 5.5rem);
+  line-height: 0.95;
   letter-spacing: -0.055em;
 }
 
 .document-excerpt {
-  min-height: 54px;
+  min-height: 0;
   margin-top: 12px;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  font-size: 17px;
+  overflow: hidden;
+  resize: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 18px;
+  line-height: 1.8;
 }
 
 .document-title:focus,
@@ -2599,6 +2622,7 @@ textarea {
 
 .document-block-list {
   gap: 0;
+  overflow: visible;
 }
 
 .document-right-rail {
