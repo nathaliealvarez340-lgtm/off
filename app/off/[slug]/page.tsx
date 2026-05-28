@@ -16,10 +16,13 @@ import {
 import { getCurrentUser } from "@/lib/auth";
 
 function renderInline(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_)/g).filter(Boolean);
+  const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_|<u>[^<]+<\/u>|==[^=]+==|~~[^~]+~~)/g).filter(Boolean);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
     if (part.startsWith("_") && part.endsWith("_")) return <em key={index}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("<u>") && part.endsWith("</u>")) return <u key={index}>{part.slice(3, -4)}</u>;
+    if (part.startsWith("==") && part.endsWith("==")) return <mark key={index}>{part.slice(2, -2)}</mark>;
+    if (part.startsWith("~~") && part.endsWith("~~")) return <s key={index}>{part.slice(2, -2)}</s>;
     return <span key={index}>{part}</span>;
   });
 }
@@ -99,15 +102,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {visibleBlocks.map((block, index) => {
           switch (block.type) {
             case "paragraph":
-              return <p className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</p>;
+              return <p className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
             case "h1":
-              return <h2 className={`reader-h1 align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h2>;
+              return <h2 className={`reader-h1 align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
             case "h2":
-              return <h2 className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h2>;
+              return <h2 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
             case "h3":
-              return <h3 className={`align-${block.align ?? "left"}`} key={index}>{renderInline(block.text)}</h3>;
+              return <h3 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h3>;
             case "highlight":
-              return <p className="reader-highlight" key={index}>{renderInline(block.text)}</p>;
+              return <p className="reader-highlight" style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
             case "code":
               return <pre className="reader-code" key={index}><code>{block.text}</code></pre>;
             case "list":

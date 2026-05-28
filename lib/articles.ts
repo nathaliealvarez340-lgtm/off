@@ -3,7 +3,7 @@ import { getDb } from "./db";
 export { slugify } from "./slug";
 
 export type EditorialBlock =
-  | { type: "paragraph" | "h1" | "h2" | "h3" | "highlight" | "code"; text: string; align?: "left" | "center" | "right" }
+  | { type: "paragraph" | "h1" | "h2" | "h3" | "highlight" | "code"; text: string; align?: "left" | "center" | "right"; color?: string; highlightColor?: string }
   | { type: "list" | "numbered" | "checklist"; items: string[] }
   | { type: "quote" | "pullquote"; text: string }
   | { type: "divider" }

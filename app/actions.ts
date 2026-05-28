@@ -201,19 +201,37 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     const currentCover = stringValue(formData, "coverImage");
     const coverImage = await saveCoverImage(formData, currentCover);
 
-    if (!title || !slug || !excerpt || !content || !category || !readTime) {
-      return { ok: false, message: "Faltan campos obligatorios para guardar el artículo." };
-    }
+    if (!title) return { ok: false, message: "Falta titulo." };
+    if (!slug) return { ok: false, message: "Falta slug." };
+    if (!excerpt) return { ok: false, message: "Falta subtitulo o extracto." };
+    if (!content) return { ok: false, message: "Falta contenido." };
+    if (!category) return { ok: false, message: "Falta categoria." };
+    if (!readTime) return { ok: false, message: "Falta tiempo estimado de lectura." };
 
     content = await resolveInlineImages(content, formData);
+
+    try {
+      const parsedContent = JSON.parse(content) as Array<Record<string, unknown>>;
+      const hasReadableContent = Array.isArray(parsedContent) && parsedContent.some((block) => {
+        if (typeof block.text === "string" && block.text.trim()) return true;
+        if (typeof block.src === "string" && block.src.trim()) return true;
+        if (Array.isArray(block.items) && block.items.length > 0) return true;
+        if (typeof block.url === "string" && block.url.trim()) return true;
+        if (typeof block.value === "string" && block.value.trim()) return true;
+        if (typeof block.left === "string" && block.left.trim()) return true;
+        if (Array.isArray(block.images) && block.images.length > 0) return true;
+        return false;
+      });
+      if (!hasReadableContent) return { ok: false, message: "Falta contenido." };
+    } catch {
+      if (!content.trim()) return { ok: false, message: "Falta contenido." };
+    }
 
     if (content.length > 70000) {
       return { ok: false, message: "El contenido supera el límite de 70,000 caracteres." };
     }
 
-    if (!coverImage) {
-      return { ok: false, message: "Agrega una imagen de portada antes de publicar o guardar." };
-    }
+    if (!coverImage) return { ok: false, message: "Falta portada." };
 
     const db = getDb();
     const articleWithSlug = await db.article.findUnique({ where: { slug } });
@@ -226,7 +244,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       return { ok: false, message: "No encontramos este artículo para actualizarlo." };
     }
 
-    const publishedAt = status === "published" ? new Date() : existingArticle?.publishedAt ?? null;
+    const publishedAt = status === "published" ? existingArticle?.publishedAt ?? new Date() : existingArticle?.publishedAt ?? null;
     const data = {
       title,
       slug,

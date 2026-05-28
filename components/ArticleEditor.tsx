@@ -38,6 +38,8 @@ type EditorBlock = {
   alt?: string;
   caption?: string;
   align?: "full" | "center" | "left" | "right" | "image-left" | "image-right";
+  color?: string;
+  highlightColor?: string;
   preview?: string;
   url?: string;
   label?: string;
@@ -102,7 +104,7 @@ function defaultBlock(type: BlockType): EditorBlock {
   if (type === "stat") return { id: blockId(), type, value: "70%", label: "de claridad empieza cuando puedes nombrar lo que sientes." };
   if (type === "columns") return { id: blockId(), type, left: "Primera columna editorial.", right: "Segunda columna editorial." };
   if (type === "list" || type === "numbered" || type === "checklist") return { id: blockId(), type, items: "Primer punto\nSegundo punto" };
-  return { id: blockId(), type, text: "" };
+  return { id: blockId(), type, text: "", align: "left" };
 }
 
 function initialBlocks(content?: string): EditorBlock[] {
@@ -132,6 +134,8 @@ function initialBlocks(content?: string): EditorBlock[] {
           alt: String(block.alt ?? ""),
           caption: String(block.caption ?? ""),
           align: typeof block.align === "string" ? block.align as EditorBlock["align"] : "center",
+          color: typeof block.color === "string" ? block.color : undefined,
+          highlightColor: typeof block.highlightColor === "string" ? block.highlightColor : undefined,
         };
       });
     }
@@ -155,6 +159,7 @@ function toEditorialJson(blocks: EditorBlock[]) {
   return JSON.stringify(
     blocks
       .filter((block) => block.type === "divider" || block.type === "image" || block.type === "gallery" || block.type === "collage" || block.text?.trim() || block.items?.trim() || block.url?.trim() || block.value?.trim() || block.left?.trim() || block.right?.trim())
+      .filter((block) => block.type !== "image" || block.src || block.preview)
       .map((block) => {
         if (block.type === "divider") return { type: "divider" };
         if (block.type === "image") return { type: "image", src: block.src || "", alt: block.alt || block.caption || "Imagen editorial", caption: block.caption || "", align: block.align || "center" };
@@ -167,7 +172,7 @@ function toEditorialJson(blocks: EditorBlock[]) {
         if (block.type === "stat") return { type: "stat", value: block.value || "", label: block.label || "" };
         if (block.type === "columns") return { type: "columns", left: block.left || "", right: block.right || "" };
         if (block.type === "pullquote") return { type: "pullquote", text: block.text || "" };
-        return { type: block.type, text: block.text || "", align: block.align === "left" || block.align === "center" || block.align === "right" ? block.align : undefined };
+        return { type: block.type, text: block.text || "", align: block.align === "left" || block.align === "center" || block.align === "right" ? block.align : undefined, color: block.color, highlightColor: block.highlightColor };
       }),
   );
 }
@@ -209,12 +214,14 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => initialBlocks(article?.content));
   const [previewOpen, setPreviewOpen] = useState(false);
   const [localSave, setLocalSave] = useState("Autosave local listo");
+  const [activeBlockId, setActiveBlockId] = useState("");
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const contentJson = useMemo(() => toEditorialJson(blocks), [blocks]);
   const characterCount = contentJson.length;
   const overLimit = characterCount > LIMIT;
   const viewSlug = state.slug ?? slug;
   const storageKey = `off-editor-${savedId || slug || "new"}`;
+  const activeBlock = blocks.find((block) => block.id === activeBlockId) ?? blocks[0];
 
   useEffect(() => {
     if (state.articleId) setSavedId(state.articleId);
@@ -267,6 +274,11 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
   function applyInline(mark: "bold" | "italic" | "underline" | "highlight" | "strike", id: string) {
     const tokens = { bold: "**texto**", italic: "_texto_", underline: "<u>texto</u>", highlight: "==texto==", strike: "~~texto~~" };
     updateBlock(id, { text: `${blocks.find((block) => block.id === id)?.text ?? ""}${tokens[mark]}` });
+  }
+
+  function updateActiveBlock(patch: Partial<EditorBlock>) {
+    if (!activeBlock) return;
+    updateBlock(activeBlock.id, patch);
   }
 
   function handleCoverFile(file?: File) {
@@ -333,17 +345,53 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
         <textarea className="excerpt-input editor-excerpt-hero" name="excerpt" placeholder="Subtitulo o extracto editorial" value={excerpt} onChange={(event) => setExcerpt(event.target.value)} required />
       </section>
 
-      <nav className="editor-command-bar" aria-label="Toolbar editorial">
-        <div><strong>Texto</strong>{textBlocks.map((item) => <button type="button" onClick={() => addBlock(item.type)} key={item.type}>{item.label}</button>)}</div>
-        <div><strong>Media</strong>{mediaBlocks.map((item) => <button type="button" onClick={() => addBlock(item.type)} key={item.type}>{item.label}</button>)}</div>
-        <div><strong>Editorial</strong>{editorialBlocks.map((item) => <button type="button" onClick={() => addBlock(item.type)} key={item.type}>{item.label}</button>)}</div>
+      <nav className="editor-command-bar doc-toolbar" aria-label="Toolbar editorial">
+        <div className="doc-toolbar-group">
+          <strong>Formato</strong>
+          <select value={activeBlock?.type ?? "paragraph"} onChange={(event) => activeBlock ? updateBlock(activeBlock.id, { ...defaultBlock(event.target.value as BlockType), id: activeBlock.id, text: activeBlock.text }) : addBlock(event.target.value as BlockType)}>
+            <option value="paragraph">Parrafo</option>
+            <option value="h1">Titulo</option>
+            <option value="h2">Subtitulo</option>
+            <option value="h3">H3</option>
+            <option value="quote">Cita</option>
+            <option value="pullquote">Cita destacada</option>
+            <option value="highlight">Highlight</option>
+            <option value="code">Codigo</option>
+          </select>
+          {(["bold", "italic", "underline", "strike", "highlight"] as const).map((mark) => (
+            <button type="button" onClick={() => activeBlock && applyInline(mark, activeBlock.id)} key={mark}>{mark}</button>
+          ))}
+        </div>
+        <div className="doc-toolbar-group">
+          <strong>Color</strong>
+          {["#ffffff", "#cfc8da", "#7b3dff", "#111111"].map((color) => (
+            <button className="color-dot" style={{ background: color }} type="button" onClick={() => updateActiveBlock({ color })} key={color} aria-label={`Color ${color}`} />
+          ))}
+          <button type="button" onClick={() => updateActiveBlock({ highlightColor: "rgba(123,61,255,.22)" })}>Highlight</button>
+        </div>
+        <div className="doc-toolbar-group">
+          <strong>Alinear</strong>
+          {(["left", "center", "right"] as const).map((align) => (
+            <button type="button" onClick={() => updateActiveBlock({ align })} key={align}>{align}</button>
+          ))}
+        </div>
+        <div className="doc-toolbar-group">
+          <strong>Insertar</strong>
+          <button type="button" onClick={() => addBlock("image", activeBlock?.id)}>Imagen</button>
+          <button type="button" onClick={() => addBlock("list", activeBlock?.id)}>Bullets</button>
+          <button type="button" onClick={() => addBlock("numbered", activeBlock?.id)}>Numerada</button>
+          <button type="button" onClick={() => addBlock("divider", activeBlock?.id)}>Divider</button>
+          <button type="button" onClick={() => addBlock("cta", activeBlock?.id)}>CTA</button>
+          <button type="button" onClick={() => addBlock("subscribe", activeBlock?.id)}>Suscripcion</button>
+          <button type="button" onClick={() => addBlock("insight", activeBlock?.id)}>Nota editorial</button>
+        </div>
       </nav>
 
       <div className="editor-layout premium-editor-layout">
         <main className="editor-canvas premium-editor-canvas">
           <div className="block-list">
             {blocks.map((block) => (
-              <section className={`editor-block premium-block block-${block.type}`} key={block.id}>
+              <section className={`editor-block premium-block doc-block block-${block.type} ${activeBlock?.id === block.id ? "active" : ""}`} key={block.id} onFocus={() => setActiveBlockId(block.id)}>
                 <div className="block-controls premium-block-controls">
                   <select value={block.type} onChange={(event) => updateBlock(block.id, { ...defaultBlock(event.target.value as BlockType), id: block.id })}>
                     {[...textBlocks, ...mediaBlocks, ...editorialBlocks].map((item) => <option value={item.type} key={item.type}>{item.label}</option>)}
@@ -420,7 +468,13 @@ export function ArticleEditor({ article }: { article?: Article | null }) {
                 ) : null}
 
                 {block.type !== "divider" && block.type !== "image" && block.type !== "gallery" && block.type !== "collage" && block.type !== "video" && block.type !== "embed" && block.type !== "stat" && block.type !== "columns" && block.type !== "cta" ? (
-                  <textarea className="block-textarea visual-block-textarea" placeholder="Escribe aqui..." value={block.type === "list" || block.type === "numbered" || block.type === "checklist" ? block.items ?? "" : block.text ?? ""} onChange={(event) => {
+                  <textarea
+                    className="block-textarea visual-block-textarea"
+                    placeholder="Escribe aqui..."
+                    style={{ color: block.color, background: block.highlightColor, textAlign: block.align === "center" || block.align === "right" ? block.align : "left" }}
+                    value={block.type === "list" || block.type === "numbered" || block.type === "checklist" ? block.items ?? "" : block.text ?? ""}
+                    onFocus={() => setActiveBlockId(block.id)}
+                    onChange={(event) => {
                     if (block.type === "list" || block.type === "numbered" || block.type === "checklist") updateBlock(block.id, { items: event.target.value });
                     else updateBlock(block.id, { text: event.target.value });
                   }} />
