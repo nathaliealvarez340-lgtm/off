@@ -1783,6 +1783,54 @@ textarea {
   text-transform: uppercase;
 }
 
+.link-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(14px);
+}
+
+.link-modal {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(123, 61, 255, 0.18), transparent 12rem),
+    rgba(9, 8, 13, 0.96);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+}
+
+.link-modal strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.link-modal label {
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.link-modal input[type="text"],
+.link-modal input:not([type]) {
+  width: 100%;
+}
+
+.link-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -2284,6 +2332,38 @@ textarea {
   color: rgba(255, 255, 255, 0.72);
   font-size: 18px;
   line-height: 1.8;
+}
+
+.wysiwyg-editable {
+  display: block;
+  width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.wysiwyg-editable:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.wysiwyg-editable strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 700;
+}
+
+.wysiwyg-editable mark,
+.reader mark {
+  border-radius: 5px;
+  padding: 0.04em 0.18em;
+  background: rgba(123, 61, 255, 0.32);
+  color: inherit;
+}
+
+.wysiwyg-editable a,
+.reader a {
+  color: #bda6ff;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 .visual-block-textarea:focus {

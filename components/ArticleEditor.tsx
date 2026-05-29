@@ -51,6 +51,7 @@ type EditorBlock = {
 
 const LIMIT = 70000;
 const initialState: SaveArticleState = { ok: false, message: "" };
+const inlineTags = ["strong", "em", "u", "s", "mark", "a", "br"] as const;
 
 const textBlocks: Array<{ label: string; type: BlockType }> = [
   { label: "Parrafo", type: "paragraph" },
@@ -129,7 +130,7 @@ function initialBlocks(content?: string): EditorBlock[] {
         return {
           id: blockId(),
           type,
-          text: String(block.text ?? ""),
+          text: storedTextToEditorHtml(String(block.text ?? "")),
           src: typeof block.src === "string" ? block.src : undefined,
           alt: String(block.alt ?? ""),
           caption: String(block.caption ?? ""),
@@ -143,7 +144,7 @@ function initialBlocks(content?: string): EditorBlock[] {
     return content
       .split(/\n{2,}/)
       .filter(Boolean)
-      .map((text) => ({ id: blockId(), type: "paragraph", text }));
+      .map((text) => ({ id: blockId(), type: "paragraph", text: storedTextToEditorHtml(text) }));
   }
 
   return [defaultBlock("paragraph")];
@@ -158,6 +159,80 @@ function galleryImages(block: EditorBlock) {
 function autoGrow(element: HTMLTextAreaElement) {
   element.style.height = "auto";
   element.style.height = `${element.scrollHeight}px`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function markdownToEditorHtml(value: string) {
+  return escapeHtml(value)
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/_([^_]+)_/g, "<em>$1</em>")
+    .replace(/&lt;u&gt;([^<]+)&lt;\/u&gt;/g, "<u>$1</u>")
+    .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+    .replace(/~~([^~]+)~~/g, "<s>$1</s>")
+    .replace(/\n/g, "<br>");
+}
+
+function storedTextToEditorHtml(value: string) {
+  if (/<(strong|em|u|s|mark|a|br)(\s|>|\/)/i.test(value)) return value;
+  return markdownToEditorHtml(value);
+}
+
+function editorHtmlToText(value: string) {
+  if (typeof window === "undefined") return value.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, "");
+  const template = document.createElement("template");
+  template.innerHTML = value.replace(/<br\s*\/?>/gi, "\n");
+  return template.content.textContent ?? "";
+}
+
+function sanitizeEditorHtml(value: string) {
+  if (typeof window === "undefined") return value;
+  const template = document.createElement("template");
+  template.innerHTML = value;
+
+  template.content.querySelectorAll("*").forEach((element) => {
+    const tagName = element.tagName.toLowerCase();
+    if (!inlineTags.includes(tagName as (typeof inlineTags)[number])) {
+      element.replaceWith(document.createTextNode(element.textContent ?? ""));
+      return;
+    }
+
+    Array.from(element.attributes).forEach((attribute) => {
+      const name = attribute.name.toLowerCase();
+      const safeLinkAttribute = tagName === "a" && ["href", "target", "rel"].includes(name);
+      if (!safeLinkAttribute) element.removeAttribute(attribute.name);
+    });
+
+    if (tagName === "a") {
+      const href = element.getAttribute("href") ?? "";
+      if (!/^https?:\/\//i.test(href) && !href.startsWith("/") && !href.startsWith("#") && !href.startsWith("mailto:")) {
+        element.removeAttribute("href");
+      }
+      if (element.getAttribute("target") === "_blank") {
+        element.setAttribute("rel", "noreferrer");
+      }
+    }
+  });
+
+  return template.innerHTML;
+}
+
+function unwrapElement(element: HTMLElement) {
+  const parent = element.parentNode;
+  if (!parent) return;
+  while (element.firstChild) parent.insertBefore(element.firstChild, element);
+  parent.removeChild(element);
+}
+
+function elementFromNode(node: Node) {
+  return node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
 }
 
 async function uploadEditorFile(file: File) {
@@ -188,15 +263,19 @@ function toEditorialJson(blocks: EditorBlock[]) {
         if (block.type === "gallery" || block.type === "collage") return { type: block.type, images: galleryImages(block) };
         if (block.type === "list" || block.type === "numbered" || block.type === "checklist") return { type: block.type, items: (block.items ?? "").split("\n").map((item) => item.trim()).filter(Boolean) };
         if (block.type === "video" || block.type === "embed") return { type: block.type, url: block.url || "", caption: block.caption || "" };
-        if (block.type === "cta") return { type: "cta", text: block.text || "", url: block.url || "/", label: block.label || "Leer mas" };
-        if (block.type === "subscribe" || block.type === "share") return { type: block.type, text: block.text || "" };
-        if (block.type === "insight") return { type: "special", label: "Estrategia", text: block.text || "" };
+        if (block.type === "cta") return { type: "cta", text: sanitizeEditorHtml(block.text || ""), url: block.url || "/", label: block.label || "Leer mas" };
+        if (block.type === "subscribe" || block.type === "share") return { type: block.type, text: sanitizeEditorHtml(block.text || "") };
+        if (block.type === "insight") return { type: "special", label: "Estrategia", text: sanitizeEditorHtml(block.text || "") };
         if (block.type === "stat") return { type: "stat", value: block.value || "", label: block.label || "" };
-        if (block.type === "columns") return { type: "columns", left: block.left || "", right: block.right || "" };
-        if (block.type === "pullquote") return { type: "pullquote", text: block.text || "" };
-        return { type: block.type, text: block.text || "", align: block.align === "left" || block.align === "center" || block.align === "right" ? block.align : undefined, color: block.color, highlightColor: block.highlightColor };
+        if (block.type === "columns") return { type: "columns", left: sanitizeEditorHtml(block.left || ""), right: sanitizeEditorHtml(block.right || "") };
+        if (block.type === "pullquote") return { type: "pullquote", text: sanitizeEditorHtml(block.text || "") };
+        return { type: block.type, text: sanitizeEditorHtml(block.text || ""), align: block.align === "left" || block.align === "center" || block.align === "right" ? block.align : undefined, color: block.color, highlightColor: block.highlightColor };
       }),
   );
+}
+
+function InlineHtml({ html }: { html?: string }) {
+  return <span dangerouslySetInnerHTML={{ __html: sanitizeEditorHtml(html ?? "") }} />;
 }
 
 function renderPreview(block: EditorBlock) {
@@ -212,16 +291,16 @@ function renderPreview(block: EditorBlock) {
   if (block.type === "gallery" || block.type === "collage") {
     return <div className={`preview-gallery ${block.type}`}>{galleryImages(block).map((image) => <img src={image.src} alt={image.alt} key={image.src} />)}</div>;
   }
-  if (block.type === "h1") return <h1>{block.text}</h1>;
-  if (block.type === "h2") return <h2>{block.text}</h2>;
-  if (block.type === "h3") return <h3>{block.text}</h3>;
-  if (block.type === "quote" || block.type === "pullquote") return <blockquote>{block.text}</blockquote>;
-  if (block.type === "highlight") return <p className="preview-highlight">{block.text}</p>;
+  if (block.type === "h1") return <h1><InlineHtml html={block.text} /></h1>;
+  if (block.type === "h2") return <h2><InlineHtml html={block.text} /></h2>;
+  if (block.type === "h3") return <h3><InlineHtml html={block.text} /></h3>;
+  if (block.type === "quote" || block.type === "pullquote") return <blockquote><InlineHtml html={block.text} /></blockquote>;
+  if (block.type === "highlight") return <p className="preview-highlight"><InlineHtml html={block.text} /></p>;
   if (block.type === "stat") return <aside className="preview-stat"><strong>{block.value}</strong><span>{block.label}</span></aside>;
   if (block.type === "columns") return <div className="preview-columns"><p>{block.left}</p><p>{block.right}</p></div>;
   if (block.type === "list" || block.type === "numbered" || block.type === "checklist") return <p>{block.items}</p>;
-  if (block.type === "cta") return <aside className="preview-cta"><p>{block.text}</p><span>{block.label}</span></aside>;
-  return <p>{block.text || block.url}</p>;
+  if (block.type === "cta") return <aside className="preview-cta"><p><InlineHtml html={block.text} /></p><span>{block.label}</span></aside>;
+  return <p><InlineHtml html={block.text || block.url} /></p>;
 }
 
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
@@ -239,7 +318,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [localSave, setLocalSave] = useState("Autosave local listo");
   const [activeBlockId, setActiveBlockId] = useState("");
+  const [linkModal, setLinkModal] = useState({ open: false, url: "", newTab: true });
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const selectionRangeRef = useRef<Range | null>(null);
   const contentJson = useMemo(() => toEditorialJson(blocks), [blocks]);
   const characterCount = contentJson.length;
   const overLimit = characterCount > LIMIT;
@@ -301,14 +382,136 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     });
   }
 
-  function applyInline(mark: "bold" | "italic" | "underline" | "highlight" | "strike", id: string) {
-    const tokens = { bold: "**texto**", italic: "_texto_", underline: "<u>texto</u>", highlight: "==texto==", strike: "~~texto~~" };
-    updateBlock(id, { text: `${blocks.find((block) => block.id === id)?.text ?? ""}${tokens[mark]}` });
-  }
-
   function updateActiveBlock(patch: Partial<EditorBlock>) {
     if (!activeBlock) return;
     updateBlock(activeBlock.id, patch);
+  }
+
+  function saveCurrentSelection() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const element = elementFromNode(container);
+    const editable = element?.closest<HTMLElement>("[data-editable-block]");
+    if (!editable) return;
+
+    selectionRangeRef.current = range.cloneRange();
+    setActiveBlockId(editable.dataset.blockId ?? "");
+  }
+
+  function restoreSelection() {
+    const range = selectionRangeRef.current;
+    if (!range) return false;
+    const selection = window.getSelection();
+    if (!selection) return false;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  }
+
+  function updateBlockFromEditable(editable: HTMLElement) {
+    const blockId = editable.dataset.blockId;
+    if (!blockId) return;
+    updateBlock(blockId, { text: sanitizeEditorHtml(editable.innerHTML) });
+    setActiveBlockId(blockId);
+  }
+
+  function applyInline(mark: "bold" | "italic" | "underline" | "highlight" | "strike") {
+    if (!restoreSelection()) {
+      setClientMessage("Selecciona texto dentro del artículo para aplicar formato.");
+      return;
+    }
+
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!selection || !range || selection.isCollapsed) {
+      setClientMessage("Selecciona texto dentro del artículo para aplicar formato.");
+      return;
+    }
+
+    const container = range.commonAncestorContainer;
+    const element = elementFromNode(container);
+    const editable = element?.closest<HTMLElement>("[data-editable-block]");
+    if (!editable) return;
+
+    const tagByMark = {
+      bold: "strong",
+      italic: "em",
+      underline: "u",
+      highlight: "mark",
+      strike: "s",
+    } as const;
+    const wrapper = document.createElement(tagByMark[mark]);
+    wrapper.appendChild(range.extractContents());
+    range.insertNode(wrapper);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(wrapper);
+    selection.addRange(nextRange);
+    selectionRangeRef.current = nextRange.cloneRange();
+    updateBlockFromEditable(editable);
+    setClientMessage("");
+  }
+
+  function applyLink() {
+    if (!restoreSelection()) {
+      setClientMessage("Selecciona texto para agregar un enlace.");
+      return;
+    }
+    setLinkModal({ open: true, url: "", newTab: true });
+  }
+
+  function confirmLink() {
+    if (!linkModal.url.trim() || !restoreSelection()) return;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!selection || !range || selection.isCollapsed) return;
+
+    const container = range.commonAncestorContainer;
+    const element = elementFromNode(container);
+    const editable = element?.closest<HTMLElement>("[data-editable-block]");
+    if (!editable) return;
+
+    const link = document.createElement("a");
+    link.href = linkModal.url.trim();
+    if (linkModal.newTab) {
+      link.target = "_blank";
+      link.rel = "noreferrer";
+    }
+    link.appendChild(range.extractContents());
+    range.insertNode(link);
+    selection.removeAllRanges();
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(link);
+    selection.addRange(nextRange);
+    selectionRangeRef.current = nextRange.cloneRange();
+    updateBlockFromEditable(editable);
+    setLinkModal({ open: false, url: "", newTab: true });
+    setClientMessage("");
+  }
+
+  function applyBlockType(type: BlockType) {
+    if (!activeBlock) return;
+    if (type === "list" || type === "numbered" || type === "checklist") {
+      updateBlock(activeBlock.id, { type, items: activeBlock.items || editorHtmlToText(activeBlock.text ?? "") });
+      return;
+    }
+    updateBlock(activeBlock.id, { type, text: activeBlock.text || markdownToEditorHtml(activeBlock.items ?? "") });
+  }
+
+  function clearInlineFormat() {
+    if (!restoreSelection()) return;
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!range) return;
+    const container = range.commonAncestorContainer;
+    const element = elementFromNode(container);
+    const editable = element?.closest<HTMLElement>("[data-editable-block]");
+    if (!editable) return;
+    editable.querySelectorAll("strong, em, u, s, mark, a").forEach((node) => unwrapElement(node as HTMLElement));
+    updateBlockFromEditable(editable);
   }
 
   async function handleInlineImageFile(blockId: string, file?: File) {
@@ -399,6 +602,35 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </div>
       ) : null}
 
+      {linkModal.open ? (
+        <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label="Agregar enlace">
+          <div className="link-modal">
+            <strong>Agregar enlace</strong>
+            <label>
+              URL
+              <input
+                autoFocus
+                placeholder="https://..."
+                value={linkModal.url}
+                onChange={(event) => setLinkModal((current) => ({ ...current, url: event.target.value }))}
+              />
+            </label>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={linkModal.newTab}
+                onChange={(event) => setLinkModal((current) => ({ ...current, newTab: event.target.checked }))}
+              />
+              <span>Abrir en nueva pestaña</span>
+            </label>
+            <div className="link-modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setLinkModal({ open: false, url: "", newTab: true })}>Cancelar</button>
+              <button type="button" className="button" onClick={confirmLink}>Aplicar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="document-editor-frame">
         <aside className="document-left-rail">
           <div className="document-rail-head">
@@ -423,7 +655,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         <section className="document-workspace">
           <nav className="editor-command-bar doc-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
-              <select value={activeBlock?.type ?? "paragraph"} onChange={(event) => activeBlock ? updateBlock(activeBlock.id, { ...defaultBlock(event.target.value as BlockType), id: activeBlock.id, text: activeBlock.text }) : addBlock(event.target.value as BlockType)}>
+              <select
+                value={activeBlock?.type ?? "paragraph"}
+                onMouseDown={() => saveCurrentSelection()}
+                onChange={(event) => applyBlockType(event.target.value as BlockType)}
+              >
                 <option value="paragraph">Parrafo</option>
                 <option value="h1">Titulo</option>
                 <option value="h2">Subtitulo</option>
@@ -434,27 +670,27 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 <option value="code">Codigo</option>
               </select>
               {(["bold", "italic", "underline", "strike", "highlight"] as const).map((mark) => (
-                <button type="button" onClick={() => activeBlock && applyInline(mark, activeBlock.id)} key={mark}>{mark === "bold" ? "B" : mark === "italic" ? "I" : mark === "underline" ? "U" : mark === "strike" ? "S" : "H"}</button>
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyInline(mark)} key={mark}>{mark === "bold" ? "B" : mark === "italic" ? "I" : mark === "underline" ? "U" : mark === "strike" ? "S" : "H"}</button>
               ))}
-              <button type="button">🔗</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={applyLink}>Link</button>
             </div>
             <div className="doc-toolbar-group">
               {["#ffffff", "#cfc8da", "#7b3dff", "#111111"].map((color) => (
-                <button className="color-dot" style={{ background: color }} type="button" onClick={() => updateActiveBlock({ color })} key={color} aria-label={`Color ${color}`} />
+                <button className="color-dot" style={{ background: color }} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => updateActiveBlock({ color })} key={color} aria-label={`Color ${color}`} />
               ))}
               {(["left", "center", "right"] as const).map((align) => (
-                <button type="button" onClick={() => updateActiveBlock({ align })} key={align}>{align === "left" ? "≡" : align === "center" ? "☰" : "≣"}</button>
+                <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => updateActiveBlock({ align })} key={align}>{align === "left" ? "Izq" : align === "center" ? "Centro" : "Der"}</button>
               ))}
             </div>
             <div className="doc-toolbar-group">
-              <button type="button" onClick={() => addBlock("list", activeBlock?.id)}>•</button>
-              <button type="button" onClick={() => addBlock("numbered", activeBlock?.id)}>1.</button>
-              <button type="button" onClick={() => addBlock("quote", activeBlock?.id)}>❝</button>
-              <button type="button" onClick={() => addBlock("divider", activeBlock?.id)}>—</button>
-              <button type="button" onClick={() => addBlock("code", activeBlock?.id)}>{"</>"}</button>
-              <button type="button" onClick={() => addBlock("image", activeBlock?.id)}>▧</button>
-              <button type="button" onClick={() => addBlock("embed", activeBlock?.id)}>Embed</button>
-              <button type="button" onClick={() => addBlock("cta", activeBlock?.id)}>CTA</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyBlockType("list")}>Bullets</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyBlockType("numbered")}>1.</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyBlockType("quote")}>Quote</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => addBlock("divider", activeBlock?.id)}>Divider</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => applyBlockType("code")}>{"</>"}</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => addBlock("image", activeBlock?.id)}>Imagen</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => addBlock("embed", activeBlock?.id)}>Embed</button>
+              <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => addBlock("cta", activeBlock?.id)}>CTA</button>
             </div>
           </nav>
 
@@ -487,12 +723,6 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   <button type="button" onClick={() => moveBlock(block.id, 1)}>Bajar</button>
                   <button type="button" onClick={() => removeBlock(block.id)}>Eliminar</button>
                 </div>
-
-                {block.type !== "image" && block.type !== "divider" && block.type !== "gallery" && block.type !== "collage" && block.type !== "video" && block.type !== "embed" && block.type !== "stat" && block.type !== "columns" ? (
-                  <div className="inline-style-bar doc-inline-style-bar">
-                    {(["bold", "italic", "underline", "highlight", "strike"] as const).map((mark) => <button type="button" onClick={() => applyInline(mark, block.id)} key={mark}>{mark}</button>)}
-                  </div>
-                ) : null}
 
                 {block.type === "divider" ? <hr /> : null}
 
@@ -553,17 +783,27 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 ) : null}
 
                 {block.type !== "divider" && block.type !== "image" && block.type !== "gallery" && block.type !== "collage" && block.type !== "video" && block.type !== "embed" && block.type !== "stat" && block.type !== "columns" && block.type !== "cta" ? (
-                  <textarea
-                    className="block-textarea visual-block-textarea"
-                    placeholder="Escribe aqui..."
+                  <div
+                    className="block-textarea visual-block-textarea wysiwyg-editable"
+                    contentEditable
+                    data-editable-block
+                    data-block-id={block.id}
+                    data-placeholder="Escribe aqui..."
+                    suppressContentEditableWarning
                     style={{ color: block.color, background: block.highlightColor, textAlign: block.align === "center" || block.align === "right" ? block.align : "left" }}
-                    value={block.type === "list" || block.type === "numbered" || block.type === "checklist" ? block.items ?? "" : block.text ?? ""}
                     onFocus={() => setActiveBlockId(block.id)}
-                    onInput={(event) => autoGrow(event.currentTarget)}
-                    onChange={(event) => {
-                    if (block.type === "list" || block.type === "numbered" || block.type === "checklist") updateBlock(block.id, { items: event.target.value });
-                    else updateBlock(block.id, { text: event.target.value });
-                  }} />
+                    onMouseUp={saveCurrentSelection}
+                    onKeyUp={saveCurrentSelection}
+                    onInput={(event) => {
+                      const html = sanitizeEditorHtml(event.currentTarget.innerHTML);
+                      if (block.type === "list" || block.type === "numbered" || block.type === "checklist") {
+                        updateBlock(block.id, { items: event.currentTarget.innerText });
+                      } else {
+                        updateBlock(block.id, { text: html });
+                      }
+                    }}
+                    dangerouslySetInnerHTML={{ __html: block.type === "list" || block.type === "numbered" || block.type === "checklist" ? markdownToEditorHtml(block.items ?? "") : block.text ?? "" }}
+                  />
                 ) : null}
               </section>
               ))}

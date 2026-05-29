@@ -15,7 +15,21 @@ import {
 } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 
+function sanitizeInlineHtml(text: string) {
+  return text
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/\shref=["']javascript:[^"']*["']/gi, "")
+    .replace(/<(?!\/?(strong|em|u|s|mark|a|br)(\s|>|\/))/gi, "&lt;")
+    .replace(/<a\s/gi, "<a rel=\"noreferrer\" ");
+}
+
 function renderInline(text: string) {
+  if (/<(strong|em|u|s|mark|a|br)(\s|>|\/)/i.test(text)) {
+    return <span dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(text) }} />;
+  }
+
   const parts = text.split(/(\*\*[^*]+\*\*|_[^_]+_|<u>[^<]+<\/u>|==[^=]+==|~~[^~]+~~)/g).filter(Boolean);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
