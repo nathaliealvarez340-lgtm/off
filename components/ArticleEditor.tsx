@@ -1,7 +1,7 @@
 "use client";
 
 import type { Article } from "@prisma/client";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { saveArticleAction, type SaveArticleState } from "@/app/actions";
 import { slugify } from "@/lib/slug";
 
@@ -160,6 +160,23 @@ function autoGrow(element: HTMLTextAreaElement) {
   element.style.height = `${element.scrollHeight}px`;
 }
 
+async function uploadEditorFile(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/uploads", {
+    method: "POST",
+    body: formData,
+  });
+  const data = await response.json() as { url?: string; error?: string };
+
+  if (!response.ok || !data.url) {
+    throw new Error(data.error || "No pudimos subir la imagen.");
+  }
+
+  return data.url;
+}
+
 function toEditorialJson(blocks: EditorBlock[]) {
   return JSON.stringify(
     blocks
@@ -209,6 +226,8 @@ function renderPreview(block: EditorBlock) {
 
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
   const [state, formAction, pending] = useActionState(saveArticleAction, initialState);
+  const [clientMessage, setClientMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [savedId, setSavedId] = useState(article?.id ?? "");
   const [title, setTitle] = useState(article?.title ?? "");
   const [excerpt, setExcerpt] = useState(article?.excerpt ?? "");
@@ -292,22 +311,66 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     updateBlock(activeBlock.id, patch);
   }
 
-  function handleCoverFile(file?: File) {
+  async function handleInlineImageFile(blockId: string, file?: File) {
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    updateBlock(blockId, { preview });
+    setUploading(true);
+    setClientMessage("Subiendo imagen...");
+    try {
+      const url = await uploadEditorFile(file);
+      updateBlock(blockId, { src: url, preview: url });
+      setClientMessage("");
+    } catch (error) {
+      setClientMessage(error instanceof Error ? error.message : "No pudimos subir la imagen.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleCoverFile(file?: File) {
     if (!file) return;
     setCoverPreview(URL.createObjectURL(file));
+    setUploading(true);
+    setClientMessage("Subiendo portada...");
+    try {
+      const url = await uploadEditorFile(file);
+      setCover(url);
+      setCoverPreview(url);
+      setClientMessage("");
+    } catch (error) {
+      setClientMessage(error instanceof Error ? error.message : "No pudimos subir la portada.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function attachCoverFile(file?: File) {
     if (!file) return;
-    handleCoverFile(file);
-    if (!coverInputRef.current) return;
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    coverInputRef.current.files = transfer.files;
+    void handleCoverFile(file);
+  }
+
+  function validateSubmit(event: FormEvent<HTMLFormElement>) {
+    if (/data:image\/[a-zA-Z]+;base64,/.test(contentJson)) {
+      event.preventDefault();
+      setClientMessage("El artículo es demasiado pesado. Revisa imágenes insertadas.");
+      return;
+    }
+
+    if (contentJson.length > 900000) {
+      event.preventDefault();
+      setClientMessage("El artículo es demasiado pesado. Revisa imágenes insertadas.");
+      return;
+    }
+
+    if (uploading) {
+      event.preventDefault();
+      setClientMessage("Espera a que terminen de subir las imágenes.");
+    }
   }
 
   return (
-    <form action={formAction} className="magazine-editor premium-editor document-editor-shell">
+    <form action={formAction} className="magazine-editor premium-editor document-editor-shell" onSubmit={validateSubmit}>
       <input name="id" type="hidden" value={savedId} />
       <input name="content" type="hidden" value={contentJson} />
       <input name="coverImage" type="hidden" value={cover} />
@@ -324,14 +387,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         <div className="editor-actions">
           <button className="ghost-button" type="button" onClick={() => setPreviewOpen((open) => !open)}>Vista previa</button>
           <button className="ghost-button" type="button">•••</button>
-          <button className="ghost-button" disabled={pending || overLimit} name="publishIntent" type="submit" value="draft">{pending ? "Guardando..." : "Guardar draft"}</button>
-          <button className="button" disabled={pending || overLimit} name="publishIntent" type="submit" value="publish">{pending ? "Publicando..." : "Publicar"}</button>
+          <button className="ghost-button" disabled={pending || overLimit || uploading} name="publishIntent" type="submit" value="draft">{pending ? "Guardando..." : "Guardar draft"}</button>
+          <button className="button" disabled={pending || overLimit || uploading} name="publishIntent" type="submit" value="publish">{pending ? "Publicando..." : uploading ? "Subiendo..." : "Publicar"}</button>
         </div>
       </header>
 
-      {state.message ? (
-        <div className={state.ok ? "editor-notice success" : "editor-notice error"}>
-          <span>{state.message}</span>
+      {state.message || clientMessage ? (
+        <div className={state.ok && !clientMessage ? "editor-notice success" : "editor-notice error"}>
+          <span>{clientMessage || state.message}</span>
           {state.ok && state.status === "published" && viewSlug ? <a href={`/off/${viewSlug}`} target="_blank">Ver articulo</a> : null}
         </div>
       ) : null}
@@ -436,10 +499,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 {block.type === "image" ? (
                   <div className="image-editor visual-media-editor">
                     {block.preview || block.src ? <img src={block.preview || block.src} alt={block.alt || "Imagen"} /> : <div className="image-placeholder">Sube una imagen dentro del articulo</div>}
-                    <input name={`blockImage-${block.id}`} type="file" accept="image/*" onChange={(event) => {
+                    <input type="file" accept="image/*" onChange={(event) => {
                       const file = event.target.files?.[0];
-                      if (!file) return;
-                      updateBlock(block.id, { src: `__UPLOAD__:blockImage-${block.id}`, preview: URL.createObjectURL(file) });
+                      void handleInlineImageFile(block.id, file);
                     }} />
                     <input placeholder="URL de imagen" value={block.src?.startsWith("__UPLOAD__") ? "" : block.src ?? ""} onChange={(event) => updateBlock(block.id, { src: event.target.value })} />
                     <input placeholder="Caption" value={block.caption ?? ""} onChange={(event) => updateBlock(block.id, { caption: event.target.value })} />
@@ -522,7 +584,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               }}
             >
               {coverPreview ? <img src={coverPreview} alt="Preview portada" /> : <span>Subir imagen</span>}
-              <input ref={coverInputRef} name="coverFile" type="file" accept="image/*" onChange={(event) => handleCoverFile(event.target.files?.[0])} />
+              <input ref={coverInputRef} type="file" accept="image/*" onChange={(event) => void handleCoverFile(event.target.files?.[0])} />
             </label>
             <input value={cover} placeholder="Ruta de portada" onChange={(event) => { setCover(event.target.value); setCoverPreview(event.target.value); }} />
             <button type="button" onClick={() => { setCover(""); setCoverPreview(""); }}>Quitar portada</button>

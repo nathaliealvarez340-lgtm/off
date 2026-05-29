@@ -1,8 +1,5 @@
 import type { Article, Subscriber } from "@prisma/client";
-
-function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-}
+import { getSiteUrl } from "./site-url";
 
 export async function sendArticleToSubscriber(article: Article, subscriber: Subscriber) {
   const apiKey = process.env.RESEND_API_KEY;

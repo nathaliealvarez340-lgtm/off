@@ -210,6 +210,14 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
 
     content = await resolveInlineImages(content, formData);
 
+    if (content.length > 900000) {
+      return { ok: false, message: "El artículo es demasiado pesado. Revisa imágenes insertadas." };
+    }
+
+    if (/data:image\/[a-zA-Z]+;base64,/.test(content)) {
+      return { ok: false, message: "El artículo contiene imágenes en base64. Sube las imágenes correctamente antes de publicar." };
+    }
+
     try {
       const parsedContent = JSON.parse(content) as Array<Record<string, unknown>>;
       const hasReadableContent = Array.isArray(parsedContent) && parsedContent.some((block) => {
