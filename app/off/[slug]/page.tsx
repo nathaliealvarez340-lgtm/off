@@ -21,12 +21,13 @@ function sanitizeInlineHtml(text: string) {
     .replace(/\son\w+="[^"]*"/gi, "")
     .replace(/\son\w+='[^']*'/gi, "")
     .replace(/\shref=["']javascript:[^"']*["']/gi, "")
-    .replace(/<(?!\/?(strong|em|u|s|mark|a|br)(\s|>|\/))/gi, "&lt;")
+    .replace(/\sstyle=["'][^"']*(url|expression|javascript)[^"']*["']/gi, "")
+    .replace(/<(?!\/?(strong|em|u|s|mark|a|br|span)(\s|>|\/))/gi, "&lt;")
     .replace(/<a\s/gi, "<a rel=\"noreferrer\" ");
 }
 
 function renderInline(text: string) {
-  if (/<(strong|em|u|s|mark|a|br)(\s|>|\/)/i.test(text)) {
+  if (/<(strong|em|u|s|mark|a|br|span)(\s|>|\/)/i.test(text)) {
     return <span dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(text) }} />;
   }
 
