@@ -134,12 +134,13 @@ async function main() {
     });
   }
 
-  for (const article of articles) {
-    await prisma.article.upsert({
-      where: { slug: article.slug },
-      update: article,
-      create: { ...article, author: "Nathalie Garcia" },
-    });
+  const articleCount = await prisma.article.count();
+  if (articleCount === 0) {
+    for (const article of articles) {
+      await prisma.article.create({
+        data: { ...article, author: "Nathalie Garcia" },
+      });
+    }
   }
 }
 

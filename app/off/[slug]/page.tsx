@@ -143,7 +143,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             case "image":
               return (
                 <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
-                  <Image src={block.src} alt={block.alt} width={900} height={560} />
+                  <Image src={block.src} alt={block.alt} width={900} height={560} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
                   {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                 </figure>
               );

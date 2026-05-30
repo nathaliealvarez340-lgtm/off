@@ -1831,6 +1831,94 @@ textarea {
   gap: 10px;
 }
 
+.preview-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+  overflow: auto;
+  padding: clamp(18px, 4vw, 48px);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.preview-modal {
+  position: relative;
+  width: min(940px, 100%);
+  margin: 0 auto;
+  border-radius: 22px;
+  padding: clamp(28px, 6vw, 70px);
+}
+
+.preview-close {
+  position: sticky;
+  top: 16px;
+  float: right;
+  z-index: 2;
+}
+
+.preview-cover {
+  width: 100%;
+  max-height: 520px;
+  margin-bottom: 32px;
+  object-fit: cover;
+}
+
+.palette-wrap {
+  position: relative;
+}
+
+.palette-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 40;
+  width: 230px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(8, 8, 10, 0.96);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+}
+
+.palette-popover span,
+.autosave-state,
+.document-section-label {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.palette-swatches,
+.design-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.palette-popover label,
+.design-panel label {
+  display: grid;
+  gap: 7px;
+}
+
+.settings-tabs button {
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: 0 0 13px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+}
+
+.settings-tabs button.active {
+  border-bottom-color: #7b3dff;
+  color: #c9baff;
+}
+
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -2441,6 +2529,26 @@ textarea {
   max-height: 620px;
   margin: 2rem 0;
   object-fit: cover;
+}
+
+.tiptap-editor .ProseMirror img[data-layout="left"] {
+  width: min(52%, 440px);
+  margin-right: auto;
+}
+
+.tiptap-editor .ProseMirror img[data-layout="right"] {
+  width: min(52%, 440px);
+  margin-left: auto;
+}
+
+.tiptap-editor .ProseMirror img[data-layout="center"] {
+  width: min(82%, 760px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tiptap-editor .ProseMirror img[data-layout="full"] {
+  width: 100%;
 }
 
 .tiptap-editor .ProseMirror hr {

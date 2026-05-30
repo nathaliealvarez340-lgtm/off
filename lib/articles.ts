@@ -7,7 +7,7 @@ export type EditorialBlock =
   | { type: "list" | "numbered" | "checklist"; items: string[] }
   | { type: "quote" | "pullquote"; text: string }
   | { type: "divider" }
-  | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" | "image-left" | "image-right" }
+  | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" | "image-left" | "image-right"; width?: string }
   | { type: "gallery" | "collage"; images: Array<{ src: string; alt?: string; caption?: string }> }
   | { type: "embed" | "video"; url: string; caption?: string }
   | { type: "cta"; text: string; url: string; label: string }

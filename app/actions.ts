@@ -80,7 +80,7 @@ export async function registerAction(_: unknown, formData: FormData) {
 
 export async function logoutAction() {
   await clearSession();
-  redirect("/");
+  redirect("/login");
 }
 
 export async function subscribeAction(_: unknown, formData: FormData) {
@@ -181,6 +181,23 @@ export type SaveArticleState = {
   articleId?: string;
   slug?: string;
   status?: string;
+};
+
+export type AutosaveArticlePayload = {
+  id?: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  category: string;
+  readTime: string;
+  status: string;
+  featured: boolean;
+};
+
+export type AutosaveArticleState = SaveArticleState & {
+  updatedAt?: string;
 };
 
 export async function saveArticleAction(_: SaveArticleState, formData: FormData): Promise<SaveArticleState> {
@@ -290,6 +307,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     revalidatePath("/");
     revalidatePath(`/off/${article.slug}`);
     revalidatePath("/admin");
+    revalidatePath("/admin/new");
 
     return {
       ok: true,
@@ -302,6 +320,78 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     return {
       ok: false,
       message: error instanceof Error ? error.message : "No pudimos guardar el artículo. Intenta de nuevo.",
+    };
+  }
+}
+
+export async function autosaveArticleAction(payload: AutosaveArticlePayload): Promise<AutosaveArticleState> {
+  try {
+    await requireAdmin();
+
+    const id = payload.id?.trim() ?? "";
+    const title = payload.title.trim();
+    const slug = (payload.slug.trim() || slugify(title) || `borrador-${Date.now()}`).toLowerCase();
+    const excerpt = payload.excerpt.trim();
+    const content = payload.content.trim();
+    const coverImage = payload.coverImage.trim();
+    const category = payload.category.trim() || "Vida";
+    const readTime = payload.readTime.trim() || "5 min leer";
+    const featured = Boolean(payload.featured);
+
+    if (!title && !excerpt && (!content || content === "[]" || content === "[{\"type\":\"paragraph\",\"text\":\"\"}]")) {
+      return { ok: false, message: "No hay contenido suficiente para autoguardar." };
+    }
+
+    if (/data:image\/[a-zA-Z]+;base64,/.test(content)) {
+      return { ok: false, message: "El articulo contiene imagenes en base64. Sube las imagenes correctamente." };
+    }
+
+    if (content.length > 70000) {
+      return { ok: false, message: "El contenido supera el limite de 70,000 caracteres." };
+    }
+
+    const db = getDb();
+    const existingArticle = id ? await db.article.findUnique({ where: { id } }) : null;
+    const articleWithSlug = await db.article.findUnique({ where: { slug } });
+    if (articleWithSlug && articleWithSlug.id !== id) {
+      return { ok: false, message: "Ese slug ya existe. Cambia el slug antes de guardar." };
+    }
+
+    const data = {
+      title: title || existingArticle?.title || "Sin titulo",
+      slug,
+      excerpt: excerpt || existingArticle?.excerpt || "Borrador editorial de OFF.",
+      content: content || existingArticle?.content || JSON.stringify([{ type: "paragraph", text: "" }]),
+      coverImage: coverImage || existingArticle?.coverImage || "/images/hero-off.webp",
+      category,
+      readTime,
+      author: "Nathalie Garcia",
+      status: payload.status === "published" ? "published" : "draft",
+      featured,
+      publishedAt: payload.status === "published" ? existingArticle?.publishedAt ?? new Date() : existingArticle?.publishedAt ?? null,
+    };
+
+    const article = existingArticle
+      ? await db.article.update({ where: { id: existingArticle.id }, data })
+      : await db.article.create({ data });
+
+    revalidatePath("/admin");
+    revalidatePath("/admin/new");
+    revalidatePath("/");
+    revalidatePath(`/off/${article.slug}`);
+
+    return {
+      ok: true,
+      message: "Guardado",
+      articleId: article.id,
+      slug: article.slug,
+      status: article.status,
+      updatedAt: article.updatedAt.toISOString(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Error al guardar",
     };
   }
 }
@@ -320,10 +410,12 @@ export async function deleteArticleAction(formData: FormData) {
     redirect("/admin?deleted=missing");
   }
 
+  await db.comment.deleteMany({ where: { articleId: id } });
   await db.article.delete({ where: { id } });
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/admin/new");
   revalidatePath(`/off/${article.slug}`);
   redirect("/admin?deleted=1");
 }
