@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import type { Article } from "@prisma/client";
-import { Extension } from "@tiptap/core";
+import { Extension, Node as TiptapNode } from "@tiptap/core";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
@@ -20,6 +20,14 @@ import { slugify } from "@/lib/slug";
 const LIMIT = 70000;
 const initialState: SaveArticleState = { ok: false, message: "" };
 const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const EDITOR_CATEGORIES = ["Negocios", "Vida", "Sociedad", "Tips", "Crecimiento"];
+const PALETTE_COLORS = [
+  "#FFFFFF", "#F5F1FF", "#D8D1E6", "#A7A1B3", "#6F687A",
+  "#000000", "#07060A", "#111116", "#1B1723", "#2A2237",
+  "#7B3DFF", "#8B5CF6", "#A78BFA", "#5B2CCF", "#241142",
+  "#1ED760", "#E7C66A", "#E86D6D", "#64D2FF", "#FF8BD1",
+];
+const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime";
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -32,9 +40,16 @@ const FontSize = Extension.create({
             default: null,
             parseHTML: (element) => element.style.fontSize.replace(/['"]+/g, ""),
             renderHTML: (attributes) => {
-              if (!attributes.fontSize) return {};
-              return { style: `font-size: ${attributes.fontSize}` };
+              const styles = [];
+              if (attributes.fontSize) styles.push(`font-size: ${attributes.fontSize}`);
+              if (attributes.lineHeight) styles.push(`line-height: ${attributes.lineHeight}`);
+              if (styles.length === 0) return {};
+              return { style: styles.join("; ") };
             },
+          },
+          lineHeight: {
+            default: null,
+            parseHTML: (element) => element.style.lineHeight.replace(/['"]+/g, ""),
           },
         },
       },
@@ -60,6 +75,47 @@ const EditorialImage = Image.extend({
         },
       },
     };
+  },
+});
+
+const VideoEmbed = TiptapNode.create({
+  name: "videoEmbed",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      caption: { default: "" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "video[src]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["video", { ...HTMLAttributes, controls: "true" }];
+  },
+});
+
+const SpotifyEmbed = TiptapNode.create({
+  name: "spotifyEmbed",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      url: { default: null },
+      title: { default: "Contenido de Spotify" },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "a[data-spotify-card]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "a",
+      { href: HTMLAttributes.url, "data-spotify-card": "true", target: "_blank", rel: "noreferrer" },
+      ["span", { class: "spotify-logo" }, "Spotify"],
+      ["strong", {}, HTMLAttributes.title || "Contenido de Spotify"],
+    ];
   },
 });
 
@@ -132,7 +188,13 @@ function legacyContentToHtml(content?: string) {
       if ((block.type === "gallery" || block.type === "collage") && block.images?.length) {
         return block.images.map((image) => image.src ? `<figure><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt ?? "Imagen editorial")}">${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}</figure>` : "").join("");
       }
-      if ((block.type === "video" || block.type === "embed") && block.url) {
+      if (block.type === "video" && block.url) {
+        return `<video src="${escapeHtml(block.url)}" controls></video>`;
+      }
+      if (block.type === "embed" && block.url) {
+        if (block.caption === "spotify") {
+          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="Contenido de Spotify">Contenido de Spotify</a>`;
+        }
         return `<p><a href="${escapeHtml(block.url)}">${escapeHtml(block.url)}</a></p>`;
       }
       if (block.type === "cta") return `<blockquote>${text}</blockquote>`;
@@ -228,6 +290,12 @@ function htmlToEditorialJson(html: string) {
     } else if (tag === "img") {
       const src = node.getAttribute("src") ?? "";
       if (src) blocks.push({ type: "image", src, alt: node.getAttribute("alt") ?? "Imagen editorial", align: node.getAttribute("data-layout") ?? "center", width: node.getAttribute("style") ?? undefined });
+    } else if (tag === "video") {
+      const src = node.getAttribute("src") ?? "";
+      if (src) blocks.push({ type: "video", url: src, caption: node.getAttribute("data-caption") ?? "" });
+    } else if (tag === "a" && node.getAttribute("data-spotify-card")) {
+      const url = node.getAttribute("href") ?? "";
+      if (url) blocks.push({ type: "embed", url, caption: "spotify" });
     } else if (tag === "figure") {
       const image = node.querySelector("img");
       const src = image?.getAttribute("src") ?? "";
@@ -297,7 +365,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [cover, setCover] = useState(article?.coverImage ?? "");
   const [coverPreview, setCoverPreview] = useState(article?.coverImage ?? "");
   const [statusValue, setStatusValue] = useState(article?.status ?? "draft");
-  const [category, setCategory] = useState(article?.category ?? "Vida");
+  const [category, setCategory] = useState(article?.category && EDITOR_CATEGORIES.includes(article.category) ? article.category : "Vida");
   const [readTime, setReadTime] = useState(article?.readTime ?? "5 min leer");
   const [featured, setFeatured] = useState(article?.featured ?? false);
   const initialEditorContent = useMemo(() => legacyContentToHtml(article?.content), [article?.content]);
@@ -307,6 +375,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [serverSave, setServerSave] = useState("Guardado");
   const [linkModal, setLinkModal] = useState({ open: false, title: "", url: "", newTab: true });
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [headingOpen, setHeadingOpen] = useState(false);
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
   const [selectedKind, setSelectedKind] = useState<"text" | "image" | null>(null);
@@ -315,6 +384,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -326,6 +396,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       Color,
       Highlight.configure({ multicolor: true }),
       EditorialImage.configure({ allowBase64: false, inline: false }),
+      VideoEmbed,
+      SpotifyEmbed,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({
         openOnClick: false,
@@ -445,17 +517,34 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   async function handleInlineImageFile(file?: File) {
     if (!file || !editor) return;
     setUploading(true);
-    setClientMessage("Subiendo imagen...");
+    setClientMessage("Subiendo archivo...");
     try {
       const url = await uploadEditorFile(file);
-      editor.chain().focus().setImage({ src: url, alt: "Imagen editorial" }).run();
+      if (file.type.startsWith("video/")) {
+        editor.chain().focus().insertContent({ type: "videoEmbed", attrs: { src: url } }).run();
+      } else {
+        editor.chain().focus().setImage({ src: url, alt: "Imagen editorial" }).run();
+      }
       setEditorHtml(editor.getHTML());
       setClientMessage("");
     } catch (error) {
-      setClientMessage(error instanceof Error ? error.message : "No se pudo subir la imagen. Intenta con otro archivo.");
+      setClientMessage(error instanceof Error ? error.message : "No se pudo subir el archivo. Intenta con otro archivo.");
     } finally {
       setUploading(false);
     }
+  }
+
+  function insertSpotifyCard() {
+    if (!editor) return;
+    const url = window.prompt("Pega el link de Spotify");
+    if (!url) return;
+    if (!/^https?:\/\/(open\.)?spotify\.com\//i.test(url.trim())) {
+      setClientMessage("Pega un enlace válido de Spotify.");
+      return;
+    }
+    editor.chain().focus().insertContent({ type: "spotifyEmbed", attrs: { url: url.trim(), title: "Contenido de Spotify" } }).run();
+    setEditorHtml(editor.getHTML());
+    setClientMessage("");
   }
 
   function validateSubmit(event: FormEvent<HTMLFormElement>) {
@@ -495,21 +584,15 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       return;
     }
 
-    if (title) {
-      editor.chain().focus().insertContent(`<a href="${escapeHtml(url)}" target="${linkModal.newTab ? "_blank" : ""}">${escapeHtml(title)}</a>`).run();
-    } else {
-      editor
-        .chain()
-        .focus()
-        .extendMarkRange("link")
-        .setLink({ href: url, target: linkModal.newTab ? "_blank" : null })
-        .run();
-    }
+    const { from, to } = editor.state.selection;
+    const selectedTitle = editor.state.doc.textBetween(from, to, " ").trim();
+    const label = title || selectedTitle || "Link";
+    editor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank"><em>[${escapeHtml(label)}]</em></a>`).run();
     setEditorHtml(editor.getHTML());
     setLinkModal({ open: false, title: "", url: "", newTab: true });
   }
 
-  function applyColor(color: string) {
+  function applyColor(color: string, close = false) {
     if (!editor || !HEX_PATTERN.test(color)) {
       setClientMessage("Escribe un color HEX valido, por ejemplo #7B3DFF.");
       return;
@@ -517,7 +600,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     editor.chain().focus().setColor(color).run();
     setEditorHtml(editor.getHTML());
     setHexColor(color.toUpperCase());
-    setPaletteOpen(false);
+    if (close) setPaletteOpen(false);
     setClientMessage("");
   }
 
@@ -525,6 +608,32 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     if (!editor) return;
     editor.chain().focus().setMark("textStyle", { fontSize: size }).run();
     setEditorHtml(editor.getHTML());
+  }
+
+  function applyLineHeight(lineHeight: string) {
+    if (!editor) return;
+    editor.chain().focus().setMark("textStyle", { lineHeight }).run();
+    setEditorHtml(editor.getHTML());
+  }
+
+  function applyHeadingToken(token: string) {
+    if (!editor) return;
+    const map: Record<string, string> = {
+      H1: "48px",
+      H2: "38px",
+      H3: "30px",
+      H4: "24px",
+      H5: "20px",
+      H6: "18px",
+      H7: "16px",
+      H8: "14px",
+    };
+    if (token === "H1") editor.chain().focus().toggleHeading({ level: 1 }).run();
+    else if (token === "H2") editor.chain().focus().toggleHeading({ level: 2 }).run();
+    else if (token === "H3") editor.chain().focus().toggleHeading({ level: 3 }).run();
+    else editor.chain().focus().setMark("textStyle", { fontSize: map[token] }).run();
+    setEditorHtml(editor.getHTML());
+    setHeadingOpen(false);
   }
 
   function applyImageLayout(layout: "center" | "left" | "right" | "full") {
@@ -604,10 +713,6 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               URL
               <input autoFocus placeholder="https://..." value={linkModal.url} onChange={(event) => setLinkModal((current) => ({ ...current, url: event.target.value }))} />
             </label>
-            <label className="checkbox">
-              <input type="checkbox" checked={linkModal.newTab} onChange={(event) => setLinkModal((current) => ({ ...current, newTab: event.target.checked }))} />
-              <span>Abrir en nueva pestaÃ±a</span>
-            </label>
             <div className="link-modal-actions">
               <button type="button" className="ghost-button" onClick={() => setLinkModal({ open: false, title: "", url: "", newTab: true })}>Cancelar</button>
               <button type="button" className="button" onClick={confirmLink}>Aplicar</button>
@@ -655,9 +760,16 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
           <nav className="editor-command-bar doc-toolbar tiptap-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
               <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().setParagraph().run()}>Parrafo</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}>H1</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button>
+              <div className="toolbar-dropdown">
+                <button type="button" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
+                {headingOpen ? (
+                  <div className="toolbar-menu">
+                    {["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"].map((token) => (
+                      <button type="button" key={token} onClick={() => applyHeadingToken(token)}>{token}</button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleBlockquote().run()}>Quote</button>
             </div>
             <div className="doc-toolbar-group">
@@ -675,7 +787,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   <div className="palette-popover">
                     <span>Colores OFF</span>
                     <div className="palette-swatches">
-                      {["#FFFFFF", "#CFC8DA", "#7B3DFF", "#A78BFA", "#111111"].map((color) => (
+                      {PALETTE_COLORS.map((color) => (
                         <button className="color-dot" style={{ background: color }} type="button" onClick={() => applyColor(color)} key={color} aria-label={`Color ${color}`} />
                       ))}
                     </div>
@@ -687,7 +799,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                       HEX exacto
                       <input value={hexColor} onChange={(event) => setHexColor(event.target.value)} placeholder="#7B3DFF" />
                     </label>
-                    <button type="button" onClick={() => applyColor(hexColor)}>Aplicar HEX</button>
+                    <button type="button" onClick={() => applyColor(hexColor, true)}>Aplicar HEX</button>
                   </div>
                 ) : null}
               </div>
@@ -695,7 +807,10 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleOrderedList().run()}>1.</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().setHorizontalRule().run()}>Divider</button>
               <button type="button" disabled={!canUseToolbar || uploading} onClick={() => imageInputRef.current?.click()}>Imagen</button>
-              <input ref={imageInputRef} hidden type="file" accept="image/*" onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+              <button type="button" disabled={!canUseToolbar || uploading} onClick={() => videoInputRef.current?.click()}>Video</button>
+              <button type="button" disabled={!canUseToolbar} onClick={insertSpotifyCard}>Spotify</button>
+              <input ref={imageInputRef} hidden type="file" accept={MEDIA_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+              <input ref={videoInputRef} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
             </div>
           </nav>
 
@@ -740,14 +855,18 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   }}
                 >
                   {coverPreview ? <img src={coverPreview} alt="Preview portada" /> : <span>Subir imagen</span>}
-                  <input ref={coverInputRef} type="file" accept="image/*" onChange={(event) => void handleCoverFile(event.target.files?.[0])} />
+                  <input ref={coverInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml" onChange={(event) => void handleCoverFile(event.target.files?.[0])} />
                 </label>
                 <input value={cover} placeholder="Ruta de portada" onChange={(event) => { setCover(event.target.value); setCoverPreview(event.target.value); }} />
                 <button type="button" onClick={() => { setCover(""); setCoverPreview(""); }}>Quitar portada</button>
               </div>
               <div className="right-panel-group">
                 <label className="field">Estado<select name="status" value={statusValue} onChange={(event) => setStatusValue(event.target.value)}><option value="draft">Borrador</option><option value="published">Publicado</option></select></label>
-                <label className="field">Categoria<input name="category" value={category} onChange={(event) => setCategory(event.target.value)} required /></label>
+                <label className="field">Categoria
+                  <select value={category} onChange={(event) => setCategory(event.target.value)} required>
+                    {EDITOR_CATEGORIES.map((item) => <option value={item} key={item}>{item}</option>)}
+                  </select>
+                </label>
                 <label className="field">Slug<input name="slug" value={slug} onChange={(event) => setSlug(event.target.value)} required /></label>
                 <label className="field">Tiempo estimado<input name="readTime" value={readTime} onChange={(event) => setReadTime(event.target.value)} required /></label>
                 <label className="checkbox"><input name="featured" type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} /><span>Destacado</span></label>
@@ -776,23 +895,22 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   <option value="quote">Cita</option>
                 </select>
               </label>
-              <label className="field">Tamaño de texto
-                <select onChange={(event) => applyFontSize(event.target.value)} defaultValue="">
-                  <option value="" disabled>Seleccionar</option>
-                  <option value="14px">Pequeño</option>
-                  <option value="18px">Normal</option>
-                  <option value="24px">Grande</option>
-                  <option value="36px">Extra grande</option>
-                </select>
-              </label>
-              <label className="field">Tamaño personalizado<input placeholder="Ej. 22px" onBlur={(event) => event.target.value && applyFontSize(event.target.value)} /></label>
               <label className="field">Color de texto<input value={hexColor} onChange={(event) => setHexColor(event.target.value)} onBlur={() => applyColor(hexColor)} placeholder="#7B3DFF" /></label>
               <div className="design-button-row">
                 <button type="button" onClick={() => editor?.chain().focus().setTextAlign("left").run()}>Izquierda</button>
                 <button type="button" onClick={() => editor?.chain().focus().setTextAlign("center").run()}>Centro</button>
                 <button type="button" onClick={() => editor?.chain().focus().setTextAlign("right").run()}>Derecha</button>
               </div>
-              <label className="field">Espaciado opcional<input placeholder="Usa Enter para separar bloques" disabled /></label>
+              <label className="field">Espaciado
+                <select onChange={(event) => applyLineHeight(event.target.value)} defaultValue="">
+                  <option value="" disabled>Seleccionar</option>
+                  <option value="0.5em">0.5</option>
+                  <option value="1em">1.0</option>
+                  <option value="1.5em">1.5</option>
+                  <option value="2em">2.0</option>
+                  <option value="2.5em">2.5</option>
+                </select>
+              </label>
               {selectedKind === "image" || lastSelectedImage ? (
                 <>
                   <label className="field">Ancho de imagen<input placeholder="100%, 720px..." onBlur={(event) => event.target.value && applyImageWidth(event.target.value)} /></label>

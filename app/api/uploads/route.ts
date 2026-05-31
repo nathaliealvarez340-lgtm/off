@@ -4,7 +4,17 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { slugify } from "@/lib/slug";
 
-const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
 
 export async function POST(request: Request) {
   try {
@@ -21,11 +31,11 @@ export async function POST(request: Request) {
     }
 
     if (file.size > MAX_UPLOAD_SIZE) {
-      return NextResponse.json({ error: "La imagen supera 5 MB." }, { status: 413 });
+      return NextResponse.json({ error: "El archivo supera 25 MB." }, { status: 413 });
     }
 
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Solo se permiten imagenes." }, { status: 400 });
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json({ error: "Formato no permitido." }, { status: 400 });
     }
 
     const extension = path.extname(file.name) || ".png";

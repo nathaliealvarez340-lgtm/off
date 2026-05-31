@@ -11,7 +11,7 @@ export function SubscribeForm() {
   useEffect(() => {
     if (!state.ok) return;
     const timeout = window.setTimeout(() => {
-      window.location.href = "/?welcome=1";
+      window.location.href = "/?welcome=1#mi-espacio";
     }, 2600);
     return () => window.clearTimeout(timeout);
   }, [state.ok]);

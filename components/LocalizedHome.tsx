@@ -323,7 +323,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
       </nav>
 
       {user ? (
-        <section className="subscriber-hero-card" aria-label="Experiencia de suscriptor">
+        <section className="subscriber-hero-card" id="mi-espacio" aria-label="Experiencia de suscriptor">
           <Image src="/images/cap2-off.webp" alt="" fill priority={false} sizes="(max-width: 820px) 100vw, 1120px" />
           <div>
             <p className="eyebrow">OFF / Mi espacio</p>
@@ -516,6 +516,23 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             </div>
             <div className="profile-social-body">
               <span className="social-user">@nathalie.garciaa</span>
+              <span className="social-profile-button">Ver perfil</span>
+            </div>
+          </a>
+
+          <a className="profile-social-card" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA==" target="_blank">
+            <div className="profile-social-head">
+              <span className="platform-mark instagram-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17" cy="7" r="1" />
+                </svg>
+              </span>
+              <strong>INSTAGRAM</strong>
+            </div>
+            <div className="profile-social-body">
+              <span className="social-user">@off_journal</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>

@@ -118,115 +118,139 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         <Image src={article.coverImage} alt={article.title} width={1200} height={720} priority />
       </div>
 
-      <article className="reader">
-        {visibleBlocks.map((block, index) => {
-          switch (block.type) {
-            case "paragraph":
-              return <p className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
-            case "h1":
-              return <h2 className={`reader-h1 align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
-            case "h2":
-              return <h2 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
-            case "h3":
-              return <h3 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h3>;
-            case "highlight":
-              return <p className="reader-highlight" style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
-            case "code":
-              return <pre className="reader-code" key={index}><code>{block.text}</code></pre>;
-            case "list":
-              return <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
-            case "numbered":
-              return <ol key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ol>;
-            case "checklist":
-              return <ul className="reader-checklist" key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
-            case "quote":
-              return <blockquote key={index}>{renderInline(block.text)}</blockquote>;
-            case "pullquote":
-              return <blockquote className="reader-pullquote" key={index}>{renderInline(block.text)}</blockquote>;
-            case "divider":
-              return <hr key={index} />;
-            case "image":
-              return (
-                <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
-                  <Image src={block.src} alt={block.alt} width={900} height={560} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
-                  {block.caption ? <figcaption>{block.caption}</figcaption> : null}
-                </figure>
-              );
-            case "gallery":
-            case "collage":
-              return (
-                <div className={`reader-gallery ${block.type}`} key={index}>
-                  {block.images.map((image, imageIndex) => (
-                    <figure key={`${image.src}-${imageIndex}`}>
-                      <Image src={image.src} alt={image.alt ?? "Imagen editorial"} width={700} height={520} />
-                      {image.caption ? <figcaption>{image.caption}</figcaption> : null}
-                    </figure>
-                  ))}
-                </div>
-              );
-            case "embed":
-            case "video":
-              return (
-                <figure className="reader-embed" key={index}>
-                  <a href={block.url} target="_blank">{block.url}</a>
-                  {block.caption ? <figcaption>{block.caption}</figcaption> : null}
-                </figure>
-              );
-            case "cta":
-              return (
-                <aside className="reader-cta" key={index}>
-                  <p>{block.text}</p>
-                  <Link className="button violet-button" href={block.url}>{block.label}</Link>
-                </aside>
-              );
-            case "subscribe":
-            case "share":
-              return (
-                <aside className="reader-cta" key={index}>
-                  <p>{block.text}</p>
-                </aside>
-              );
-            case "stat":
-              return (
-                <aside className="reader-stat" key={index}>
-                  <strong>{block.value}</strong>
-                  <span>{block.label}</span>
-                </aside>
-              );
-            case "columns":
-              return (
-                <div className="reader-columns" key={index}>
-                  <p>{renderInline(block.left)}</p>
-                  <p>{renderInline(block.right)}</p>
-                </div>
-              );
-            case "special":
-              return (
-                <aside className="special-block" key={index}>
-                  <strong>{block.label}</strong>
-                  <p>{block.text}</p>
-                </aside>
-              );
-          }
-        })}
+      <div className="article-reader-layout">
+        <article className="reader">
+          {visibleBlocks.map((block, index) => {
+            switch (block.type) {
+              case "paragraph":
+                return <p className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
+              case "h1":
+                return <h2 className={`reader-h1 align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
+              case "h2":
+                return <h2 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h2>;
+              case "h3":
+                return <h3 className={`align-${block.align ?? "left"}`} style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</h3>;
+              case "highlight":
+                return <p className="reader-highlight" style={{ color: block.color, background: block.highlightColor }} key={index}>{renderInline(block.text)}</p>;
+              case "code":
+                return <pre className="reader-code" key={index}><code>{block.text}</code></pre>;
+              case "list":
+                return <ul key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
+              case "numbered":
+                return <ol key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ol>;
+              case "checklist":
+                return <ul className="reader-checklist" key={index}>{block.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>;
+              case "quote":
+                return <blockquote key={index}>{renderInline(block.text)}</blockquote>;
+              case "pullquote":
+                return <blockquote className="reader-pullquote" key={index}>{renderInline(block.text)}</blockquote>;
+              case "divider":
+                return <hr key={index} />;
+              case "image":
+                return (
+                  <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
+                    <Image src={block.src} alt={block.alt} width={900} height={560} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
+                    {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                  </figure>
+                );
+              case "gallery":
+              case "collage":
+                return (
+                  <div className={`reader-gallery ${block.type}`} key={index}>
+                    {block.images.map((image, imageIndex) => (
+                      <figure key={`${image.src}-${imageIndex}`}>
+                        <Image src={image.src} alt={image.alt ?? "Imagen editorial"} width={700} height={520} />
+                        {image.caption ? <figcaption>{image.caption}</figcaption> : null}
+                      </figure>
+                    ))}
+                  </div>
+                );
+              case "embed":
+                return (
+                  <a className={block.caption === "spotify" ? "spotify-card" : "reader-embed"} href={block.url} target="_blank" key={index}>
+                    {block.caption === "spotify" ? <span className="spotify-logo">Spotify</span> : null}
+                    <strong>{block.caption === "spotify" ? "Contenido de Spotify" : block.url}</strong>
+                  </a>
+                );
+              case "video":
+                return (
+                  <figure className="reader-video" key={index}>
+                    <video src={block.url} controls />
+                    {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                  </figure>
+                );
+              case "cta":
+                return (
+                  <aside className="reader-cta" key={index}>
+                    <p>{block.text}</p>
+                    <Link className="button violet-button" href={block.url}>{block.label}</Link>
+                  </aside>
+                );
+              case "subscribe":
+              case "share":
+                return (
+                  <aside className="reader-cta" key={index}>
+                    <p>{block.text}</p>
+                  </aside>
+                );
+              case "stat":
+                return (
+                  <aside className="reader-stat" key={index}>
+                    <strong>{block.value}</strong>
+                    <span>{block.label}</span>
+                  </aside>
+                );
+              case "columns":
+                return (
+                  <div className="reader-columns" key={index}>
+                    <p>{renderInline(block.left)}</p>
+                    <p>{renderInline(block.right)}</p>
+                  </div>
+                );
+              case "special":
+                return (
+                  <aside className="special-block" key={index}>
+                    <strong>{block.label}</strong>
+                    <p>{block.text}</p>
+                  </aside>
+                );
+            }
+          })}
 
-        {!canReadFull ? (
-          <aside className="reader-gate">
-            <p className="eyebrow">OFF completo</p>
-            <h2>Hay más detrás de esta historia.</h2>
-            <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y entender lo que pasa cuando dejamos de vivir en automático.</p>
-            <Link className="button violet-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
-              Entrar a OFF
-            </Link>
-          </aside>
-        ) : null}
-      </article>
+          {!canReadFull ? (
+            <aside className="reader-gate">
+              <p className="eyebrow">OFF completo</p>
+              <h2>Hay más detrás de esta historia.</h2>
+              <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y entender lo que pasa cuando dejamos de vivir en automático.</p>
+              <Link className="button violet-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
+                Entrar a OFF
+              </Link>
+            </aside>
+          ) : null}
+        </article>
 
-      <section className="comments-section">
-        <div className="comments-head">
-          <p className="eyebrow">Conversación</p>
-          <h2>Comentarios</h2>
-        </div>
+        <aside className="article-side-panel">
+          {user ? (
+            <section className="topic-suggestion-section">
+              <div>
+                <p className="eyebrow">OFF escucha</p>
+                <h2>¿De qué te gustaría hablar en el próximo capítulo?</h2>
+              </div>
+              <form action={topicSuggestionAction}>
+                <input name="articleId" type="hidden" value={article.id} />
+                <input name="articleSlug" type="hidden" value={article.slug} />
+                <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
+                <textarea name="content" placeholder="Escribe una idea o tensión..." required minLength={2} />
+                <button className="button violet-button" type="submit">Enviar</button>
+              </form>
+            </section>
+          ) : null}
+
+          <section className="comments-section">
+            <div className="comments-head">
+              <p className="eyebrow">Conversación</p>
+              <h2>Comentarios</h2>
+            </div>
 
         {!user ? (
           <div className="comment-login locked-comments">
@@ -279,23 +303,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </div>
           </>
         )}
-      </section>
-
-      {user ? (
-        <section className="topic-suggestion-section">
-          <div>
-            <p className="eyebrow">OFF escucha</p>
-            <h2>¿De qué te gustaría hablar en el próximo capítulo?</h2>
-          </div>
-          <form action={topicSuggestionAction}>
-            <input name="articleId" type="hidden" value={article.id} />
-            <input name="articleSlug" type="hidden" value={article.slug} />
-            <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
-            <textarea name="content" placeholder="Escribe una idea, pregunta o tensión que quieras ver en OFF..." required minLength={2} />
-            <button className="button violet-button" type="submit">Enviar</button>
-          </form>
-        </section>
-      ) : null}
+          </section>
+        </aside>
+      </div>
     </main>
   );
 }
