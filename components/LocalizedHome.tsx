@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { logoutAction } from "@/app/actions";
 import { SubscribeForm } from "@/components/SubscribeForm";
 
 export type PublicArticle = {
@@ -15,6 +16,10 @@ export type PublicArticle = {
   readTime: string;
   publishedAt: string | null;
   featured: boolean;
+};
+
+export type PublicUser = {
+  name: string;
 };
 
 type Lang = "es" | "en" | "it" | "pt";
@@ -46,7 +51,7 @@ const copy = {
     eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Todo parece", "avanzar.", "Pero algo dentro", "de ti sigue", "apagado."],
     subtitle:
-      "OFF nace para una generación que está construyendo éxito mientras están construyendo su futuro, cuestionando su camino y aprendiendo a crecer sin perderse a sí mismos.",
+      "OFF nace para una generación que está en busca del éxito personal y profesional mientras están construyendo su futuro, cuestionando su camino y aprendiendo a crecer sin perderse a sí mismos.",
     cta: "Entrar al archivo",
     side: ["SE VE BIEN.", "PERO SE SIENTE"],
     orbit: "SENTIR · ENTENDER · ELEGIR · VOLVER · CONSTRUIR ·",
@@ -231,10 +236,11 @@ function formatDate(date: string | null, lang: Lang) {
   }).format(new Date(date));
 }
 
-export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
+export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; user: PublicUser | null }) {
   const [lang, setLang] = useState<Lang>("es");
   const [languageOpen, setLanguageOpen] = useState(false);
   const [sessionMessage, setSessionMessage] = useState("");
+  const [subscriberGreeting, setSubscriberGreeting] = useState("");
   const t = copy[lang];
   const featured = useMemo(() => articles.find((article) => article.featured) ?? articles[0], [articles]);
 
@@ -247,6 +253,15 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
     }
     if (params.get("logout") === "1") {
       setSessionMessage("Tu sesión se cerró con éxito.");
+    }
+
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) {
+      setSubscriberGreeting("Buenos días");
+    } else if (hour >= 12 && hour < 19) {
+      setSubscriberGreeting("Buenas tardes");
+    } else {
+      setSubscriberGreeting("Buenas noches");
     }
   }, []);
 
@@ -293,11 +308,30 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
               ))}
             </div>
           </div>
-          <Link className="publish-link" href="/login">
-            {t.login} <span>→</span>
-          </Link>
+          {user ? (
+            <form action={logoutAction}>
+              <button className="publish-link nav-form-button" type="submit">
+                Cerrar sesión <span>→</span>
+              </button>
+            </form>
+          ) : (
+            <Link className="publish-link" href="/login">
+              {t.login} <span>→</span>
+            </Link>
+          )}
         </div>
       </nav>
+
+      {user ? (
+        <section className="subscriber-hero-card" aria-label="Experiencia de suscriptor">
+          <Image src="/images/cap2-off.webp" alt="" fill priority={false} sizes="(max-width: 820px) 100vw, 1120px" />
+          <div>
+            <p className="eyebrow">OFF / Mi espacio</p>
+            <h2>{subscriberGreeting ? `${subscriberGreeting}, ${user.name}.` : `Bienvenida, ${user.name}.`}</h2>
+            <p>Tu archivo está abierto. Sigue leyendo, pensando y construyendo sin vivir en automático.</p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="hero-cinema" id="inicio">
         <Image className="hero-background" src="/images/hero-off.webp" alt="" fill priority sizes="100vw" />
@@ -461,29 +495,27 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
           <a className="profile-social-card" href="https://mx.linkedin.com/in/nathaliegarciaa" target="_blank">
             <div className="profile-social-head">
               <span className="platform-mark linkedin-mark">in</span>
-              <strong>LinkedIn</strong>
+              <strong>LINKEDIN</strong>
             </div>
             <div className="profile-social-body">
-              <img src="/images/image1.webp" alt="Nathalie Garcia" />
-              <span className="social-user">Nathalie Garcia</span>
-              <h3>Nathalie Garcia</h3>
-              <p>Editora de OFF y fundadora de MAIA. Estrategia, inteligencia artificial y marcas que escalan con intención.</p>
+              <span className="social-user">NATHALIE GARCIA A.</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
 
           <a className="profile-social-card" href="https://www.instagram.com/nathalie.garciaa" target="_blank">
             <div className="profile-social-head">
-              <span className="platform-mark instagram-mark">IG</span>
-              <strong>Instagram</strong>
+              <span className="platform-mark instagram-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17" cy="7" r="1" />
+                </svg>
+              </span>
+              <strong>INSTAGRAM</strong>
             </div>
             <div className="profile-social-body">
-              <img src="/images/hero-off.webp" alt="Nathalie Garcia" />
               <span className="social-user">@nathalie.garciaa</span>
-              <h3>NATHALIE GARCIA | BUSINESS & IA</h3>
-              <p>BUILDING BRANDS THAT ACTUALLY SCALE</p>
-              <p>IA · ESTRATEGIA · POSICIONAMIENTO</p>
-              <p>FOUNDER & CEO - MAIA</p>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>

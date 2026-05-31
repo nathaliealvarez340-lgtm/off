@@ -2,6 +2,8 @@ const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@maiabusiness.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "OFFbyMA1A";
 
 const articles = [
   {
@@ -117,19 +119,50 @@ const articles = [
 ];
 
 async function main() {
-  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-    await prisma.user.upsert({
-      where: { email: process.env.ADMIN_EMAIL.toLowerCase() },
-      update: {
+  if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+    const adminEmail = ADMIN_EMAIL.toLowerCase();
+    const existingTargetAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+    if (existingTargetAdmin) {
+      await prisma.user.update({
+        where: { id: existingTargetAdmin.id },
+        data: {
+          name: "Nathalie Garcia",
+          passwordHash,
+          role: "ADMIN",
+        },
+      });
+    } else {
+      const existingAdmin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (existingAdmin) {
+        await prisma.user.update({
+          where: { id: existingAdmin.id },
+          data: {
+            email: adminEmail,
+            name: "Nathalie Garcia",
+            passwordHash,
+            role: "ADMIN",
+          },
+        });
+      } else {
+        await prisma.user.create({
+          data: {
+            name: "Nathalie Garcia",
+            email: adminEmail,
+            passwordHash,
+            role: "ADMIN",
+          },
+        });
+      }
+    }
+
+    await prisma.user.updateMany({
+      where: { role: "ADMIN", email: { not: adminEmail } },
+      data: {
         name: "Nathalie Garcia",
-        passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
-        role: "ADMIN",
-      },
-      create: {
-        name: "Nathalie Garcia",
-        email: process.env.ADMIN_EMAIL.toLowerCase(),
-        passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
-        role: "ADMIN",
+        passwordHash,
+        role: "USER",
       },
     });
   }

@@ -14,6 +14,9 @@ function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@maiabusiness.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "OFFbyMA1A";
+
 export async function loginAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email");
   const password = stringValue(formData, "password");
@@ -22,7 +25,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   const db = getDb();
   let user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
 
-  if (!user && email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+  if (!user && email === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
     user = await db.user.create({
       data: {
         name: "Nathalie Garcia",
