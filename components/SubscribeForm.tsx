@@ -1,12 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { subscribeAction } from "@/app/actions";
 
 const initialState = { ok: false, message: "" };
 
 export function SubscribeForm() {
   const [state, action, pending] = useActionState(subscribeAction, initialState);
+
+  useEffect(() => {
+    if (!state.ok) return;
+    const timeout = window.setTimeout(() => {
+      window.location.href = "/?welcome=1";
+    }, 2600);
+    return () => window.clearTimeout(timeout);
+  }, [state.ok]);
 
   return (
     <form action={action} className="form-grid">
@@ -37,7 +45,9 @@ export function SubscribeForm() {
         {pending ? "Guardando..." : "Quiero recibir OFF"}
       </button>
       <div className="status-message" role="status">
-        {state.message}
+        {state.message.split("\n").map((line) => (
+          <span key={line}>{line}</span>
+        ))}
       </div>
     </form>
   );

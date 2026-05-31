@@ -14,6 +14,11 @@ export const metadata: Metadata = {
     images: ["/covers/off-chapter-1.svg"],
     type: "website",
   },
+  icons: {
+    icon: "/logo/favicon-off.png.jpeg",
+    shortcut: "/logo/favicon-off.png.jpeg",
+    apple: "/logo/favicon-off.png.jpeg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

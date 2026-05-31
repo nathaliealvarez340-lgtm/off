@@ -234,12 +234,20 @@ function formatDate(date: string | null, lang: Lang) {
 export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
   const [lang, setLang] = useState<Lang>("es");
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [sessionMessage, setSessionMessage] = useState("");
   const t = copy[lang];
   const featured = useMemo(() => articles.find((article) => article.featured) ?? articles[0], [articles]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("off-language") as Lang | null;
     if (saved && saved in copy) setLang(saved);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") === "1") {
+      setSessionMessage("Bienvenido a OFF. Un espacio para cuestionar, reconstruir y volver a conectar con lo que realmente quieres construir. La siguiente historia te espera.");
+    }
+    if (params.get("logout") === "1") {
+      setSessionMessage("Tu sesión se cerró con éxito.");
+    }
   }, []);
 
   function chooseLanguage(nextLang: Lang) {
@@ -250,6 +258,7 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
 
   return (
     <main className="site-shell home-shell">
+      {sessionMessage ? <div className="public-session-banner">{sessionMessage}</div> : null}
       <nav className="nav cinematic-nav">
         <Link href="/" className="brand logo-brand" aria-label="OFF inicio">
           <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />

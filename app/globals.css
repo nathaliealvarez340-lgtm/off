@@ -428,6 +428,44 @@ textarea {
   color: #d5c7ff;
 }
 
+.status-message span {
+  display: block;
+}
+
+.public-session-banner {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 80;
+  width: min(720px, calc(100% - 32px));
+  border: 1px solid rgba(123, 61, 255, 0.28);
+  border-radius: 16px;
+  padding: 14px 18px;
+  background: rgba(8, 7, 12, 0.92);
+  color: #f5f1ff;
+  text-align: center;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.article-logo-brand {
+  width: 96px;
+}
+
+.article-nav-logo {
+  display: block;
+  width: 96px;
+  height: auto;
+}
+
+.nav-logout {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  font: inherit;
+}
+
 .article-hero {
   width: min(1040px, calc(100% - 32px));
   margin: 0 auto;
@@ -781,6 +819,76 @@ textarea {
   margin: 14px 0 0;
   color: rgba(255, 255, 255, 0.74);
   line-height: 1.65;
+}
+
+.locked-comments h3 {
+  margin: 0 0 10px;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.reply-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.reply-form textarea {
+  min-height: 82px;
+}
+
+.reply-form button {
+  width: max-content;
+  border: 1px solid rgba(123, 61, 255, 0.36);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(123, 61, 255, 0.13);
+  color: #fff;
+  cursor: pointer;
+}
+
+.reply-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(123, 61, 255, 0.28);
+}
+
+.comment-reply {
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.topic-suggestion-section {
+  width: min(860px, calc(100% - 32px));
+  margin: 0 auto 90px;
+  border: 1px solid rgba(123, 61, 255, 0.22);
+  border-radius: 24px;
+  padding: clamp(24px, 5vw, 42px);
+  background:
+    radial-gradient(circle at top right, rgba(123, 61, 255, 0.14), transparent 18rem),
+    rgba(255, 255, 255, 0.045);
+}
+
+.topic-suggestion-section h2 {
+  margin: 0 0 18px;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 5vw, 54px);
+  font-weight: 400;
+}
+
+.topic-suggestion-section form {
+  display: grid;
+  gap: 14px;
+}
+
+.topic-suggestion-section textarea {
+  min-height: 130px;
 }
 
 .auth-page {

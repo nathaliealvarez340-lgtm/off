@@ -23,7 +23,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   const { deleted } = await searchParams;
   const db = getDb();
-  const [articles, users, subscribers, subscriberCount, commentCount, comments] = await Promise.all([
+  const [articles, users, subscribers, subscriberCount, commentCount, comments, topicSuggestions] = await Promise.all([
     getAllArticles(),
     db.user.findMany({
       select: {
@@ -50,6 +50,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     db.subscriber.count(),
     db.comment.count(),
     db.comment.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+        article: { select: { title: true, slug: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    db.topicSuggestion.findMany({
       include: {
         user: { select: { name: true, email: true } },
         article: { select: { title: true, slug: true } },
@@ -138,6 +146,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <a href="#suscriptores">Suscriptores</a>
           <a href="#insights">Insights</a>
           <a href="#comentarios">Comentarios</a>
+          <a href="#temas">Próximos temas</a>
           <a href="#actividad">Actividades OFF</a>
           <a href="#configuracion">Configuracion</a>
         </nav>
@@ -363,6 +372,30 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 ))
               ) : (
                 <div className="empty-dashboard-state">Aun no hay comentarios.</div>
+              )}
+            </div>
+          </article>
+
+          <article className="dashboard-card comments-dashboard-card" id="temas">
+            <div className="card-heading">
+              <div>
+                <p className="eyebrow">Próximo capítulo</p>
+                <h2>Temas sugeridos</h2>
+              </div>
+              <span>{topicSuggestions.length} respuestas</span>
+            </div>
+            <div className="comment-dashboard-list">
+              {topicSuggestions.length > 0 ? (
+                topicSuggestions.map((suggestion) => (
+                  <div className="comment-dashboard-row" key={suggestion.id}>
+                    <strong>{suggestion.user.name}</strong>
+                    <span>{suggestion.user.email}</span>
+                    <p>{suggestion.content}</p>
+                    <span>{suggestion.article?.title ?? "Sin artículo origen"} · {formatDate(suggestion.createdAt)}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-dashboard-state">Aún no hay respuestas para próximos capítulos.</div>
               )}
             </div>
           </article>

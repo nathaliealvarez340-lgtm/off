@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
@@ -34,7 +34,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   }
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return { ok: false, message: "Correo o contraseña incorrectos." };
+    return { ok: false, message: "Correo o contraseÃ±a incorrectos." };
   }
 
   await createSession(user.id);
@@ -43,7 +43,7 @@ export async function loginAction(_: unknown, formData: FormData) {
     redirect("/admin");
   }
 
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? `${next}${next.includes("?") ? "&" : "?"}welcome=1` : "/?welcome=1");
 }
 
 export async function registerAction(_: unknown, formData: FormData) {
@@ -53,11 +53,11 @@ export async function registerAction(_: unknown, formData: FormData) {
   const next = stringValue(formData, "next") || "/";
 
   if (!name || !email || password.length < 8) {
-    return { ok: false, message: "Escribe tu nombre, correo y una contraseña de al menos 8 caracteres." };
+    return { ok: false, message: "Escribe tu nombre, correo y una contraseÃ±a de al menos 8 caracteres." };
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: "Escribe un correo válido." };
+    return { ok: false, message: "Escribe un correo vÃ¡lido." };
   }
 
   try {
@@ -72,15 +72,15 @@ export async function registerAction(_: unknown, formData: FormData) {
 
     await createSession(user.id);
   } catch {
-    return { ok: false, message: "Ese correo ya está registrado o no pudimos crear tu cuenta." };
+    return { ok: false, message: "Ese correo ya estÃ¡ registrado o no pudimos crear tu cuenta." };
   }
 
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? `${next}${next.includes("?") ? "&" : "?"}welcome=1` : "/?welcome=1");
 }
 
 export async function logoutAction() {
   await clearSession();
-  redirect("/login");
+  redirect("/?logout=1");
 }
 
 export async function subscribeAction(_: unknown, formData: FormData) {
@@ -90,11 +90,11 @@ export async function subscribeAction(_: unknown, formData: FormData) {
   const consent = formData.get("consent") === "on";
 
   if (!name || !email || !interest) {
-    return { ok: false, message: "Completa nombre, correo e interés principal." };
+    return { ok: false, message: "Completa nombre, correo e interes principal." };
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: "Escribe un correo válido." };
+    return { ok: false, message: "Escribe un correo valido." };
   }
 
   if (!consent) {
@@ -102,19 +102,36 @@ export async function subscribeAction(_: unknown, formData: FormData) {
   }
 
   try {
-    await getDb().subscriber.upsert({
+    const db = getDb();
+    await db.subscriber.upsert({
       where: { email },
       update: { name, interest, consent },
       create: { name, email, interest, consent },
     });
+
+    const user = await db.user.upsert({
+      where: { email },
+      update: { name },
+      create: {
+        name,
+        email,
+        passwordHash: await bcrypt.hash(`off-subscriber-${email}-${Date.now()}`, 12),
+        role: "USER",
+      },
+    });
+
+    await createSession(user.id);
   } catch {
-    return { ok: false, message: "No pudimos guardar tu suscripción. Intenta de nuevo." };
+    return { ok: false, message: "No pudimos guardar tu suscripcion. Intenta de nuevo." };
   }
 
   revalidatePath("/");
-  return { ok: true, message: "Ya estás dentro de OFF. Te llegará el próximo capítulo." };
+  return {
+    ok: true,
+    message:
+      "Bienvenido a OFF.\nUn espacio para cuestionar, reconstruir y volver a conectar con lo que realmente quieres construir.\nLa siguiente historia te espera.",
+  };
 }
-
 async function saveCoverImage(formData: FormData, fallback: string) {
   const file = formData.get("coverFile");
   if (!(file instanceof File) || file.size === 0) return fallback;
@@ -228,11 +245,11 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     content = await resolveInlineImages(content, formData);
 
     if (content.length > 900000) {
-      return { ok: false, message: "El artículo es demasiado pesado. Revisa imágenes insertadas." };
+      return { ok: false, message: "El artÃ­culo es demasiado pesado. Revisa imÃ¡genes insertadas." };
     }
 
     if (/data:image\/[a-zA-Z]+;base64,/.test(content)) {
-      return { ok: false, message: "El artículo contiene imágenes en base64. Sube las imágenes correctamente antes de publicar." };
+      return { ok: false, message: "El artÃ­culo contiene imÃ¡genes en base64. Sube las imÃ¡genes correctamente antes de publicar." };
     }
 
     try {
@@ -253,7 +270,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     }
 
     if (content.length > 70000) {
-      return { ok: false, message: "El contenido supera el límite de 70,000 caracteres." };
+      return { ok: false, message: "El contenido supera el lÃ­mite de 70,000 caracteres." };
     }
 
     if (!coverImage) return { ok: false, message: "Falta portada." };
@@ -266,7 +283,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
 
     const existingArticle = id ? await db.article.findUnique({ where: { id } }) : null;
     if (id && !existingArticle) {
-      return { ok: false, message: "No encontramos este artículo para actualizarlo." };
+      return { ok: false, message: "No encontramos este artÃ­culo para actualizarlo." };
     }
 
     const publishedAt = status === "published" ? existingArticle?.publishedAt ?? new Date() : existingArticle?.publishedAt ?? null;
@@ -311,7 +328,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
 
     return {
       ok: true,
-      message: status === "published" ? "Artículo publicado correctamente" : "Borrador guardado correctamente",
+      message: status === "published" ? "ArtÃ­culo publicado correctamente" : "Borrador guardado correctamente",
       articleId: article.id,
       slug: article.slug,
       status: article.status,
@@ -319,7 +336,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "No pudimos guardar el artículo. Intenta de nuevo.",
+      message: error instanceof Error ? error.message : "No pudimos guardar el artÃ­culo. Intenta de nuevo.",
     };
   }
 }
@@ -429,6 +446,7 @@ export async function commentAction(formData: FormData) {
   const articleId = stringValue(formData, "articleId");
   const articleSlug = stringValue(formData, "articleSlug");
   const content = stringValue(formData, "content");
+  const parentId = stringValue(formData, "parentId");
 
   if (!articleId || !articleSlug || content.length < 2) {
     return;
@@ -438,10 +456,35 @@ export async function commentAction(formData: FormData) {
     data: {
       articleId,
       userId: user.id,
+      parentId: parentId || null,
       content,
       status: "PUBLISHED",
     },
   });
 
   revalidatePath(`/off/${articleSlug}`);
+}
+
+export async function topicSuggestionAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(stringValue(formData, "articlePath") || "/")}`);
+  }
+
+  const articleId = stringValue(formData, "articleId");
+  const articleSlug = stringValue(formData, "articleSlug");
+  const content = stringValue(formData, "content");
+
+  if (!content || content.length < 2) return;
+
+  await getDb().topicSuggestion.create({
+    data: {
+      articleId: articleId || null,
+      userId: user.id,
+      content,
+    },
+  });
+
+  revalidatePath("/admin");
+  if (articleSlug) revalidatePath(`/off/${articleSlug}`);
 }

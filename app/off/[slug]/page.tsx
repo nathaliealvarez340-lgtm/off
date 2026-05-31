@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { commentAction } from "@/app/actions";
+import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const article = await getArticleBySlug(slug);
 
   if (!article) {
-    return { title: "Capítulo no encontrado | OFF" };
+    return { title: "CapÃ­tulo no encontrado | OFF" };
   }
 
   return {
@@ -79,21 +79,26 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   }
 
   const blocks = parseArticleContent(article.content);
-  const canReadFull = Boolean(user) || firstArticle?.id === article.id;
+  const isFirstChapter = article.title.trim().toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
+  const canReadFull = Boolean(user) || isFirstChapter;
   const visibleBlocks = canReadFull ? blocks : blocks.slice(0, 2);
-  const comments = await getPublishedComments(article.id);
+  const comments = user ? await getPublishedComments(article.id) : [];
 
   return (
     <main className="site-shell">
       <ReadingProgress />
       <nav className="nav">
-        <Link href="/" className="brand">
-          <span className="brand-mark">O</span>
-          OFF
+        <Link href="/" className="brand article-logo-brand">
+          <img src="/logo/logo-off.png" alt="OFF" className="article-nav-logo" />
         </Link>
         <div className="nav-links">
           <Link href="/#capitulos">Capítulos</Link>
           <Link href="/#suscripcion">Suscripción</Link>
+          {user ? (
+            <form action={logoutAction}>
+              <button className="nav-logout" type="submit">Cerrar sesión</button>
+            </form>
+          ) : null}
         </div>
       </nav>
 
@@ -208,8 +213,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {!canReadFull ? (
           <aside className="reader-gate">
             <p className="eyebrow">OFF completo</p>
-            <h2>Este capítulo continúa adentro.</h2>
-            <p>Inicia sesión o crea tu cuenta para leer el artículo completo, recibir ejercicios y comentar.</p>
+            <h2>Hay más detrás de esta historia.</h2>
+            <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y descubrir lo que pasa cuando dejamos de vivir en automático.</p>
             <Link className="button violet-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
               Entrar a OFF
             </Link>
@@ -223,38 +228,76 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <h2>Comentarios</h2>
         </div>
 
-        {user ? (
-          <form action={commentAction} className="comment-form">
+        {!user ? (
+          <div className="comment-login locked-comments">
+            <h3>🔒 Comentar</h3>
+            <p>Tu historia también importa.<br />Únete a OFF para compartir tus pensamientos, responder y formar parte de la conversación.</p>
+            <Link className="ghost-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
+              Unirme a OFF
+            </Link>
+          </div>
+        ) : (
+          <>
+            <form action={commentAction} className="comment-form">
+              <input name="articleId" type="hidden" value={article.id} />
+              <input name="articleSlug" type="hidden" value={article.slug} />
+              <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
+              <label className="field">
+                Escribe tu comentario
+                <textarea name="content" required minLength={2} />
+              </label>
+              <button className="button" type="submit">Publicar comentario</button>
+            </form>
+
+            <div className="comment-list">
+              {comments.map((comment) => (
+                <article className="comment-card" key={comment.id}>
+                  <strong>{comment.user.name}</strong>
+                  <span>{formatDate(comment.createdAt)}</span>
+                  <p>{comment.content}</p>
+                  <form action={commentAction} className="reply-form">
+                    <input name="articleId" type="hidden" value={article.id} />
+                    <input name="articleSlug" type="hidden" value={article.slug} />
+                    <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
+                    <input name="parentId" type="hidden" value={comment.id} />
+                    <textarea name="content" placeholder="Responder..." required minLength={2} />
+                    <button type="submit">Responder</button>
+                  </form>
+                  {comment.replies.length > 0 ? (
+                    <div className="reply-list">
+                      {comment.replies.map((reply) => (
+                        <div className="comment-reply" key={reply.id}>
+                          <strong>{reply.user.name}</strong>
+                          <span>{formatDate(reply.createdAt)}</span>
+                          <p>{reply.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      {user ? (
+        <section className="topic-suggestion-section">
+          <div>
+            <p className="eyebrow">OFF escucha</p>
+            <h2>¿De qué te gustaría hablar en el próximo capítulo?</h2>
+          </div>
+          <form action={topicSuggestionAction}>
             <input name="articleId" type="hidden" value={article.id} />
             <input name="articleSlug" type="hidden" value={article.slug} />
             <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
-            <label className="field">
-              Escribe tu comentario
-              <textarea name="content" required minLength={2} />
-            </label>
-            <button className="button" type="submit">
-              Publicar comentario
-            </button>
+            <textarea name="content" placeholder="Escribe una idea, pregunta o tensión que quieras ver en OFF..." required minLength={2} />
+            <button className="button violet-button" type="submit">Enviar</button>
           </form>
-        ) : (
-          <div className="comment-login">
-            <p>Inicia sesión para comentar sin anonimato.</p>
-            <Link className="ghost-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
-              Iniciar sesión
-            </Link>
-          </div>
-        )}
-
-        <div className="comment-list">
-          {comments.map((comment) => (
-            <article className="comment-card" key={comment.id}>
-              <strong>{comment.user.name}</strong>
-              <span>{formatDate(comment.createdAt)}</span>
-              <p>{comment.content}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }
+
+

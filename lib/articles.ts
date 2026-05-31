@@ -73,8 +73,15 @@ export function getFeaturedArticle(articles: Article[]) {
 
 export async function getPublishedComments(articleId: string) {
   return getDb().comment.findMany({
-    where: { articleId, status: "PUBLISHED" },
-    include: { user: { select: { name: true } } },
+    where: { articleId, status: "PUBLISHED", parentId: null },
+    include: {
+      user: { select: { name: true } },
+      replies: {
+        where: { status: "PUBLISHED" },
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 }
