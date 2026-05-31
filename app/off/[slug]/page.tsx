@@ -214,7 +214,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <aside className="reader-gate">
             <p className="eyebrow">OFF completo</p>
             <h2>Hay más detrás de esta historia.</h2>
-            <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y descubrir lo que pasa cuando dejamos de vivir en automático.</p>
+            <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y entender lo que pasa cuando dejamos de vivir en automático.</p>
             <Link className="button violet-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
               Entrar a OFF
             </Link>
@@ -230,10 +230,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         {!user ? (
           <div className="comment-login locked-comments">
-            <h3>🔒 Comentar</h3>
+            <h3><span aria-hidden="true">🔒</span> Comentar</h3>
             <p>Tu historia también importa.<br />Únete a OFF para compartir tus pensamientos, responder y formar parte de la conversación.</p>
-            <Link className="ghost-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
-              Unirme a OFF
+            <Link className="button violet-button locked-comment-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
+              Unirme
             </Link>
           </div>
         ) : (

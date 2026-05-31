@@ -46,7 +46,7 @@ const copy = {
     eyebrow: "EDITORIAL OFF by MAIA",
     hero: ["Todo parece", "avanzar.", "Pero algo dentro", "de ti sigue", "apagado."],
     subtitle:
-      "OFF es una plataforma editorial psicológica creada para personas que están construyendo éxito mientras intentan no perderse a sí mismas.",
+      "OFF nace para una generación que está construyendo éxito mientras están construyendo su futuro, cuestionando su camino y aprendiendo a crecer sin perderse a sí mismos.",
     cta: "Entrar al archivo",
     side: ["SE VE BIEN.", "PERO SE SIENTE"],
     orbit: "SENTIR · ENTENDER · ELEGIR · VOLVER · CONSTRUIR ·",
@@ -458,29 +458,34 @@ export function LocalizedHome({ articles }: { articles: PublicArticle[] }) {
           </a>
         </div>
         <div className="social-badges">
-          <div className="linkedin-badge-wrap">
-            <div
-              className="badge-base LI-profile-badge"
-              data-locale="es_ES"
-              data-size="medium"
-              data-theme="dark"
-              data-type="VERTICAL"
-              data-vanity="nathaliegarciaa"
-              data-version="v1"
-            >
-              <a className="badge-base__link LI-simple-link" href="https://mx.linkedin.com/in/nathaliegarciaa?trk=profile-badge">
-                Nathalie Garcia
-              </a>
+          <a className="profile-social-card" href="https://mx.linkedin.com/in/nathaliegarciaa" target="_blank">
+            <div className="profile-social-head">
+              <span className="platform-mark linkedin-mark">in</span>
+              <strong>LinkedIn</strong>
             </div>
-          </div>
+            <div className="profile-social-body">
+              <img src="/images/image1.webp" alt="Nathalie Garcia" />
+              <span className="social-user">Nathalie Garcia</span>
+              <h3>Nathalie Garcia</h3>
+              <p>Editora de OFF y fundadora de MAIA. Estrategia, inteligencia artificial y marcas que escalan con intención.</p>
+              <span className="social-profile-button">Ver perfil</span>
+            </div>
+          </a>
 
-          <a className="instagram-card" href="https://www.instagram.com/nathalie.garciaa" target="_blank">
-            <span className="instagram-mark">IG</span>
-            <div>
-              <strong>Nathalie Garcia</strong>
-              <p>@nathalie.garciaa</p>
+          <a className="profile-social-card" href="https://www.instagram.com/nathalie.garciaa" target="_blank">
+            <div className="profile-social-head">
+              <span className="platform-mark instagram-mark">IG</span>
+              <strong>Instagram</strong>
             </div>
-            <span className="instagram-link">{t.instagram}</span>
+            <div className="profile-social-body">
+              <img src="/images/hero-off.webp" alt="Nathalie Garcia" />
+              <span className="social-user">@nathalie.garciaa</span>
+              <h3>NATHALIE GARCIA | BUSINESS & IA</h3>
+              <p>BUILDING BRANDS THAT ACTUALLY SCALE</p>
+              <p>IA · ESTRATEGIA · POSICIONAMIENTO</p>
+              <p>FOUNDER & CEO - MAIA</p>
+              <span className="social-profile-button">Ver perfil</span>
+            </div>
           </a>
         </div>
       </section>

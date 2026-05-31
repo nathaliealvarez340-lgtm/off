@@ -738,16 +738,41 @@ textarea {
 }
 
 .reader-gate {
-  margin: 56px 0;
-  padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  margin: 64px 0;
+  border: 1px solid rgba(123, 61, 255, 0.28);
+  border-radius: 34px;
+  padding: clamp(28px, 5vw, 48px);
   background:
-    radial-gradient(circle at 75% 15%, rgba(123, 61, 255, 0.18), transparent 14rem),
-    rgba(255, 255, 255, 0.045);
+    radial-gradient(circle at 76% 8%, rgba(123, 61, 255, 0.28), transparent 16rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.58);
+  box-shadow: 0 24px 90px rgba(123, 61, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(22px);
 }
 
 .reader-gate h2 {
   margin-top: 10px;
+  font-family: Georgia, serif;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.96;
+}
+
+.reader-gate p:not(.eyebrow) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.reader-gate .violet-button {
+  border-radius: 999px;
+  margin-top: 16px;
+  box-shadow: 0 16px 44px rgba(123, 61, 255, 0.18);
+}
+
+.reader-gate .violet-button:hover,
+.locked-comment-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 18px 54px rgba(123, 61, 255, 0.28);
 }
 
 .comments-section {
@@ -786,7 +811,12 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px;
+  border-radius: 26px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(123, 61, 255, 0.16), transparent 12rem),
+    rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(16px);
 }
 
 .comment-login p {
@@ -822,11 +852,26 @@ textarea {
 }
 
 .locked-comments h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 10px;
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 28px;
   font-weight: 400;
+}
+
+.locked-comments h3 span {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.72em;
+  line-height: 1;
+}
+
+.locked-comment-button {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 14px 38px rgba(123, 61, 255, 0.16);
 }
 
 .reply-form {
@@ -3688,6 +3733,11 @@ textarea {
   box-shadow: none;
 }
 
+.locked-comment-button {
+  border-radius: 999px;
+  box-shadow: 0 14px 38px rgba(123, 61, 255, 0.16);
+}
+
 .hero-portrait {
   position: relative;
   z-index: 1;
@@ -4010,9 +4060,15 @@ textarea {
   display: grid;
   grid-template-columns: 1.1fr repeat(3, 1fr);
   gap: 28px;
-  padding: 38px min(7vw, 72px);
-  background: #f3f0ea;
-  color: #09070b;
+  width: min(1120px, calc(100% - 56px));
+  margin: 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 46px 0;
+  background:
+    radial-gradient(circle at 18% 35%, rgba(123, 61, 255, 0.12), transparent 18rem),
+    #000;
+  color: #fff;
 }
 
 .philosophy-band h2,
@@ -4026,13 +4082,14 @@ textarea {
 }
 
 .philosophy-band p {
-  color: rgba(9, 7, 11, 0.66);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .philosophy-band blockquote {
   margin: 0;
   padding-left: 28px;
-  border-left: 1px solid rgba(9, 7, 11, 0.15);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.86);
   font-family: Georgia, serif;
   font-size: 18px;
   line-height: 1.15;
@@ -4057,7 +4114,7 @@ textarea {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background:
     radial-gradient(circle at 18% 50%, rgba(123, 61, 255, 0.13), transparent 18rem),
-    rgba(255, 255, 255, 0.01);
+    #000;
 }
 
 .impact-title,
@@ -4141,74 +4198,141 @@ textarea {
   line-height: 1.75;
 }
 
-.linkedin-badge-wrap {
-  display: grid;
-  place-items: center;
-  min-height: 0;
-  border: 0;
-  background: transparent;
-}
-
 .social-badges {
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) minmax(230px, 1fr);
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
   gap: 18px;
   align-items: stretch;
 }
 
-.instagram-card {
+.profile-social-card {
   display: grid;
-  align-content: space-between;
-  min-height: 250px;
+  grid-template-rows: auto 1fr;
+  min-height: 430px;
+  color: #fff;
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.profile-social-card:hover {
+  transform: translateY(-4px);
+}
+
+.profile-social-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  padding: 16px 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+    #111116;
+}
+
+.profile-social-head strong {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.platform-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.linkedin-mark {
+  background: #0a66c2;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.instagram-mark {
+  border: 1px solid rgba(123, 61, 255, 0.48);
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.2), transparent 34%), #151018;
+  color: #d6c7ff;
+  letter-spacing: 0.06em;
+}
+
+.profile-social-body {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 12px;
+  min-height: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0 0 22px 22px;
   padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background:
     radial-gradient(circle at 75% 10%, rgba(123, 61, 255, 0.2), transparent 12rem),
     linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
     #050506;
-  color: #fff;
-  transition: transform 220ms ease, border-color 220ms ease, background 220ms ease;
 }
 
-.instagram-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(123, 61, 255, 0.48);
+.profile-social-card:hover .profile-social-body,
+.profile-social-card:hover .profile-social-head {
+  border-color: rgba(123, 61, 255, 0.42);
+  box-shadow: 0 18px 54px rgba(123, 61, 255, 0.12);
 }
 
-.instagram-mark {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(123, 61, 255, 0.56);
+.profile-social-body img {
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
-  color: #7b3dff;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.1);
 }
 
-.instagram-card strong {
-  display: block;
-  margin-top: 36px;
+.social-user {
+  color: #a98cff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.profile-social-body h3 {
+  margin: 2px 0 0;
   font-family: Georgia, serif;
-  font-size: 28px;
+  font-size: clamp(24px, 3vw, 31px);
   font-weight: 500;
   letter-spacing: -0.035em;
+  line-height: 1;
 }
 
-.instagram-card p {
-  margin: 8px 0 0;
+.profile-social-body p {
+  margin: 0;
   color: rgba(255, 255, 255, 0.58);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
-.instagram-link {
-  color: #9b66ff;
-  font-size: 11px;
+.social-profile-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #fff;
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.profile-social-card:hover .social-profile-button {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
 }
 
 .off-footer {
@@ -4408,10 +4532,6 @@ textarea {
     min-height: auto;
     border-left: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .linkedin-badge-wrap {
-    min-height: 0;
   }
 
   .philosophy-band blockquote {
