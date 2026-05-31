@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import { AdminGreeting } from "@/components/AdminGreeting";
+import { AdminSessionGuard } from "@/components/AdminSessionGuard";
+import { AdminSidebarToggle } from "@/components/AdminSidebarToggle";
 import { DeleteArticleButton } from "@/components/DeleteArticleButton";
 import { formatDate, getAllArticles } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
@@ -13,6 +16,7 @@ function formatCount(value: number) {
 }
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  noStore();
   if (!(await isAdminSession())) {
     redirect("/login");
   }
@@ -119,10 +123,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="admin-page admin-dashboard">
+      <AdminSessionGuard />
       <aside className="admin-sidebar">
-        <Link href="/" className="admin-logo" aria-label="OFF inicio">
+        <AdminSidebarToggle />
+        <Link href="/admin" className="admin-logo admin-brand-lockup" aria-label="OFF admin">
           <img src="/logo/logo-off.png" alt="OFF" />
-          <span>OFF</span>
+          <img src="/logo/maia-logo-white.png" alt="MAIA" />
         </Link>
 
         <nav className="admin-side-nav" aria-label="Navegacion admin">
@@ -370,9 +376,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <div className="quick-actions-grid">
               <Link href="/admin/new">Crear capitulo</Link>
-              <a href="#suscriptores">Ver comunidad</a>
-              <a href="#insights">Revisar insights</a>
-              <a href="#biblioteca">Abrir biblioteca</a>
+              <a href="/admin#suscriptores">Ver comunidad</a>
+              <a href="/admin#insights">Revisar insights</a>
+              <a href="/admin#biblioteca">Abrir biblioteca</a>
             </div>
           </article>
         </section>

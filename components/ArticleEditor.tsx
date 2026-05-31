@@ -14,6 +14,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
+import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { slugify } from "@/lib/slug";
 
 const LIMIT = 70000;
@@ -310,6 +311,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
   const [selectedKind, setSelectedKind] = useState<"text" | "image" | null>(null);
   const [lastSelectedImage, setLastSelectedImage] = useState("");
+  const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
+  const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -358,6 +361,23 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     if (state.slug) setSlug(state.slug);
     if (state.status) setStatusValue(state.status);
   }, [state.articleId, state.slug, state.status]);
+
+  useEffect(() => {
+    setLeftRailCollapsed(window.localStorage.getItem("off-editor-left-collapsed") === "true");
+    setRightRailCollapsed(window.localStorage.getItem("off-editor-right-collapsed") === "true");
+  }, []);
+
+  function toggleLeftRail() {
+    const next = !leftRailCollapsed;
+    setLeftRailCollapsed(next);
+    window.localStorage.setItem("off-editor-left-collapsed", String(next));
+  }
+
+  function toggleRightRail() {
+    const next = !rightRailCollapsed;
+    setRightRailCollapsed(next);
+    window.localStorage.setItem("off-editor-right-collapsed", String(next));
+  }
 
   useEffect(() => {
     setLocalSave("Guardando local...");
@@ -523,6 +543,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
   return (
     <form action={formAction} className="magazine-editor premium-editor document-editor-shell" onSubmit={validateSubmit}>
+      <AdminSessionGuard />
       <input name="id" type="hidden" value={savedId} />
       <input name="content" type="hidden" value={contentJson} />
       <input name="coverImage" type="hidden" value={cover} />
@@ -533,7 +554,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
       <header className="editor-topbar premium-editor-topbar document-editor-topbar">
         <div>
-          <a className="editor-back-link" href="/admin">â†</a>
+          <a className="editor-logo-link" href="/admin" aria-label="Volver al admin">
+            <img src="/logo/logo-off.png" alt="OFF" />
+          </a>
           <p className="eyebrow">{article ? "Editar articulo" : "Nuevo articulo"}</p>
           <div className="editor-status-row">
             <span>{article?.status ?? "draft"}</span>
@@ -593,8 +616,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </div>
       ) : null}
 
-      <div className="document-editor-frame">
+      <div className={`document-editor-frame ${leftRailCollapsed ? "left-rail-collapsed" : ""} ${rightRailCollapsed ? "right-rail-collapsed" : ""}`}>
         <aside className="document-left-rail">
+          <button className="rail-collapse-button" type="button" onClick={toggleLeftRail} aria-label={leftRailCollapsed ? "Expandir documentos" : "Contraer documentos"}>
+            {leftRailCollapsed ? "→" : "←"}
+          </button>
           <div className="document-rail-head">
             <span>Documentos</span>
             <a href="/admin/new">+</a>
@@ -693,6 +719,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </section>
 
         <aside className="editor-sidebar premium-editor-sidebar document-right-rail">
+          <button className="rail-collapse-button right" type="button" onClick={toggleRightRail} aria-label={rightRailCollapsed ? "Expandir configuracion" : "Contraer configuracion"}>
+            {rightRailCollapsed ? "←" : "→"}
+          </button>
           <div className="settings-tabs">
             <button className={activePanel === "content" ? "active" : ""} type="button" onClick={() => setActivePanel("content")}>Contenido</button>
             <button className={activePanel === "design" ? "active" : ""} type="button" onClick={() => setActivePanel("design")}>Diseño</button>
