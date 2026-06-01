@@ -12,7 +12,8 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { slugify } from "@/lib/slug";
@@ -27,7 +28,44 @@ const PALETTE_COLORS = [
   "#7B3DFF", "#8B5CF6", "#A78BFA", "#5B2CCF", "#241142",
   "#1ED760", "#E7C66A", "#E86D6D", "#64D2FF", "#FF8BD1",
 ];
-const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-msvideo";
+const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/tiff,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,video/x-ms-wmv,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff,.svg,.mp4,.mov,.mkv,.wmv,.webm";
+const VIDEO_ACCEPT = "video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,video/x-ms-wmv,.mp4,.mov,.mkv,.wmv,.webm";
+const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/tiff,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff,.svg";
+const ZOOM_LEVELS = [75, 100, 125, 150];
+const PAGE_SIZES = {
+  a4: { label: "A4", width: 794, minHeight: 1123 },
+  letter: { label: "Carta", width: 816, minHeight: 1056 },
+  magazineVertical: { label: "Revista vertical", width: 820, minHeight: 1160 },
+  magazineHorizontal: { label: "Revista horizontal", width: 1080, minHeight: 760 },
+  custom: { label: "Custom", width: 920, minHeight: 1040 },
+} as const;
+const EDITOR_FONTS = [
+  { label: "JA Jayagiri Sans", family: '"JA Jayagiri Sans", "Open Sans", sans-serif' },
+  { label: "Open Sans", family: '"Open Sans", Arial, sans-serif' },
+  { label: "Poppins", family: 'Poppins, Arial, sans-serif' },
+  { label: "Arial", family: 'Arial, sans-serif' },
+  { label: "Anton", family: 'Anton, "Arial Black", sans-serif' },
+  { label: "League Spartan", family: '"League Spartan", Poppins, sans-serif' },
+  { label: "Archivo Black", family: '"Archivo Black", "Arial Black", sans-serif' },
+  { label: "Fenway Banner Variable", family: '"fenway-banner-vf", sans-serif', variation: '"wght" 300, "wdth" 100' },
+  { label: "PD Monolina", family: '"PD Monolina", "Cormorant Garamond", serif' },
+  { label: "Hardcover Variable", family: '"hardcover-variable", "Playfair Display", serif' },
+  { label: "Late Serif Variable", family: '"late-serif-variable", "Libre Baskerville", serif' },
+  { label: "Eanne Moderno OT BoldItalic", family: '"Eanne Moderno OT BoldItalic", "DM Serif Display", serif' },
+  { label: "Design Foundations", family: '"Design Foundations", Inter, sans-serif' },
+  { label: "Playfair Display", family: '"Playfair Display", Georgia, serif' },
+  { label: "Cormorant Garamond", family: '"Cormorant Garamond", Georgia, serif' },
+  { label: "Libre Baskerville", family: '"Libre Baskerville", Georgia, serif' },
+  { label: "DM Serif Display", family: '"DM Serif Display", Georgia, serif' },
+  { label: "Inter", family: 'Inter, ui-sans-serif, system-ui, sans-serif' },
+  { label: "Manrope", family: 'Manrope, Inter, sans-serif' },
+  { label: "Montserrat", family: 'Montserrat, Inter, sans-serif' },
+  { label: "Lora", family: 'Lora, Georgia, serif' },
+  { label: "Merriweather", family: 'Merriweather, Georgia, serif' },
+  { label: "Space Grotesk", family: '"Space Grotesk", Inter, sans-serif' },
+  { label: "Bebas Neue", family: '"Bebas Neue", Impact, sans-serif' },
+  { label: "Oswald", family: 'Oswald, Arial, sans-serif' },
+];
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -43,6 +81,8 @@ const FontSize = Extension.create({
               const styles = [];
               if (attributes.fontSize) styles.push(`font-size: ${attributes.fontSize}`);
               if (attributes.lineHeight) styles.push(`line-height: ${attributes.lineHeight}`);
+              if (attributes.fontFamily) styles.push(`font-family: ${attributes.fontFamily}`);
+              if (attributes.fontVariationSettings) styles.push(`font-variation-settings: ${attributes.fontVariationSettings}`);
               if (styles.length === 0) return {};
               return { style: styles.join("; ") };
             },
@@ -50,6 +90,14 @@ const FontSize = Extension.create({
           lineHeight: {
             default: null,
             parseHTML: (element) => element.style.lineHeight.replace(/['"]+/g, ""),
+          },
+          fontFamily: {
+            default: null,
+            parseHTML: (element) => element.style.fontFamily,
+          },
+          fontVariationSettings: {
+            default: null,
+            parseHTML: (element) => element.style.fontVariationSettings,
           },
         },
       },
@@ -278,6 +326,11 @@ function htmlToText(value: string) {
   return template.content.textContent ?? "";
 }
 
+function isVideoFile(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  return file.type.startsWith("video/") || ["mp4", "mov", "mkv", "wmv", "webm"].includes(extension ?? "");
+}
+
 function htmlToEditorialJson(html: string) {
   if (typeof document === "undefined") return "[]";
 
@@ -402,7 +455,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [spotifyModal, setSpotifyModal] = useState({ open: false, pos: -1, title: "", url: "" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
+  const [fontOpen, setFontOpen] = useState(false);
   const [hexColor, setHexColor] = useState("#7B3DFF");
+  const [zoom, setZoom] = useState(100);
+  const [pageSize, setPageSize] = useState<keyof typeof PAGE_SIZES>("magazineVertical");
+  const [pages, setPages] = useState(1);
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
   const [selectedKind, setSelectedKind] = useState<"text" | "image" | "video" | null>(null);
   const [lastSelectedImage, setLastSelectedImage] = useState("");
@@ -484,6 +541,10 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   useEffect(() => {
     setLeftRailCollapsed(window.localStorage.getItem("off-editor-left-collapsed") === "true");
     setRightRailCollapsed(window.localStorage.getItem("off-editor-right-collapsed") === "true");
+    const storedZoom = Number(window.localStorage.getItem("off-editor-zoom"));
+    if (ZOOM_LEVELS.includes(storedZoom)) setZoom(storedZoom);
+    const storedPageSize = window.localStorage.getItem("off-editor-page-size") as keyof typeof PAGE_SIZES | null;
+    if (storedPageSize && storedPageSize in PAGE_SIZES) setPageSize(storedPageSize);
   }, []);
 
   function toggleLeftRail() {
@@ -566,7 +627,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setClientMessage("Subiendo archivo...");
     try {
       const url = await uploadEditorFile(file);
-      if (file.type.startsWith("video/")) {
+      if (isVideoFile(file)) {
         editor.chain().focus().insertContent({ type: "videoEmbed", attrs: { src: url } }).run();
       } else {
         editor.chain().focus().setImage({ src: url, alt: "Imagen editorial" }).run();
@@ -656,7 +717,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     const { from, to } = targetEditor.state.selection;
     const selectedTitle = targetEditor.state.doc.textBetween(from, to, " ").trim();
     const label = title || selectedTitle || "Link";
-    targetEditor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank"><em>[${escapeHtml(label)}]</em></a>`).run();
+    targetEditor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(label)}</a>`).run();
     if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setLinkModal({ open: false, title: "", url: "", newTab: true });
   }
@@ -679,6 +740,17 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     if (!targetEditor) return;
     targetEditor.chain().focus().setMark("textStyle", { fontSize: size }).run();
     if (targetEditor === editor) setEditorHtml(editor.getHTML());
+  }
+
+  function applyFont(font: (typeof EDITOR_FONTS)[number]) {
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
+    targetEditor.chain().focus().setMark("textStyle", {
+      fontFamily: font.family,
+      fontVariationSettings: font.variation ?? null,
+    }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+    setFontOpen(false);
   }
 
   function applyLineHeight(lineHeight: string) {
@@ -727,8 +799,29 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setEditorHtml(editor.getHTML());
   }
 
+  function changeZoom(nextZoom: number) {
+    setZoom(nextZoom);
+    window.localStorage.setItem("off-editor-zoom", String(nextZoom));
+  }
+
+  function changePageSize(nextSize: keyof typeof PAGE_SIZES) {
+    setPageSize(nextSize);
+    window.localStorage.setItem("off-editor-page-size", nextSize);
+  }
+
+  function addPage() {
+    editor?.chain().focus().setHorizontalRule().run();
+    if (editor) setEditorHtml(editor.getHTML());
+    setPages((current) => current + 1);
+  }
+
+  function removePage() {
+    setPages((current) => Math.max(1, current - 1));
+  }
+
   const toolbarEditor = activeEditor ?? editor;
   const canUseToolbar = Boolean(toolbarEditor);
+  const page = PAGE_SIZES[pageSize];
 
   return (
     <form action={formAction} className="magazine-editor premium-editor document-editor-shell" onSubmit={validateSubmit}>
@@ -861,6 +954,23 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
           <nav className="editor-command-bar doc-toolbar tiptap-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>Parrafo</button>
+              <div className="toolbar-dropdown font-dropdown">
+                <button type="button" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>Tipografías</button>
+                {fontOpen ? (
+                  <div className="toolbar-menu font-menu">
+                    {EDITOR_FONTS.map((font) => (
+                      <button
+                        type="button"
+                        key={font.label}
+                        onClick={() => applyFont(font)}
+                        style={{ fontFamily: font.family, fontVariationSettings: font.variation }}
+                      >
+                        {font.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
               <div className="toolbar-dropdown">
                 <button type="button" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
                 {headingOpen ? (
@@ -911,22 +1021,57 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={!canUseToolbar || uploading} onClick={() => videoInputRef.current?.click()}>Video</button>
               <button type="button" disabled={!canUseToolbar} onClick={insertSpotifyCard}>Spotify</button>
               <input ref={imageInputRef} hidden type="file" accept={MEDIA_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
-              <input ref={videoInputRef} hidden type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-msvideo" onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+              <input ref={videoInputRef} hidden type="file" accept={VIDEO_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+            </div>
+            <div className="doc-toolbar-group page-toolbar-group">
+              <select value={pageSize} onChange={(event) => changePageSize(event.target.value as keyof typeof PAGE_SIZES)} aria-label="Tamaño de hoja">
+                {Object.entries(PAGE_SIZES).map(([key, value]) => <option value={key} key={key}>{value.label}</option>)}
+              </select>
+              <select value={zoom} onChange={(event) => changeZoom(Number(event.target.value))} aria-label="Zoom">
+                {ZOOM_LEVELS.map((level) => <option value={level} key={level}>{level}%</option>)}
+              </select>
+              <button type="button" onClick={addPage}>+ Hoja</button>
+              <button type="button" disabled={pages === 1} onClick={removePage}>Eliminar hoja</button>
             </div>
           </nav>
 
-          <main className="editor-canvas premium-editor-canvas document-page tiptap-page">
-            <input name="title" type="hidden" value={title} />
-            <input name="excerpt" type="hidden" value={excerpt} />
-            <EditorContent editor={titleEditor} className="tiptap-title-editor document-title" />
-            <EditorContent editor={excerptEditor} className="tiptap-excerpt-editor document-excerpt" />
-            <div className="document-meta-line">
-              <span>{article?.status ?? "draft"}</span>
-              <span>{characterCount.toLocaleString()} caracteres</span>
-              <span>{localSave}</span>
-            </div>
-            <EditorContent editor={editor} className="tiptap-editor" />
-          </main>
+          <div className="editor-page-stage" style={{ "--page-zoom": zoom / 100 } as CSSProperties}>
+            <motion.main
+              className="editor-canvas premium-editor-canvas document-page tiptap-page editor-paper-sheet"
+              style={{ "--page-width": `${page.width}px`, "--page-min-height": `${page.minHeight}px` } as CSSProperties}
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <input name="title" type="hidden" value={title} />
+              <input name="excerpt" type="hidden" value={excerpt} />
+              <div className="paper-label">{page.label} · {zoom}%</div>
+              <EditorContent editor={titleEditor} className="tiptap-title-editor document-title" />
+              <EditorContent editor={excerptEditor} className="tiptap-excerpt-editor document-excerpt" />
+              <div className="document-meta-line">
+                <span>{article?.status ?? "draft"}</span>
+                <span>{characterCount.toLocaleString()} caracteres</span>
+                <span>{localSave}</span>
+              </div>
+              <EditorContent editor={editor} className="tiptap-editor" />
+            </motion.main>
+            <AnimatePresence>
+              {Array.from({ length: Math.max(0, pages - 1) }).map((_, index) => (
+                <motion.section
+                  className="editor-paper-sheet editor-paper-sheet-empty"
+                  style={{ "--page-width": `${page.width}px`, "--page-min-height": `${page.minHeight}px` } as CSSProperties}
+                  key={`page-${index + 2}`}
+                  initial={{ opacity: 0, y: 28, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -18, scale: 0.96 }}
+                  transition={{ duration: 0.36, ease: "easeOut" }}
+                >
+                  <span>Hoja {index + 2}</span>
+                  <p>Continúa escribiendo en el documento principal. Esta hoja marca la estructura visual del artículo.</p>
+                </motion.section>
+              ))}
+            </AnimatePresence>
+          </div>
         </section>
 
         <aside className="editor-sidebar premium-editor-sidebar document-right-rail">
@@ -951,7 +1096,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   }}
                 >
                   {coverPreview ? <img src={coverPreview} alt="Preview portada" /> : <span>Subir imagen</span>}
-                  <input ref={coverInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml" onChange={(event) => void handleCoverFile(event.target.files?.[0])} />
+                  <input ref={coverInputRef} type="file" accept={IMAGE_ACCEPT} onChange={(event) => void handleCoverFile(event.target.files?.[0])} />
                 </label>
                 <input value={cover} placeholder="Ruta de portada" onChange={(event) => { setCover(event.target.value); setCoverPreview(event.target.value); }} />
                 <button type="button" onClick={() => { setCover(""); setCoverPreview(""); }}>Quitar portada</button>

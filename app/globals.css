@@ -3423,6 +3423,148 @@ textarea:focus {
   gap: 8px;
 }
 
+.editor-page-stage {
+  display: grid;
+  justify-items: center;
+  gap: 42px;
+  min-height: calc(100vh - 140px);
+  padding: 42px clamp(18px, 4vw, 54px) 88px;
+  overflow: visible;
+}
+
+.editor-paper-sheet {
+  position: relative;
+  width: min(100%, var(--page-width, 820px)) !important;
+  min-height: var(--page-min-height, 1120px) !important;
+  margin: 0 auto !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 18px !important;
+  padding: clamp(58px, 7vw, 92px) clamp(46px, 6vw, 86px) !important;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(123, 61, 255, 0.08), transparent 28rem),
+    linear-gradient(180deg, rgba(23, 22, 28, 0.98), rgba(11, 10, 14, 0.98));
+  box-shadow:
+    0 42px 110px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(123, 61, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: scale(var(--page-zoom, 1));
+  transform-origin: top center;
+  transition: transform 260ms ease, width 260ms ease, min-height 260ms ease, box-shadow 260ms ease;
+}
+
+.editor-paper-sheet::before {
+  pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.085) 0.45px, transparent 0.45px);
+  background-size: 4px 4px;
+  opacity: 0.13;
+}
+
+.editor-paper-sheet-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+}
+
+.editor-paper-sheet-empty span {
+  color: rgba(255, 255, 255, 0.78);
+  font-family: Georgia, serif;
+  font-size: 28px;
+}
+
+.paper-label {
+  margin-bottom: 28px;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.document-title .ProseMirror,
+.document-excerpt .ProseMirror {
+  outline: 0;
+}
+
+.document-title .ProseMirror {
+  min-height: 1.1em;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3rem, 5vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.document-excerpt .ProseMirror {
+  min-height: 3.4em;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.document-title .ProseMirror p,
+.document-excerpt .ProseMirror p {
+  margin: 0;
+}
+
+.document-title .ProseMirror p.is-editor-empty:first-child::before,
+.document-excerpt .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.font-dropdown {
+  position: relative;
+}
+
+.font-menu {
+  width: min(72vw, 360px);
+  max-height: 420px;
+  overflow-y: auto;
+  grid-template-columns: 1fr;
+}
+
+.font-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 38px;
+  text-align: left;
+}
+
+.page-toolbar-group select {
+  min-width: 112px;
+}
+
+.document-workspace .doc-toolbar {
+  overflow: visible;
+}
+
+.tiptap-editor .ProseMirror {
+  overflow: visible;
+}
+
+.tiptap-editor .ProseMirror video[data-size="small"] {
+  max-width: 380px;
+}
+
+.tiptap-editor .ProseMirror video[data-size="medium"] {
+  max-width: 640px;
+}
+
+.tiptap-editor .ProseMirror video[data-size="large"] {
+  max-width: 100%;
+}
+
 @media (max-width: 820px) {
   .article-reader-layout {
     grid-template-columns: 1fr;

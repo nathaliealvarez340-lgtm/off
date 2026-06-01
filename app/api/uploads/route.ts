@@ -4,18 +4,23 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { slugify } from "@/lib/slug";
 
-const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+const MAX_UPLOAD_SIZE = 100 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
+  "image/tiff",
+  "image/x-tiff",
   "image/svg+xml",
   "video/mp4",
   "video/webm",
   "video/quicktime",
   "video/x-m4v",
+  "video/x-matroska",
+  "video/x-ms-wmv",
   "video/x-msvideo",
+  "application/octet-stream",
 ]);
 
 export async function POST(request: Request) {
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     const extension = path.extname(file.name).toLowerCase();
-    const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".mp4", ".webm", ".mov", ".m4v", ".avi"]);
+    const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".tif", ".tiff", ".svg", ".mp4", ".webm", ".mov", ".m4v", ".mkv", ".wmv"]);
 
     if (!ALLOWED_TYPES.has(file.type) && !allowedExtensions.has(extension)) {
       return NextResponse.json({ error: "No se pudo subir el archivo. Revisa formato o tamaño." }, { status: 400 });
