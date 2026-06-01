@@ -28,7 +28,6 @@ const PALETTE_COLORS = [
   "#7B3DFF", "#8B5CF6", "#A78BFA", "#5B2CCF", "#241142",
   "#1ED760", "#E7C66A", "#E86D6D", "#64D2FF", "#FF8BD1",
 ];
-const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/tiff,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,video/x-ms-wmv,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff,.svg,.mp4,.mov,.mkv,.wmv,.webm";
 const VIDEO_ACCEPT = "video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,video/x-ms-wmv,.mp4,.mov,.mkv,.wmv,.webm";
 const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/tiff,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff,.svg";
 const ZOOM_LEVELS = [75, 100, 125, 150];
@@ -264,7 +263,7 @@ function legacyContentToHtml(content?: string) {
       }
       if (block.type === "embed" && block.url) {
         if (block.caption === "spotify") {
-          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="${escapeHtml(block.label ?? "Contenido de Spotify")}">${escapeHtml(block.label ?? "Contenido de Spotify")}</a>`;
+          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="${escapeHtml(block.label ?? "Contenido de Spotify")}"><span class="spotify-logo" aria-hidden="true"></span><strong>${escapeHtml(block.label ?? "Contenido de Spotify")}</strong></a>`;
         }
         return `<p><a href="${escapeHtml(block.url)}">${escapeHtml(block.url)}</a></p>`;
       }
@@ -353,6 +352,36 @@ function htmlToEditorialJson(html: string) {
     if (!(node instanceof Element)) return;
     const tag = node.tagName.toLowerCase();
 
+    const spotifyCard = node.matches("a[data-spotify-card]") ? node : node.querySelector("a[data-spotify-card]");
+    if (spotifyCard) {
+      const url = spotifyCard.getAttribute("href") ?? "";
+      if (url) blocks.push({ type: "embed", url, caption: "spotify", label: spotifyCard.getAttribute("data-title") ?? spotifyCard.textContent ?? "Contenido de Spotify" });
+      return;
+    }
+
+    const imageElement = node.matches("img") ? node : node.querySelector("img");
+    if (imageElement) {
+      const src = imageElement.getAttribute("src") ?? "";
+      if (src) {
+        blocks.push({
+          type: "image",
+          src,
+          alt: imageElement.getAttribute("alt") ?? "Imagen editorial",
+          caption: node.querySelector("figcaption")?.textContent ?? "",
+          align: imageElement.getAttribute("data-layout") ?? "center",
+          width: imageElement.getAttribute("style") ?? undefined,
+        });
+      }
+      return;
+    }
+
+    const videoElement = node.matches("video") ? node : node.querySelector("video");
+    if (videoElement) {
+      const src = videoElement.getAttribute("src") ?? "";
+      if (src) blocks.push({ type: "video", url: src, caption: videoElement.getAttribute("data-caption") ?? "", label: videoElement.getAttribute("data-size") ?? "medium" });
+      return;
+    }
+
     if (tag === "p") pushTextBlock("paragraph", node);
     else if (tag === "h1") pushTextBlock("h1", node);
     else if (tag === "h2") pushTextBlock("h2", node);
@@ -363,15 +392,6 @@ function htmlToEditorialJson(html: string) {
     else if (tag === "ul" || tag === "ol") {
       const items = Array.from(node.querySelectorAll("li")).map((item) => sanitizeInlineHtml(item.innerHTML)).filter((item) => htmlToText(item).trim());
       blocks.push({ type: tag === "ol" ? "numbered" : "list", items });
-    } else if (tag === "img") {
-      const src = node.getAttribute("src") ?? "";
-      if (src) blocks.push({ type: "image", src, alt: node.getAttribute("alt") ?? "Imagen editorial", align: node.getAttribute("data-layout") ?? "center", width: node.getAttribute("style") ?? undefined });
-    } else if (tag === "video") {
-      const src = node.getAttribute("src") ?? "";
-      if (src) blocks.push({ type: "video", url: src, caption: node.getAttribute("data-caption") ?? "", label: node.getAttribute("data-size") ?? "medium" });
-    } else if (tag === "a" && node.getAttribute("data-spotify-card")) {
-      const url = node.getAttribute("href") ?? "";
-      if (url) blocks.push({ type: "embed", url, caption: "spotify", label: node.getAttribute("data-title") ?? node.textContent ?? "Contenido de Spotify" });
     } else if (tag === "figure") {
       const image = node.querySelector("img");
       const src = image?.getAttribute("src") ?? "";
@@ -469,6 +489,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
     immediatelyRender: false,
@@ -508,9 +529,13 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         return true;
       },
     },
-    onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
+    onFocus: ({ editor: currentEditor }) => {
+      setActiveEditor(currentEditor);
+      bodySelectionRef.current = { from: currentEditor.state.selection.from, to: currentEditor.state.selection.to };
+    },
     onUpdate: ({ editor: currentEditor }) => setEditorHtml(currentEditor.getHTML()),
     onSelectionUpdate: ({ editor: currentEditor }) => {
+      bodySelectionRef.current = { from: currentEditor.state.selection.from, to: currentEditor.state.selection.to };
       const image = currentEditor.getAttributes("image").src as string | undefined;
       const video = currentEditor.getAttributes("videoEmbed").src as string | undefined;
       if (image) {
@@ -627,11 +652,13 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setClientMessage("Subiendo archivo...");
     try {
       const url = await uploadEditorFile(file);
+      const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
       if (isVideoFile(file)) {
-        editor.chain().focus().insertContent({ type: "videoEmbed", attrs: { src: url } }).run();
+        editor.chain().focus().insertContentAt(range, { type: "videoEmbed", attrs: { src: url, size: "medium" } }).run();
       } else {
-        editor.chain().focus().setImage({ src: url, alt: "Imagen editorial" }).run();
+        editor.chain().focus().insertContentAt(range, { type: "image", attrs: { src: url, alt: file.name || "Imagen editorial", layout: "center" } }).run();
       }
+      bodySelectionRef.current = { from: editor.state.selection.to, to: editor.state.selection.to };
       setEditorHtml(editor.getHTML());
       setClientMessage("");
     } catch (error) {
@@ -639,6 +666,16 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     } finally {
       setUploading(false);
     }
+  }
+
+  function openImagePicker() {
+    if (editor) bodySelectionRef.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    imageInputRef.current?.click();
+  }
+
+  function openVideoPicker() {
+    if (editor) bodySelectionRef.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    videoInputRef.current?.click();
   }
 
   function insertSpotifyCard() {
@@ -1017,11 +1054,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}>Bullets</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}>1.</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}>Divider</button>
-              <button type="button" disabled={!canUseToolbar || uploading} onClick={() => imageInputRef.current?.click()}>Imagen</button>
-              <button type="button" disabled={!canUseToolbar || uploading} onClick={() => videoInputRef.current?.click()}>Video</button>
+              <button type="button" disabled={!canUseToolbar || uploading} onClick={openImagePicker}>Imagen</button>
+              <button type="button" disabled={!canUseToolbar || uploading} onClick={openVideoPicker}>Video</button>
               <button type="button" disabled={!canUseToolbar} onClick={insertSpotifyCard}>Spotify</button>
-              <input ref={imageInputRef} hidden type="file" accept={MEDIA_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
-              <input ref={videoInputRef} hidden type="file" accept={VIDEO_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+              <input ref={imageInputRef} hidden type="file" accept={IMAGE_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
+              <input ref={videoInputRef} hidden type="file" accept={VIDEO_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
             </div>
             <div className="doc-toolbar-group page-toolbar-group">
               <select value={pageSize} onChange={(event) => changePageSize(event.target.value as keyof typeof PAGE_SIZES)} aria-label="Tamaño de hoja">

@@ -967,8 +967,7 @@ textarea:focus {
   min-height: 120px;
 }
 
-.reader-video,
-.spotify-card {
+.reader-video {
   display: block;
   margin: 34px 0;
 }
@@ -1003,6 +1002,7 @@ textarea:focus {
   gap: 9px;
   width: fit-content;
   max-width: min(100%, 360px);
+  margin: 34px 0;
   border: 1px solid rgba(30, 215, 96, 0.3);
   border-left: 5px solid #1ed760;
   border-radius: 999px;
@@ -3042,7 +3042,9 @@ textarea:focus {
   width: 100%;
 }
 
-.tiptap-editor .ProseMirror a[data-spotify-card] {
+.tiptap-editor .ProseMirror a[data-spotify-card],
+.editor-preview a[data-spotify-card],
+.reader a[data-spotify-card] {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -3061,13 +3063,17 @@ textarea:focus {
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
-.tiptap-editor .ProseMirror a[data-spotify-card]:hover {
+.tiptap-editor .ProseMirror a[data-spotify-card]:hover,
+.editor-preview a[data-spotify-card]:hover,
+.reader a[data-spotify-card]:hover {
   border-color: rgba(30, 215, 96, 0.58);
   box-shadow: 0 16px 42px rgba(30, 215, 96, 0.14);
   transform: translateY(-1px);
 }
 
-.tiptap-editor .ProseMirror a[data-spotify-card] strong {
+.tiptap-editor .ProseMirror a[data-spotify-card] strong,
+.editor-preview a[data-spotify-card] strong,
+.reader a[data-spotify-card] strong {
   display: block;
   overflow: hidden;
   max-width: 280px;

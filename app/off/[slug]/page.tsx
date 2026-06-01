@@ -155,7 +155,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               case "image":
                 return (
                   <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
-                    <Image src={block.src} alt={block.alt} width={900} height={560} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
+                    <img src={block.src} alt={block.alt} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
                     {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                   </figure>
                 );
@@ -165,7 +165,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   <div className={`reader-gallery ${block.type}`} key={index}>
                     {block.images.map((image, imageIndex) => (
                       <figure key={`${image.src}-${imageIndex}`}>
-                        <Image src={image.src} alt={image.alt ?? "Imagen editorial"} width={700} height={520} />
+                        <img src={image.src} alt={image.alt ?? "Imagen editorial"} />
                         {image.caption ? <figcaption>{image.caption}</figcaption> : null}
                       </figure>
                     ))}
@@ -174,7 +174,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               case "embed":
                 return (
                   <a className={block.caption === "spotify" ? "spotify-card" : "reader-embed"} href={block.url} target="_blank" key={index}>
-                    {block.caption === "spotify" ? <span className="spotify-logo">Spotify</span> : null}
+                    {block.caption === "spotify" ? <span className="spotify-logo" aria-hidden="true" /> : null}
                     <strong>{block.caption === "spotify" ? block.label ?? "Contenido de Spotify" : block.url}</strong>
                   </a>
                 );
