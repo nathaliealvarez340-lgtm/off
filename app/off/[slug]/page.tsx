@@ -173,9 +173,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 );
               case "embed":
                 return (
-                  <a className={block.caption === "spotify" ? "spotify-card" : "reader-embed"} href={block.url} target="_blank" key={index}>
-                    {block.caption === "spotify" ? <span className="spotify-logo" aria-hidden="true" /> : null}
-                    <strong>{block.caption === "spotify" ? block.label ?? "Contenido de Spotify" : block.url}</strong>
+                  <a className={block.caption === "spotify" ? "spotify-pill" : "reader-embed"} href={block.url} target="_blank" key={index}>
+                    {block.caption === "spotify" ? <span className="spotify-pill-logo" aria-hidden="true" /> : null}
+                    <span className={block.caption === "spotify" ? "spotify-pill-title" : undefined}>{block.caption === "spotify" ? block.label ?? "Contenido de Spotify" : block.url}</span>
                   </a>
                 );
               case "video":

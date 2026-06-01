@@ -30,6 +30,8 @@ const PALETTE_COLORS = [
 ];
 const VIDEO_ACCEPT = "video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-matroska,video/x-ms-wmv,.mp4,.mov,.mkv,.wmv,.webm";
 const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/tiff,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.tif,.tiff,.svg";
+const IMAGE_MAX_SIZE = 25 * 1024 * 1024;
+const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const ZOOM_LEVELS = [75, 100, 125, 150];
 const PAGE_SIZES = {
   a4: { label: "A4", width: 794, minHeight: 1123 },
@@ -160,9 +162,9 @@ const SpotifyEmbed = TiptapNode.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "a",
-      { href: HTMLAttributes.url, "data-spotify-card": "true", "data-title": HTMLAttributes.title || "Contenido de Spotify", target: "_blank", rel: "noreferrer" },
-      ["span", { class: "spotify-logo", "aria-hidden": "true" }],
-      ["strong", {}, HTMLAttributes.title || "Contenido de Spotify"],
+      { class: "spotify-pill", href: HTMLAttributes.url, "data-spotify-card": "true", "data-title": HTMLAttributes.title || "Contenido de Spotify", target: "_blank", rel: "noreferrer" },
+      ["span", { class: "spotify-pill-logo", "aria-hidden": "true" }],
+      ["span", { class: "spotify-pill-title" }, HTMLAttributes.title || "Contenido de Spotify"],
     ];
   },
 });
@@ -263,7 +265,7 @@ function legacyContentToHtml(content?: string) {
       }
       if (block.type === "embed" && block.url) {
         if (block.caption === "spotify") {
-          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="${escapeHtml(block.label ?? "Contenido de Spotify")}"><span class="spotify-logo" aria-hidden="true"></span><strong>${escapeHtml(block.label ?? "Contenido de Spotify")}</strong></a>`;
+          return `<a class="spotify-pill" data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="${escapeHtml(block.label ?? "Contenido de Spotify")}"><span class="spotify-pill-logo" aria-hidden="true"></span><span class="spotify-pill-title">${escapeHtml(block.label ?? "Contenido de Spotify")}</span></a>`;
         }
         return `<p><a href="${escapeHtml(block.url)}">${escapeHtml(block.url)}</a></p>`;
       }
@@ -428,8 +430,15 @@ function safePreviewHtml(html: string) {
 }
 
 async function uploadEditorFile(file: File) {
+  const kind = isVideoFile(file) ? "video" : "image";
+  const maxSize = kind === "video" ? VIDEO_MAX_SIZE : IMAGE_MAX_SIZE;
+  if (file.size > maxSize) {
+    throw new Error("El archivo supera el tamaño permitido.");
+  }
+
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("kind", kind);
 
   const response = await fetch("/api/uploads", {
     method: "POST",
@@ -447,6 +456,28 @@ async function uploadEditorFile(file: File) {
   }
 
   return data.url;
+}
+
+function insertMediaNode(editor: TiptapEditor, type: "image" | "videoEmbed", attrs: Record<string, unknown>, range?: { from: number; to: number } | null) {
+  return editor
+    .chain()
+    .focus()
+    .command(({ tr, dispatch }) => {
+      const nodeType = editor.schema.nodes[type];
+      if (!nodeType) return false;
+
+      const docSize = tr.doc.content.size;
+      const from = Math.min(Math.max(range?.from ?? tr.selection.from, 0), docSize);
+      const to = Math.min(Math.max(range?.to ?? from, from), docSize);
+      const node = nodeType.create(attrs);
+
+      if (dispatch) {
+        tr.replaceRangeWith(from, to, node);
+        dispatch(tr.scrollIntoView());
+      }
+      return true;
+    })
+    .run();
 }
 
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
@@ -653,10 +684,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     try {
       const url = await uploadEditorFile(file);
       const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
+      let inserted = false;
       if (isVideoFile(file)) {
-        editor.chain().focus().insertContentAt(range, { type: "videoEmbed", attrs: { src: url, size: "medium" } }).run();
+        inserted = insertMediaNode(editor, "videoEmbed", { src: url, size: "medium" }, range);
       } else {
-        editor.chain().focus().insertContentAt(range, { type: "image", attrs: { src: url, alt: file.name || "Imagen editorial", layout: "center" } }).run();
+        inserted = insertMediaNode(editor, "image", { src: url, alt: file.name || "Imagen editorial", layout: "center" }, range);
+      }
+      if (!inserted) {
+        throw new Error("No se pudo insertar el archivo en la hoja.");
       }
       bodySelectionRef.current = { from: editor.state.selection.to, to: editor.state.selection.to };
       setEditorHtml(editor.getHTML());
