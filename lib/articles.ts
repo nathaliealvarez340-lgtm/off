@@ -9,7 +9,7 @@ export type EditorialBlock =
   | { type: "divider" }
   | { type: "image"; src: string; alt: string; caption?: string; align?: "full" | "center" | "left" | "right" | "image-left" | "image-right"; width?: string }
   | { type: "gallery" | "collage"; images: Array<{ src: string; alt?: string; caption?: string }> }
-  | { type: "embed" | "video"; url: string; caption?: string }
+  | { type: "embed" | "video"; url: string; caption?: string; label?: string }
   | { type: "cta"; text: string; url: string; label: string }
   | { type: "subscribe" | "share"; text: string }
   | { type: "stat"; value: string; label: string }

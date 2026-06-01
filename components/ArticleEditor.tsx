@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import type { Article } from "@prisma/client";
-import { Extension, Node as TiptapNode } from "@tiptap/core";
+import { Extension, Node as TiptapNode, type Editor as TiptapEditor } from "@tiptap/core";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
@@ -27,7 +27,7 @@ const PALETTE_COLORS = [
   "#7B3DFF", "#8B5CF6", "#A78BFA", "#5B2CCF", "#241142",
   "#1ED760", "#E7C66A", "#E86D6D", "#64D2FF", "#FF8BD1",
 ];
-const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime";
+const MEDIA_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-msvideo";
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -86,13 +86,14 @@ const VideoEmbed = TiptapNode.create({
     return {
       src: { default: null },
       caption: { default: "" },
+      size: { default: "medium" },
     };
   },
   parseHTML() {
     return [{ tag: "video[src]" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["video", { ...HTMLAttributes, controls: "true" }];
+    return ["video", { ...HTMLAttributes, "data-size": HTMLAttributes.size || "medium", controls: "true" }];
   },
 });
 
@@ -112,12 +113,34 @@ const SpotifyEmbed = TiptapNode.create({
   renderHTML({ HTMLAttributes }) {
     return [
       "a",
-      { href: HTMLAttributes.url, "data-spotify-card": "true", target: "_blank", rel: "noreferrer" },
+      { href: HTMLAttributes.url, "data-spotify-card": "true", "data-title": HTMLAttributes.title || "Contenido de Spotify", target: "_blank", rel: "noreferrer" },
       ["span", { class: "spotify-logo" }, "Spotify"],
       ["strong", {}, HTMLAttributes.title || "Contenido de Spotify"],
     ];
   },
 });
+
+function editorExtensions(placeholder: string) {
+  return [
+    StarterKit,
+    Underline,
+    TextStyle,
+    FontSize,
+    Color,
+    Highlight.configure({ multicolor: true }),
+    EditorialImage.configure({ allowBase64: false, inline: false }),
+    VideoEmbed,
+    SpotifyEmbed,
+    TextAlign.configure({ types: ["heading", "paragraph"] }),
+    Link.configure({
+      openOnClick: false,
+      autolink: true,
+      linkOnPaste: true,
+      HTMLAttributes: { rel: "noreferrer" },
+    }),
+    Placeholder.configure({ placeholder }),
+  ];
+}
 
 type LegacyBlock = {
   type?: string;
@@ -193,7 +216,7 @@ function legacyContentToHtml(content?: string) {
       }
       if (block.type === "embed" && block.url) {
         if (block.caption === "spotify") {
-          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="Contenido de Spotify">Contenido de Spotify</a>`;
+          return `<a data-spotify-card="true" href="${escapeHtml(block.url)}" data-title="${escapeHtml(block.label ?? "Contenido de Spotify")}">${escapeHtml(block.label ?? "Contenido de Spotify")}</a>`;
         }
         return `<p><a href="${escapeHtml(block.url)}">${escapeHtml(block.url)}</a></p>`;
       }
@@ -292,10 +315,10 @@ function htmlToEditorialJson(html: string) {
       if (src) blocks.push({ type: "image", src, alt: node.getAttribute("alt") ?? "Imagen editorial", align: node.getAttribute("data-layout") ?? "center", width: node.getAttribute("style") ?? undefined });
     } else if (tag === "video") {
       const src = node.getAttribute("src") ?? "";
-      if (src) blocks.push({ type: "video", url: src, caption: node.getAttribute("data-caption") ?? "" });
+      if (src) blocks.push({ type: "video", url: src, caption: node.getAttribute("data-caption") ?? "", label: node.getAttribute("data-size") ?? "medium" });
     } else if (tag === "a" && node.getAttribute("data-spotify-card")) {
       const url = node.getAttribute("href") ?? "";
-      if (url) blocks.push({ type: "embed", url, caption: "spotify" });
+      if (url) blocks.push({ type: "embed", url, caption: "spotify", label: node.getAttribute("data-title") ?? node.textContent ?? "Contenido de Spotify" });
     } else if (tag === "figure") {
       const image = node.querySelector("img");
       const src = image?.getAttribute("src") ?? "";
@@ -343,11 +366,11 @@ async function uploadEditorFile(file: File) {
   try {
     data = await response.json() as { url?: string; error?: string };
   } catch {
-    throw new Error("No se pudo subir la imagen. Intenta con otro archivo.");
+    throw new Error("No se pudo subir el archivo. Revisa formato o tamaño.");
   }
 
   if (!response.ok || !data.url) {
-    throw new Error(data.error || "No se pudo subir la imagen. Intenta con otro archivo.");
+    throw new Error(data.error || "No se pudo subir el archivo. Revisa formato o tamaño.");
   }
 
   return data.url;
@@ -358,9 +381,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [clientMessage, setClientMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [savedId, setSavedId] = useState(article?.id ?? "");
-  const [title, setTitle] = useState(article?.title ?? "");
-  const [excerpt, setExcerpt] = useState(article?.excerpt ?? "");
-  const generatedSlug = useMemo(() => slugify(title), [title]);
+  const [title, setTitle] = useState(inlineToHtml(article?.title ?? ""));
+  const [excerpt, setExcerpt] = useState(inlineToHtml(article?.excerpt ?? ""));
+  const titleText = useMemo(() => htmlToText(title), [title]);
+  const excerptText = useMemo(() => htmlToText(excerpt), [excerpt]);
+  const generatedSlug = useMemo(() => slugify(titleText), [titleText]);
   const [slug, setSlug] = useState(article?.slug ?? generatedSlug);
   const [cover, setCover] = useState(article?.coverImage ?? "");
   const [coverPreview, setCoverPreview] = useState(article?.coverImage ?? "");
@@ -374,46 +399,68 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [localSave, setLocalSave] = useState("Autosave local listo");
   const [serverSave, setServerSave] = useState("Guardado");
   const [linkModal, setLinkModal] = useState({ open: false, title: "", url: "", newTab: true });
+  const [spotifyModal, setSpotifyModal] = useState({ open: false, pos: -1, title: "", url: "" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
-  const [selectedKind, setSelectedKind] = useState<"text" | "image" | null>(null);
+  const [selectedKind, setSelectedKind] = useState<"text" | "image" | "video" | null>(null);
   const [lastSelectedImage, setLastSelectedImage] = useState("");
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
   const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
+  const [activeEditor, setActiveEditor] = useState<TiptapEditor | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
+  const titleEditor = useEditor({
+    immediatelyRender: false,
+    extensions: editorExtensions("Título del artículo"),
+    content: title || "<p></p>",
+    onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
+    onUpdate: ({ editor: currentEditor }) => {
+      const nextTitle = currentEditor.getHTML();
+      setTitle(nextTitle);
+      if (!slug.trim() || (!article?.slug && !state.slug)) setSlug(slugify(htmlToText(nextTitle)));
+    },
+  });
+
+  const excerptEditor = useEditor({
+    immediatelyRender: false,
+    extensions: editorExtensions("Escribe un extracto que abra la tensión del artículo..."),
+    content: excerpt || "<p></p>",
+    onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
+    onUpdate: ({ editor: currentEditor }) => setExcerpt(currentEditor.getHTML()),
+  });
+
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      Underline,
-      TextStyle,
-      FontSize,
-      Color,
-      Highlight.configure({ multicolor: true }),
-      EditorialImage.configure({ allowBase64: false, inline: false }),
-      VideoEmbed,
-      SpotifyEmbed,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
-        HTMLAttributes: { rel: "noreferrer" },
-      }),
-      Placeholder.configure({ placeholder: "Empieza a escribir..." }),
-    ],
+    extensions: editorExtensions("Empieza a escribir..."),
     content: initialEditorContent,
+    editorProps: {
+      handleClick(view, _pos, event) {
+        const target = (event.target as HTMLElement).closest("a[data-spotify-card]") as HTMLAnchorElement | null;
+        if (!target) return false;
+        event.preventDefault();
+        setSpotifyModal({
+          open: true,
+          pos: view.posAtDOM(target, 0),
+          title: target.dataset.title || target.textContent || "Contenido de Spotify",
+          url: target.href,
+        });
+        return true;
+      },
+    },
+    onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
     onUpdate: ({ editor: currentEditor }) => setEditorHtml(currentEditor.getHTML()),
     onSelectionUpdate: ({ editor: currentEditor }) => {
       const image = currentEditor.getAttributes("image").src as string | undefined;
+      const video = currentEditor.getAttributes("videoEmbed").src as string | undefined;
       if (image) {
         setSelectedKind("image");
         setLastSelectedImage(image);
+      } else if (video) {
+        setSelectedKind("video");
       } else if (!currentEditor.state.selection.empty) {
         setSelectedKind("text");
       } else {
@@ -462,7 +509,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
   useEffect(() => {
     const readableText = htmlToText(editorHtml).trim();
-    if (!title.trim() && !excerpt.trim() && !readableText) return;
+    if (!titleText.trim() && !excerptText.trim() && !readableText) return;
     if (overLimit || uploading) return;
 
     setServerSave("Guardando...");
@@ -470,7 +517,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       const payload: AutosaveArticlePayload = {
         id: savedId,
         title,
-        slug: slug || slugify(title),
+        slug: slug || slugify(titleText),
         excerpt,
         content: contentJson,
         coverImage: cover,
@@ -490,11 +537,10 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     }, 3500);
 
     return () => window.clearTimeout(timeout);
-  }, [category, contentJson, cover, editorHtml, excerpt, featured, overLimit, readTime, savedId, slug, statusValue, title, uploading]);
+  }, [category, contentJson, cover, editorHtml, excerpt, excerptText, featured, overLimit, readTime, savedId, slug, statusValue, title, titleText, uploading]);
 
-  function handleTitle(value: string) {
-    setTitle(value);
-    if (!slug.trim() || (!article?.slug && !state.slug)) setSlug(slugify(value));
+  function currentEditor() {
+    return activeEditor ?? editor;
   }
 
   async function handleCoverFile(file?: File) {
@@ -508,7 +554,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       setCoverPreview(url);
       setClientMessage("");
     } catch (error) {
-      setClientMessage(error instanceof Error ? error.message : "No se pudo subir la imagen. Intenta con otro archivo.");
+      setClientMessage(error instanceof Error ? error.message : "No se pudo subir el archivo. Revisa formato o tamaño.");
     } finally {
       setUploading(false);
     }
@@ -528,23 +574,44 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       setEditorHtml(editor.getHTML());
       setClientMessage("");
     } catch (error) {
-      setClientMessage(error instanceof Error ? error.message : "No se pudo subir el archivo. Intenta con otro archivo.");
+      setClientMessage(error instanceof Error ? error.message : "No se pudo subir el archivo. Revisa formato o tamaño.");
     } finally {
       setUploading(false);
     }
   }
 
   function insertSpotifyCard() {
-    if (!editor) return;
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
     const url = window.prompt("Pega el link de Spotify");
     if (!url) return;
     if (!/^https?:\/\/(open\.)?spotify\.com\//i.test(url.trim())) {
       setClientMessage("Pega un enlace válido de Spotify.");
       return;
     }
-    editor.chain().focus().insertContent({ type: "spotifyEmbed", attrs: { url: url.trim(), title: "Contenido de Spotify" } }).run();
-    setEditorHtml(editor.getHTML());
+    targetEditor.chain().focus().insertContent({ type: "spotifyEmbed", attrs: { url: url.trim(), title: "Contenido de Spotify" } }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setClientMessage("");
+  }
+
+  function confirmSpotify() {
+    if (!editor || spotifyModal.pos < 0) return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        const node = tr.doc.nodeAt(spotifyModal.pos);
+        if (!node) return false;
+        tr.setNodeMarkup(spotifyModal.pos, undefined, {
+          ...node.attrs,
+          url: spotifyModal.url.trim(),
+          title: spotifyModal.title.trim() || "Contenido de Spotify",
+        });
+        return true;
+      })
+      .run();
+    setEditorHtml(editor.getHTML());
+    setSpotifyModal({ open: false, pos: -1, title: "", url: "" });
   }
 
   function validateSubmit(event: FormEvent<HTMLFormElement>) {
@@ -567,57 +634,63 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   }
 
   function applyLink() {
-    if (!editor) return;
-    const currentHref = editor.getAttributes("link").href as string | undefined;
-    const { from, to } = editor.state.selection;
-    const selectedTitle = editor.state.doc.textBetween(from, to, " ").trim();
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
+    const currentHref = targetEditor.getAttributes("link").href as string | undefined;
+    const { from, to } = targetEditor.state.selection;
+    const selectedTitle = targetEditor.state.doc.textBetween(from, to, " ").trim();
     setLinkModal({ open: true, title: selectedTitle, url: currentHref ?? "", newTab: true });
   }
 
   function confirmLink() {
-    if (!editor) return;
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
     const url = linkModal.url.trim();
     const title = linkModal.title.trim();
     if (!url) {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      targetEditor.chain().focus().extendMarkRange("link").unsetLink().run();
       setLinkModal({ open: false, title: "", url: "", newTab: true });
       return;
     }
 
-    const { from, to } = editor.state.selection;
-    const selectedTitle = editor.state.doc.textBetween(from, to, " ").trim();
+    const { from, to } = targetEditor.state.selection;
+    const selectedTitle = targetEditor.state.doc.textBetween(from, to, " ").trim();
     const label = title || selectedTitle || "Link";
-    editor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank"><em>[${escapeHtml(label)}]</em></a>`).run();
-    setEditorHtml(editor.getHTML());
+    targetEditor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank"><em>[${escapeHtml(label)}]</em></a>`).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setLinkModal({ open: false, title: "", url: "", newTab: true });
   }
 
   function applyColor(color: string, close = false) {
-    if (!editor || !HEX_PATTERN.test(color)) {
+    const targetEditor = currentEditor();
+    if (!targetEditor || !HEX_PATTERN.test(color)) {
       setClientMessage("Escribe un color HEX valido, por ejemplo #7B3DFF.");
       return;
     }
-    editor.chain().focus().setColor(color).run();
-    setEditorHtml(editor.getHTML());
+    targetEditor.chain().focus().setColor(color).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setHexColor(color.toUpperCase());
     if (close) setPaletteOpen(false);
     setClientMessage("");
   }
 
   function applyFontSize(size: string) {
-    if (!editor) return;
-    editor.chain().focus().setMark("textStyle", { fontSize: size }).run();
-    setEditorHtml(editor.getHTML());
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
+    targetEditor.chain().focus().setMark("textStyle", { fontSize: size }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
   }
 
   function applyLineHeight(lineHeight: string) {
-    if (!editor) return;
-    editor.chain().focus().setMark("textStyle", { lineHeight }).run();
-    setEditorHtml(editor.getHTML());
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
+    targetEditor.chain().focus().setMark("textStyle", { lineHeight }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
   }
 
   function applyHeadingToken(token: string) {
-    if (!editor) return;
+    const targetEditor = currentEditor();
+    if (!targetEditor) return;
     const map: Record<string, string> = {
       H1: "48px",
       H2: "38px",
@@ -628,11 +701,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       H7: "16px",
       H8: "14px",
     };
-    if (token === "H1") editor.chain().focus().toggleHeading({ level: 1 }).run();
-    else if (token === "H2") editor.chain().focus().toggleHeading({ level: 2 }).run();
-    else if (token === "H3") editor.chain().focus().toggleHeading({ level: 3 }).run();
-    else editor.chain().focus().setMark("textStyle", { fontSize: map[token] }).run();
-    setEditorHtml(editor.getHTML());
+    if (token === "H1") targetEditor.chain().focus().toggleHeading({ level: 1 }).run();
+    else if (token === "H2") targetEditor.chain().focus().toggleHeading({ level: 2 }).run();
+    else if (token === "H3") targetEditor.chain().focus().toggleHeading({ level: 3 }).run();
+    else targetEditor.chain().focus().setMark("textStyle", { fontSize: map[token] }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setHeadingOpen(false);
   }
 
@@ -648,7 +721,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setEditorHtml(editor.getHTML());
   }
 
-  const canUseToolbar = Boolean(editor);
+  function applyVideoSize(size: "small" | "medium" | "large") {
+    if (!editor) return;
+    editor.chain().focus().updateAttributes("videoEmbed", { size }).run();
+    setEditorHtml(editor.getHTML());
+  }
+
+  const toolbarEditor = activeEditor ?? editor;
+  const canUseToolbar = Boolean(toolbarEditor);
 
   return (
     <form action={formAction} className="magazine-editor premium-editor document-editor-shell" onSubmit={validateSubmit}>
@@ -721,10 +801,31 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </div>
       ) : null}
 
+      {spotifyModal.open ? (
+        <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label="Editar Spotify">
+          <div className="link-modal spotify-edit-modal">
+            <strong>Spotify</strong>
+            <label>
+              Título del enlace
+              <input value={spotifyModal.title} onChange={(event) => setSpotifyModal((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label>
+              URL
+              <input value={spotifyModal.url} onChange={(event) => setSpotifyModal((current) => ({ ...current, url: event.target.value }))} />
+            </label>
+            <div className="link-modal-actions">
+              <a className="ghost-button" href={spotifyModal.url} target="_blank">Abrir enlace</a>
+              <button type="button" className="ghost-button" onClick={() => setSpotifyModal({ open: false, pos: -1, title: "", url: "" })}>Cancelar</button>
+              <button type="button" className="button" onClick={confirmSpotify}>Aplicar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className={`document-editor-frame ${leftRailCollapsed ? "left-rail-collapsed" : ""} ${rightRailCollapsed ? "right-rail-collapsed" : ""}`}>
         <aside className="document-left-rail">
           <button className="rail-collapse-button" type="button" onClick={toggleLeftRail} aria-label={leftRailCollapsed ? "Expandir documentos" : "Contraer documentos"}>
-            {leftRailCollapsed ? "→" : "←"}
+            {leftRailCollapsed ? ">" : "<"}
           </button>
           <div className="document-rail-head">
             <span>Documentos</span>
@@ -736,14 +837,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 <span className="document-section-label">Publicados</span>
                 {articles.filter((doc) => doc.status === "published").slice(0, 8).map((doc) => (
                   <a className={doc.id === savedId ? "document-list-item active" : "document-list-item"} href={`/admin/${doc.id}`} key={doc.id}>
-                    <strong>{doc.title || "Sin titulo"}</strong>
+                    <strong>{htmlToText(doc.title) || "Sin titulo"}</strong>
                     <span><i />Publicado</span>
                   </a>
                 ))}
                 <span className="document-section-label">Borradores</span>
                 {articles.filter((doc) => doc.status !== "published").slice(0, 12).map((doc) => (
                   <a className={doc.id === savedId ? "document-list-item active" : "document-list-item"} href={`/admin/${doc.id}`} key={doc.id}>
-                    <strong>{doc.title || "Sin titulo"}</strong>
+                    <strong>{htmlToText(doc.title) || "Sin titulo"}</strong>
                     <span><i />Borrador</span>
                   </a>
                 ))}
@@ -759,7 +860,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         <section className="document-workspace">
           <nav className="editor-command-bar doc-toolbar tiptap-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().setParagraph().run()}>Parrafo</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>Parrafo</button>
               <div className="toolbar-dropdown">
                 <button type="button" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
                 {headingOpen ? (
@@ -770,14 +871,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   </div>
                 ) : null}
               </div>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleBlockquote().run()}>Quote</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>Quote</button>
             </div>
             <div className="doc-toolbar-group">
-              <button type="button" className={editor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleBold().run()}>B</button>
-              <button type="button" className={editor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleItalic().run()}>I</button>
-              <button type="button" className={editor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleUnderline().run()}>U</button>
-              <button type="button" className={editor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleStrike().run()}>S</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}>Highlight</button>
+              <button type="button" className={toolbarEditor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBold().run()}>B</button>
+              <button type="button" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}>I</button>
+              <button type="button" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}>U</button>
+              <button type="button" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}>S</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}>Highlight</button>
               <button type="button" disabled={!canUseToolbar} onClick={applyLink}>Link</button>
             </div>
             <div className="doc-toolbar-group">
@@ -803,27 +904,22 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   </div>
                 ) : null}
               </div>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleBulletList().run()}>Bullets</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().toggleOrderedList().run()}>1.</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => editor?.chain().focus().setHorizontalRule().run()}>Divider</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}>Bullets</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}>1.</button>
+              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}>Divider</button>
               <button type="button" disabled={!canUseToolbar || uploading} onClick={() => imageInputRef.current?.click()}>Imagen</button>
               <button type="button" disabled={!canUseToolbar || uploading} onClick={() => videoInputRef.current?.click()}>Video</button>
               <button type="button" disabled={!canUseToolbar} onClick={insertSpotifyCard}>Spotify</button>
               <input ref={imageInputRef} hidden type="file" accept={MEDIA_ACCEPT} onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
-              <input ref={videoInputRef} hidden type="file" accept="video/mp4,video/webm,video/quicktime" onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
+              <input ref={videoInputRef} hidden type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/x-msvideo" onChange={(event) => void handleInlineImageFile(event.target.files?.[0])} />
             </div>
           </nav>
 
           <main className="editor-canvas premium-editor-canvas document-page tiptap-page">
-            <input className="title-input editor-title-hero document-title" name="title" placeholder="Titulo del articulo" value={title} onChange={(event) => handleTitle(event.target.value)} required />
-            <textarea
-              className="excerpt-input editor-excerpt-hero document-excerpt"
-              name="excerpt"
-              placeholder="Escribe un extracto que abra la tension del articulo..."
-              value={excerpt}
-              onChange={(event) => setExcerpt(event.target.value)}
-              required
-            />
+            <input name="title" type="hidden" value={title} />
+            <input name="excerpt" type="hidden" value={excerpt} />
+            <EditorContent editor={titleEditor} className="tiptap-title-editor document-title" />
+            <EditorContent editor={excerptEditor} className="tiptap-excerpt-editor document-excerpt" />
             <div className="document-meta-line">
               <span>{article?.status ?? "draft"}</span>
               <span>{characterCount.toLocaleString()} caracteres</span>
@@ -835,7 +931,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
         <aside className="editor-sidebar premium-editor-sidebar document-right-rail">
           <button className="rail-collapse-button right" type="button" onClick={toggleRightRail} aria-label={rightRailCollapsed ? "Expandir configuracion" : "Contraer configuracion"}>
-            {rightRailCollapsed ? "←" : "→"}
+            {rightRailCollapsed ? "<" : ">"}
           </button>
           <div className="settings-tabs">
             <button className={activePanel === "content" ? "active" : ""} type="button" onClick={() => setActivePanel("content")}>Contenido</button>
@@ -881,11 +977,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <label className="field">Estilo de texto
                 <select onChange={(event) => {
                   const value = event.target.value;
-                  if (value === "paragraph") editor?.chain().focus().setParagraph().run();
-                  if (value === "title") editor?.chain().focus().toggleHeading({ level: 1 }).run();
-                  if (value === "subtitle" || value === "h2") editor?.chain().focus().toggleHeading({ level: 2 }).run();
-                  if (value === "h3") editor?.chain().focus().toggleHeading({ level: 3 }).run();
-                  if (value === "quote") editor?.chain().focus().toggleBlockquote().run();
+                  if (value === "paragraph") toolbarEditor?.chain().focus().setParagraph().run();
+                  if (value === "title") toolbarEditor?.chain().focus().toggleHeading({ level: 1 }).run();
+                  if (value === "subtitle" || value === "h2") toolbarEditor?.chain().focus().toggleHeading({ level: 2 }).run();
+                  if (value === "h3") toolbarEditor?.chain().focus().toggleHeading({ level: 3 }).run();
+                  if (value === "quote") toolbarEditor?.chain().focus().toggleBlockquote().run();
                 }} defaultValue="paragraph">
                   <option value="paragraph">Parrafo</option>
                   <option value="title">Titulo</option>
@@ -897,9 +993,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               </label>
               <label className="field">Color de texto<input value={hexColor} onChange={(event) => setHexColor(event.target.value)} onBlur={() => applyColor(hexColor)} placeholder="#7B3DFF" /></label>
               <div className="design-button-row">
-                <button type="button" onClick={() => editor?.chain().focus().setTextAlign("left").run()}>Izquierda</button>
-                <button type="button" onClick={() => editor?.chain().focus().setTextAlign("center").run()}>Centro</button>
-                <button type="button" onClick={() => editor?.chain().focus().setTextAlign("right").run()}>Derecha</button>
+                <button type="button" onClick={() => toolbarEditor?.chain().focus().setTextAlign("left").run()}>Izquierda</button>
+                <button type="button" onClick={() => toolbarEditor?.chain().focus().setTextAlign("center").run()}>Centro</button>
+                <button type="button" onClick={() => toolbarEditor?.chain().focus().setTextAlign("right").run()}>Derecha</button>
               </div>
               <label className="field">Espaciado
                 <select onChange={(event) => applyLineHeight(event.target.value)} defaultValue="">
@@ -922,6 +1018,13 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   </div>
                 </>
               ) : null}
+              {selectedKind === "video" ? (
+                <div className="design-button-row">
+                  <button type="button" onClick={() => applyVideoSize("small")}>Video pequeño</button>
+                  <button type="button" onClick={() => applyVideoSize("medium")}>Video mediano</button>
+                  <button type="button" onClick={() => applyVideoSize("large")}>Video grande</button>
+                </div>
+              ) : null}
             </div>
           )}
         </aside>
@@ -933,8 +1036,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
             <button className="ghost-button preview-close" type="button" onClick={() => setPreviewOpen(false)}>Cerrar</button>
             {coverPreview ? <img className="preview-cover" src={coverPreview} alt="" /> : null}
             <p className="eyebrow">Vista previa</p>
-            <h1>{title || "Titulo del articulo"}</h1>
-            <p className="preview-excerpt">{excerpt || "Extracto editorial"}</p>
+            <h1 dangerouslySetInnerHTML={{ __html: safePreviewHtml(title || "Titulo del articulo") }} />
+            <div className="preview-excerpt" dangerouslySetInnerHTML={{ __html: safePreviewHtml(excerpt || "Extracto editorial") }} />
             <div className="reader" dangerouslySetInnerHTML={{ __html: safePreviewHtml(editorHtml) }} />
           </section>
         </div>
@@ -942,4 +1045,6 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     </form>
   );
 }
+
+
 

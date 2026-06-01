@@ -979,6 +979,18 @@ textarea:focus {
   background: #000;
 }
 
+.reader-video.video-small video {
+  width: min(100%, 420px);
+}
+
+.reader-video.video-medium video {
+  width: min(100%, 640px);
+}
+
+.reader-video.video-large video {
+  width: 100%;
+}
+
 .reader-video figcaption {
   margin-top: 10px;
   color: rgba(255, 255, 255, 0.48);
@@ -986,20 +998,23 @@ textarea:focus {
 }
 
 .spotify-card {
+  width: max-content;
+  max-width: min(100%, 420px);
   border: 1px solid rgba(30, 215, 96, 0.24);
   border-left: 8px solid #1ed760;
-  border-radius: 18px;
-  padding: 18px;
+  border-radius: 999px;
+  padding: 12px 16px;
+  backdrop-filter: blur(16px);
   background: linear-gradient(135deg, rgba(30, 215, 96, 0.08), rgba(255, 255, 255, 0.035)), #050506;
   color: #fff;
+  box-shadow: 0 16px 48px rgba(30, 215, 96, 0.08);
 }
 
 .spotify-card strong {
-  display: block;
-  margin-top: 8px;
-  font-family: Georgia, serif;
-  font-size: 24px;
-  font-weight: 500;
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .spotify-logo {
@@ -2982,24 +2997,38 @@ textarea:focus {
   background: #000;
 }
 
+.tiptap-editor .ProseMirror video[data-size="small"] {
+  width: min(100%, 420px);
+}
+
+.tiptap-editor .ProseMirror video[data-size="medium"] {
+  width: min(100%, 640px);
+}
+
+.tiptap-editor .ProseMirror video[data-size="large"] {
+  width: 100%;
+}
+
 .tiptap-editor .ProseMirror a[data-spotify-card] {
   display: block;
+  width: max-content;
+  max-width: min(100%, 420px);
   margin: 2rem 0;
   border: 1px solid rgba(30, 215, 96, 0.24);
   border-left: 8px solid #1ed760;
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 999px;
+  padding: 12px 16px;
+  backdrop-filter: blur(16px);
   background: linear-gradient(135deg, rgba(30, 215, 96, 0.08), rgba(255, 255, 255, 0.035)), #050506;
   color: #fff;
   text-decoration: none;
 }
 
 .tiptap-editor .ProseMirror a[data-spotify-card] strong {
-  display: block;
-  margin-top: 8px;
-  font-family: Georgia, serif;
-  font-size: 24px;
-  font-weight: 500;
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .tiptap-editor .ProseMirror hr {

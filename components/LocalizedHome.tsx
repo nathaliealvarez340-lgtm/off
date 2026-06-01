@@ -227,6 +227,10 @@ function editorialImage(article: PublicArticle) {
   return visualMap[article.slug] ?? article.coverImage;
 }
 
+function plainText(value: string) {
+  return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
 function formatDate(date: string | null, lang: Lang) {
   if (!date) return "Draft";
   return new Intl.DateTimeFormat(localeMap[lang], {
@@ -433,12 +437,12 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             {articles.map((article) => (
               <article className="article-card cinematic-card" key={article.id}>
                 <Link className="cover-frame" href={`/off/${article.slug}`}>
-                  <Image src={editorialImage(article)} alt={article.title} fill sizes="(max-width: 820px) 100vw, 31vw" />
+                  <Image src={editorialImage(article)} alt={plainText(article.title)} fill sizes="(max-width: 820px) 100vw, 31vw" />
                 </Link>
                 <div className="article-copy">
                   <span className="pill">{article.category}</span>
-                  <h3>{article.title}</h3>
-                  <p>{article.excerpt}</p>
+                  <h3>{plainText(article.title)}</h3>
+                  <p>{plainText(article.excerpt)}</p>
                   <div className="meta">
                     <span>{formatDate(article.publishedAt, lang)}</span>
                     <span>{article.readTime}</span>

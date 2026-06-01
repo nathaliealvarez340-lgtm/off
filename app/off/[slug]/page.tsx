@@ -26,7 +26,13 @@ function sanitizeInlineHtml(text: string) {
     .replace(/<a\s/gi, "<a rel=\"noreferrer\" ");
 }
 
+function plainText(text: string) {
+  return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
 function renderInline(text: string) {
+  text = text.replace(/^<p>([\s\S]*)<\/p>$/i, "$1");
+  text = text.replace(/^<h[1-6][^>]*>([\s\S]*)<\/h[1-6]>$/i, "$1");
   if (/<(strong|em|u|s|mark|a|br|span)(\s|>|\/)/i.test(text)) {
     return <span dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(text) }} />;
   }
@@ -56,11 +62,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   return {
-    title: `${article.title} | OFF`,
-    description: article.excerpt,
+    title: `${plainText(article.title)} | OFF`,
+    description: plainText(article.excerpt),
     openGraph: {
-      title: article.title,
-      description: article.excerpt,
+      title: plainText(article.title),
+      description: plainText(article.excerpt),
       images: [article.coverImage],
       type: "article",
       publishedTime: article.publishedAt?.toISOString(),
@@ -104,14 +110,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       <header className="article-hero">
         <p className="eyebrow">{article.category}</p>
-        <h1>{article.title}</h1>
-        <p>{article.excerpt}</p>
+        <h1>{renderInline(article.title)}</h1>
+        <p>{renderInline(article.excerpt)}</p>
         <div className="meta">
           <span>{formatDate(article.publishedAt)}</span>
           <span>{article.author}</span>
           <span>{article.readTime}</span>
         </div>
-        <ShareButtons title={article.title} />
+        <ShareButtons title={plainText(article.title)} />
       </header>
 
       <div className="article-cover">
@@ -169,12 +175,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 return (
                   <a className={block.caption === "spotify" ? "spotify-card" : "reader-embed"} href={block.url} target="_blank" key={index}>
                     {block.caption === "spotify" ? <span className="spotify-logo">Spotify</span> : null}
-                    <strong>{block.caption === "spotify" ? "Contenido de Spotify" : block.url}</strong>
+                    <strong>{block.caption === "spotify" ? block.label ?? "Contenido de Spotify" : block.url}</strong>
                   </a>
                 );
               case "video":
                 return (
-                  <figure className="reader-video" key={index}>
+                <figure className={`reader-video video-${block.label ?? "medium"}`} key={index}>
                     <video src={block.url} controls />
                     {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                   </figure>
