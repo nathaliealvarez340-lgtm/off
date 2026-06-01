@@ -162,7 +162,7 @@ const SpotifyEmbed = TiptapNode.create({
     return [
       "a",
       { href: HTMLAttributes.url, "data-spotify-card": "true", "data-title": HTMLAttributes.title || "Contenido de Spotify", target: "_blank", rel: "noreferrer" },
-      ["span", { class: "spotify-logo" }, "Spotify"],
+      ["span", { class: "spotify-logo", "aria-hidden": "true" }],
       ["strong", {}, HTMLAttributes.title || "Contenido de Spotify"],
     ];
   },
