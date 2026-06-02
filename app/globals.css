@@ -658,22 +658,42 @@ textarea:focus {
 
 .reader-image.wrap-square,
 .reader-image.wrap-tight,
-.reader-image.wrap-transparent {
+.reader-image.wrap-transparent,
+.reader-image.wrap-inline,
+.reader-video.wrap-square,
+.reader-video.wrap-tight,
+.reader-video.wrap-transparent,
+.reader-video.wrap-inline {
   width: min(48%, 420px);
 }
 
 .reader-image.wrap-square.align-left,
 .reader-image.wrap-tight.align-left,
-.reader-image.wrap-transparent.align-left {
+.reader-image.wrap-transparent.align-left,
+.reader-image.wrap-inline.align-left,
+.reader-video.wrap-square.align-left,
+.reader-video.wrap-tight.align-left,
+.reader-video.wrap-transparent.align-left,
+.reader-video.wrap-inline.align-left {
   float: left;
   margin: 8px 28px 18px 0;
 }
 
 .reader-image.wrap-square.align-right,
 .reader-image.wrap-tight.align-right,
-.reader-image.wrap-transparent.align-right {
+.reader-image.wrap-transparent.align-right,
+.reader-image.wrap-inline.align-right,
+.reader-video.wrap-square.align-right,
+.reader-video.wrap-tight.align-right,
+.reader-video.wrap-transparent.align-right,
+.reader-video.wrap-inline.align-right {
   float: right;
   margin: 8px 0 18px 28px;
+}
+
+.reader-image.wrap-top-bottom,
+.reader-video.wrap-top-bottom {
+  clear: both;
 }
 
 .reader-image.wrap-behind,
@@ -3140,22 +3160,38 @@ textarea:focus {
 
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="square"],
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="tight"],
-.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"] {
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"],
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="inline"] {
   width: min(48%, 420px);
 }
 
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="square"][data-layout="left"],
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="tight"][data-layout="left"],
-.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"][data-layout="left"] {
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"][data-layout="left"],
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="inline"][data-layout="left"] {
   float: left;
   margin: 0.5rem 1.7rem 1.2rem 0;
 }
 
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="square"][data-layout="right"],
 .tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="tight"][data-layout="right"],
-.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"][data-layout="right"] {
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="transparent"][data-layout="right"],
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="inline"][data-layout="right"] {
   float: right;
   margin: 0.5rem 0 1.2rem 1.7rem;
+}
+
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="top-bottom"] {
+  clear: both;
+}
+
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="behind"] {
+  z-index: 0;
+  opacity: 0.72;
+}
+
+.tiptap-editor .ProseMirror figure.editor-media-node[data-wrap="front"] {
+  z-index: 3;
 }
 
 .tiptap-editor .ProseMirror figure.editor-media-node.ProseMirror-selectednode {
@@ -3252,6 +3288,84 @@ textarea:focus {
   background: rgba(9, 8, 12, 0.94);
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(18px);
+}
+
+.media-caption-panel {
+  position: fixed;
+  z-index: 82;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  border: 1px solid rgba(123, 61, 255, 0.24);
+  border-radius: 18px;
+  padding: 10px;
+  background: rgba(9, 8, 12, 0.94);
+  box-shadow: 0 18px 58px rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(18px);
+}
+
+.media-caption-panel label {
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+}
+
+.media-caption-panel input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+}
+
+.media-caption-panel button {
+  align-self: end;
+  border: 1px solid rgba(123, 61, 255, 0.32);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: rgba(123, 61, 255, 0.16);
+  color: #fff;
+}
+
+.insert-menu {
+  min-width: 200px;
+}
+
+.insert-menu-item {
+  position: relative;
+}
+
+.insert-menu-item > button {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.insert-menu-item > button::after {
+  content: "›";
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.insert-submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  display: none;
+  min-width: 190px;
+  gap: 4px;
+  border: 1px solid rgba(123, 61, 255, 0.2);
+  border-radius: 14px;
+  padding: 8px;
+  background: rgba(10, 9, 14, 0.96);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+}
+
+.insert-menu-item:hover .insert-submenu,
+.insert-menu-item:focus-within .insert-submenu {
+  display: grid;
 }
 
 .media-context-menu button,

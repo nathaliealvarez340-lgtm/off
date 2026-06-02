@@ -49,6 +49,14 @@ const WRAP_MODES = [
   { value: "behind", label: "Detrás del texto" },
   { value: "front", label: "Delante del texto" },
 ] as const;
+const MEDIA_POSITION_OPTIONS = [
+  { value: "above", label: "Encima del texto" },
+  { value: "below", label: "Debajo del texto" },
+  { value: "left", label: "Izquierda" },
+  { value: "right", label: "Derecha" },
+  { value: "center", label: "Centro" },
+  { value: "wrap", label: "Ajustar al texto" },
+] as const;
 const ASPECT_RATIOS = [
   { value: "", label: "Libre" },
   { value: "1 / 1", label: "1:1" },
@@ -651,6 +659,18 @@ function insertMediaNode(editor: TiptapEditor, type: "image" | "videoEmbed", att
     .run();
 }
 
+function isSafeMediaUrl(kind: "image" | "video", url: string) {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol)) return false;
+    const extension = parsed.pathname.split(".").pop()?.toLowerCase() ?? "";
+    if (kind === "image") return ["png", "jpg", "jpeg", "webp", "gif", "tif", "tiff", "svg"].includes(extension) || /^https?:\/\//i.test(url);
+    return ["mp4", "mov", "mkv", "wmv", "webm", "m4v"].includes(extension) || /^https?:\/\//i.test(url);
+  } catch {
+    return false;
+  }
+}
+
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
   const [state, formAction, pending] = useActionState(saveArticleAction, initialState);
   const [clientMessage, setClientMessage] = useState("");
@@ -680,8 +700,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [headingOpen, setHeadingOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
-  const [mediaContext, setMediaContext] = useState({ open: false, x: 0, y: 0 });
+  const [mediaContext, setMediaContext] = useState({ open: false, x: 0, y: 0, pos: null as number | null });
+  const [mediaCaptionPanel, setMediaCaptionPanel] = useState({ open: false, x: 0, y: 0, width: 320, pos: null as number | null });
   const [cropOpen, setCropOpen] = useState(false);
+  const [mediaUrlModal, setMediaUrlModal] = useState({ open: false, kind: "image" as "image" | "video", url: "" });
+  const [captionFocusTick, setCaptionFocusTick] = useState(0);
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [zoom, setZoom] = useState(100);
   const [pageSize, setPageSize] = useState<keyof typeof PAGE_SIZES>("magazineVertical");
@@ -699,6 +722,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const captionInputRef = useRef<HTMLInputElement | null>(null);
+  const captionPanelInputRef = useRef<HTMLInputElement | null>(null);
   const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
@@ -747,6 +772,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
           view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
           setSelectedMediaPos(pos);
           setActiveEditor(editor);
+          setMediaContext({ open: false, x: 0, y: 0, pos: null });
           return true;
         }
         return false;
@@ -763,7 +789,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
             view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
             setSelectedMediaPos(pos);
           }
-          setMediaContext({ open: true, x: mouseEvent.clientX, y: mouseEvent.clientY });
+          setMediaContext({ open: true, x: mouseEvent.clientX, y: mouseEvent.clientY, pos });
           setActiveEditor(editor);
           return true;
         },
@@ -791,7 +817,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
           if (keyboardEvent.key === "Delete" || keyboardEvent.key === "Backspace") {
             event.preventDefault();
             view.dispatch(view.state.tr.deleteSelection().scrollIntoView());
-            setMediaContext({ open: false, x: 0, y: 0 });
+            setMediaContext({ open: false, x: 0, y: 0, pos: null });
+            setMediaCaptionPanel({ open: false, x: 0, y: 0, width: 320, pos: null });
             setSelectedKind(null);
             setSelectedMediaPos(null);
             return true;
@@ -799,7 +826,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
           if (keyboardEvent.key === "Escape") {
             event.preventDefault();
-            setMediaContext({ open: false, x: 0, y: 0 });
+            setMediaContext({ open: false, x: 0, y: 0, pos: null });
+            setMediaCaptionPanel({ open: false, x: 0, y: 0, width: 320, pos: null });
             setCropOpen(false);
             return true;
           }
@@ -853,6 +881,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       } else {
         setSelectedKind(null);
         setSelectedMediaPos(null);
+        setMediaCaptionPanel((current) => current.open ? { open: false, x: 0, y: 0, width: 320, pos: null } : current);
       }
     },
   });
@@ -877,6 +906,56 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     const storedPageSize = window.localStorage.getItem("off-editor-page-size") as keyof typeof PAGE_SIZES | null;
     if (storedPageSize && storedPageSize in PAGE_SIZES) setPageSize(storedPageSize);
   }, []);
+
+  useEffect(() => {
+    if (!mediaContext.open || mediaContext.pos === null || !editor) return;
+
+    function updateMenuPosition() {
+      if (!editor || mediaContext.pos === null) return;
+      const dom = editor.view.nodeDOM(mediaContext.pos);
+      if (!(dom instanceof HTMLElement)) return;
+      const rect = dom.getBoundingClientRect();
+      const menuWidth = 260;
+      const left = Math.min(Math.max(16, rect.right + 12), window.innerWidth - menuWidth - 16);
+      const top = Math.min(Math.max(16, rect.top + 8), window.innerHeight - 280);
+      setMediaContext((current) => current.open ? { ...current, x: left, y: top } : current);
+    }
+
+    updateMenuPosition();
+    window.addEventListener("scroll", updateMenuPosition, true);
+    window.addEventListener("resize", updateMenuPosition);
+    return () => {
+      window.removeEventListener("scroll", updateMenuPosition, true);
+      window.removeEventListener("resize", updateMenuPosition);
+    };
+  }, [editor, mediaContext.open, mediaContext.pos]);
+
+  useEffect(() => {
+    if (!mediaCaptionPanel.open || mediaCaptionPanel.pos === null || !editor) return;
+
+    function updateCaptionPosition() {
+      if (!editor || mediaCaptionPanel.pos === null) return;
+      const dom = editor.view.nodeDOM(mediaCaptionPanel.pos);
+      if (!(dom instanceof HTMLElement)) return;
+      const rect = dom.getBoundingClientRect();
+      const width = Math.min(Math.max(260, rect.width), window.innerWidth - 32);
+      const left = Math.min(Math.max(16, rect.left), window.innerWidth - width - 16);
+      const top = Math.min(Math.max(16, rect.bottom + 10), window.innerHeight - 90);
+      setMediaCaptionPanel((current) => current.open ? { ...current, x: left, y: top, width } : current);
+    }
+
+    updateCaptionPosition();
+    window.addEventListener("scroll", updateCaptionPosition, true);
+    window.addEventListener("resize", updateCaptionPosition);
+    return () => {
+      window.removeEventListener("scroll", updateCaptionPosition, true);
+      window.removeEventListener("resize", updateCaptionPosition);
+    };
+  }, [editor, mediaCaptionPanel.open, mediaCaptionPanel.pos]);
+
+  useEffect(() => {
+    if (captionFocusTick > 0) (captionPanelInputRef.current ?? captionInputRef.current)?.focus();
+  }, [captionFocusTick]);
 
   function toggleLeftRail() {
     const next = !leftRailCollapsed;
@@ -1144,26 +1223,24 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     return null;
   }
 
-  function updateSelectedMedia(attrs: Record<string, unknown>) {
+  function updateSelectedMedia(attrs: Record<string, unknown>, options: { focus?: boolean } = {}) {
     if (!editor) return;
+    const shouldFocus = options.focus ?? true;
     const type = selectedMediaType();
     if (!type) return;
     const pos = selectedMediaPos;
     const node = pos !== null ? editor.state.doc.nodeAt(pos) : null;
     if (pos !== null && node?.type.name === type) {
-      const safePos = pos;
-      editor
-        .chain()
-        .focus()
-        .command(({ tr }) => {
-          const current = tr.doc.nodeAt(safePos);
-          if (!current || current.type.name !== type) return false;
-          tr.setNodeMarkup(safePos, undefined, { ...current.attrs, ...attrs });
-          return true;
-        })
-        .run();
+      const tr = editor.state.tr;
+      const current = tr.doc.nodeAt(pos);
+      if (!current || current.type.name !== type) return;
+      tr.setNodeMarkup(pos, undefined, { ...current.attrs, ...attrs });
+      tr.setSelection(NodeSelection.create(tr.doc, pos));
+      editor.view.dispatch(tr);
+      if (shouldFocus) editor.view.focus();
     } else {
-      editor.chain().focus().updateAttributes(type, attrs).run();
+      const chain = shouldFocus ? editor.chain().focus() : editor.chain();
+      chain.updateAttributes(type, attrs).run();
     }
     setEditorHtml(editor.getHTML());
   }
@@ -1177,13 +1254,86 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     updateSelectedMedia({ layout, width: layout === "full" ? MEDIA_SIZES.full : undefined });
   }
 
+  function moveSelectedMedia(direction: "above" | "below") {
+    if (!editor || selectedMediaPos === null) return;
+    const pos = selectedMediaPos;
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || (node.type.name !== "image" && node.type.name !== "videoEmbed")) return;
+
+    editor
+      .chain()
+      .focus()
+      .command(({ tr, dispatch }) => {
+        const current = tr.doc.nodeAt(pos);
+        if (!current || current.type.name !== node.type.name) return false;
+        const resolved = tr.doc.resolve(pos);
+        const parent = resolved.parent;
+        const index = resolved.index();
+        let insertAt = pos;
+
+        if (direction === "above") {
+          if (index <= 0) return false;
+          const previous = parent.child(index - 1);
+          insertAt = pos - previous.nodeSize;
+        } else {
+          if (index >= parent.childCount - 1) return false;
+          const next = parent.child(index + 1);
+          insertAt = pos + current.nodeSize + next.nodeSize;
+        }
+
+        tr.delete(pos, pos + current.nodeSize);
+        const adjustedInsertAt = direction === "below" ? insertAt - current.nodeSize : insertAt;
+        tr.insert(adjustedInsertAt, current.copy(current.content));
+        tr.setSelection(NodeSelection.create(tr.doc, adjustedInsertAt));
+        if (dispatch) dispatch(tr.scrollIntoView());
+        setSelectedMediaPos(adjustedInsertAt);
+        return true;
+      })
+      .run();
+    setEditorHtml(editor.getHTML());
+  }
+
+  function applyMediaPosition(position: (typeof MEDIA_POSITION_OPTIONS)[number]["value"]) {
+    if (position === "above") {
+      updateSelectedMedia({ layout: "center", wrapMode: "top-bottom" });
+      moveSelectedMedia("above");
+      return;
+    }
+    if (position === "below") {
+      updateSelectedMedia({ layout: "center", wrapMode: "top-bottom" });
+      moveSelectedMedia("below");
+      return;
+    }
+    if (position === "left") {
+      updateSelectedMedia({ layout: "left", wrapMode: "square", width: MEDIA_SIZES.medium });
+      return;
+    }
+    if (position === "right") {
+      updateSelectedMedia({ layout: "right", wrapMode: "square", width: MEDIA_SIZES.medium });
+      return;
+    }
+    if (position === "center") {
+      updateSelectedMedia({ layout: "center", wrapMode: "top-bottom", width: MEDIA_SIZES.large });
+      return;
+    }
+    updateSelectedMedia({ layout: "left", wrapMode: "square", width: MEDIA_SIZES.medium });
+  }
+
   function applyWrapMode(wrapMode: string) {
     updateSelectedMedia({ wrapMode });
   }
 
   function applyMediaCaption(caption: string) {
     setMediaCaption(caption);
-    updateSelectedMedia({ caption });
+    updateSelectedMedia({ caption }, { focus: false });
+  }
+
+  function openCaptionEditor() {
+    const pos = selectedMediaPos ?? mediaContext.pos;
+    if (pos === null) return;
+    setMediaCaptionPanel((current) => ({ ...current, open: true, pos }));
+    setMediaContext({ open: false, x: 0, y: 0, pos: null });
+    setCaptionFocusTick((tick) => tick + 1);
   }
 
   function applyCrop(next: { objectPosition?: string; aspectRatio?: string; objectFit?: string }) {
@@ -1205,6 +1355,32 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   function openSpotifyCreate() {
     setInsertOpen(false);
     setSpotifyCreateModal({ open: true, title: "Contenido de Spotify", url: "" });
+  }
+
+  function openMediaUrlModal(kind: "image" | "video") {
+    if (editor) bodySelectionRef.current = { from: editor.state.selection.from, to: editor.state.selection.to };
+    setInsertOpen(false);
+    setMediaUrlModal({ open: true, kind, url: "" });
+  }
+
+  function confirmMediaUrl() {
+    if (!editor) return;
+    const url = mediaUrlModal.url.trim();
+    if (!isSafeMediaUrl(mediaUrlModal.kind, url)) {
+      setClientMessage("Pega una URL valida de imagen o video.");
+      return;
+    }
+    const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
+    const inserted = mediaUrlModal.kind === "video"
+      ? insertMediaNode(editor, "videoEmbed", { src: url, size: "medium", layout: "center", width: MEDIA_SIZES.medium }, range)
+      : insertMediaNode(editor, "image", { src: url, alt: "Imagen editorial", layout: "center", width: MEDIA_SIZES.large }, range);
+    if (!inserted) {
+      setClientMessage("No se pudo insertar la URL en la hoja.");
+      return;
+    }
+    setEditorHtml(editor.getHTML());
+    setMediaUrlModal({ open: false, kind: "image", url: "" });
+    setClientMessage("");
   }
 
   function confirmSpotifyCreate() {
@@ -1360,16 +1536,61 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </div>
       ) : null}
 
+      {mediaUrlModal.open ? (
+        <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label={mediaUrlModal.kind === "image" ? "Insertar imagen desde URL" : "Insertar video desde URL"}>
+          <div className="link-modal">
+            <strong>{mediaUrlModal.kind === "image" ? "Imagen desde URL" : "Video desde URL"}</strong>
+            <label>
+              URL
+              <input
+                autoFocus
+                value={mediaUrlModal.url}
+                onChange={(event) => setMediaUrlModal((current) => ({ ...current, url: event.target.value }))}
+                placeholder={mediaUrlModal.kind === "image" ? "https://.../imagen.webp" : "https://.../video.mp4"}
+              />
+            </label>
+            <div className="link-modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setMediaUrlModal({ open: false, kind: "image", url: "" })}>Cancelar</button>
+              <button type="button" className="button" onClick={confirmMediaUrl}>Insertar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {mediaContext.open ? (
         <div className="media-context-menu" style={{ left: mediaContext.x, top: mediaContext.y }}>
-          <button type="button" onClick={() => { setCropOpen(true); setMediaContext({ open: false, x: 0, y: 0 }); }}>Recortar</button>
+          <button type="button" onClick={() => { setCropOpen(true); setMediaContext({ open: false, x: 0, y: 0, pos: null }); }}>Recortar</button>
+          <div className="media-context-submenu">
+            <span>Posición</span>
+            {MEDIA_POSITION_OPTIONS.map((mode) => (
+              <button type="button" key={mode.value} onClick={() => { applyMediaPosition(mode.value); setMediaContext({ open: false, x: 0, y: 0, pos: null }); }}>{mode.label}</button>
+            ))}
+          </div>
           <div className="media-context-submenu">
             <span>Ajustar imagen/video</span>
             {WRAP_MODES.map((mode) => (
-              <button type="button" key={mode.value} onClick={() => { applyWrapMode(mode.value); setMediaContext({ open: false, x: 0, y: 0 }); }}>{mode.label}</button>
+              <button type="button" key={mode.value} onClick={() => { applyWrapMode(mode.value); setMediaContext({ open: false, x: 0, y: 0, pos: null }); }}>{mode.label}</button>
             ))}
           </div>
-          <button type="button" onClick={() => { setActivePanel("design"); setMediaContext({ open: false, x: 0, y: 0 }); }}>Pie de foto</button>
+          <button type="button" onClick={openCaptionEditor}>Pie de foto</button>
+        </div>
+      ) : null}
+
+      {mediaCaptionPanel.open ? (
+        <div className="media-caption-panel" style={{ left: mediaCaptionPanel.x, top: mediaCaptionPanel.y, width: mediaCaptionPanel.width }}>
+          <label>
+            Pie de foto
+            <input
+              ref={captionPanelInputRef}
+              value={mediaCaption}
+              onChange={(event) => applyMediaCaption(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setMediaCaptionPanel({ open: false, x: 0, y: 0, width: 320, pos: null });
+              }}
+              placeholder="Escribe un caption..."
+            />
+          </label>
+          <button type="button" onClick={() => setMediaCaptionPanel({ open: false, x: 0, y: 0, width: 320, pos: null })}>Listo</button>
         </div>
       ) : null}
 
@@ -1508,8 +1729,20 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 <button type="button" disabled={!canUseToolbar || uploading} onClick={() => setInsertOpen((open) => !open)}>Insertar</button>
                 {insertOpen ? (
                   <div className="toolbar-menu insert-menu">
-                    <button type="button" onClick={() => { setInsertOpen(false); openImagePicker(); }}>Subir imagen</button>
-                    <button type="button" onClick={() => { setInsertOpen(false); openVideoPicker(); }}>Subir video</button>
+                    <div className="insert-menu-item">
+                      <button type="button">Imagen</button>
+                      <div className="insert-submenu">
+                        <button type="button" onClick={() => { setInsertOpen(false); openImagePicker(); }}>Desde mi dispositivo</button>
+                        <button type="button" onClick={() => openMediaUrlModal("image")}>Desde URL</button>
+                      </div>
+                    </div>
+                    <div className="insert-menu-item">
+                      <button type="button">Video</button>
+                      <div className="insert-submenu">
+                        <button type="button" onClick={() => { setInsertOpen(false); openVideoPicker(); }}>Desde mi dispositivo</button>
+                        <button type="button" onClick={() => openMediaUrlModal("video")}>Desde URL</button>
+                      </div>
+                    </div>
                     <button type="button" onClick={openSpotifyCreate}>Spotify</button>
                   </div>
                 ) : null}
@@ -1539,9 +1772,12 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" onClick={() => applyMediaLayout("left")}>Izquierda</button>
               <button type="button" onClick={() => applyMediaLayout("center")}>Centro</button>
               <button type="button" onClick={() => applyMediaLayout("right")}>Derecha</button>
+              <button type="button" onClick={() => applyMediaPosition("above")}>Encima</button>
+              <button type="button" onClick={() => applyMediaPosition("below")}>Debajo</button>
+              <button type="button" onClick={() => applyMediaPosition("wrap")}>Ajustar texto</button>
               <label>
                 Pie de foto
-                <input value={mediaCaption} onChange={(event) => applyMediaCaption(event.target.value)} placeholder="Escribe un caption..." />
+                <input ref={captionInputRef} value={mediaCaption} onChange={(event) => applyMediaCaption(event.target.value)} placeholder="Escribe un caption..." />
               </label>
             </div>
           ) : null}
