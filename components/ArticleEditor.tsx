@@ -2,6 +2,7 @@
 
 import type { Article } from "@prisma/client";
 import { Extension, Node as TiptapNode, type Editor as TiptapEditor } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
@@ -33,6 +34,28 @@ const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/
 const IMAGE_MAX_SIZE = 25 * 1024 * 1024;
 const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const ZOOM_LEVELS = [75, 100, 125, 150];
+const MEDIA_SIZES = {
+  small: "360px",
+  medium: "640px",
+  large: "820px",
+  full: "100%",
+} as const;
+const WRAP_MODES = [
+  { value: "inline", label: "En línea con el texto" },
+  { value: "square", label: "Cuadrado" },
+  { value: "tight", label: "Estrecho" },
+  { value: "transparent", label: "Transparente" },
+  { value: "top-bottom", label: "Arriba y abajo" },
+  { value: "behind", label: "Detrás del texto" },
+  { value: "front", label: "Delante del texto" },
+] as const;
+const ASPECT_RATIOS = [
+  { value: "", label: "Libre" },
+  { value: "1 / 1", label: "1:1" },
+  { value: "4 / 3", label: "4:3" },
+  { value: "16 / 9", label: "16:9" },
+  { value: "4 / 5", label: "Vertical 4:5" },
+] as const;
 const PAGE_SIZES = {
   a4: { label: "A4", width: 794, minHeight: 1123 },
   letter: { label: "Carta", width: 816, minHeight: 1056 },
@@ -117,13 +140,72 @@ const EditorialImage = Image.extend({
       },
       width: {
         default: null,
-        parseHTML: (element) => element.getAttribute("width") || element.style.width || null,
+        parseHTML: (element) => element.getAttribute("width") || element.style.width || element.closest("figure")?.getAttribute("data-width") || null,
         renderHTML: (attributes) => {
           if (!attributes.width) return {};
           return { style: `width: ${attributes.width};` };
         },
       },
+      caption: {
+        default: "",
+        parseHTML: (element) => element.closest("figure")?.querySelector("figcaption")?.textContent ?? element.getAttribute("data-caption") ?? "",
+      },
+      wrapMode: {
+        default: "top-bottom",
+        parseHTML: (element) => element.closest("figure")?.getAttribute("data-wrap") ?? element.getAttribute("data-wrap") ?? "top-bottom",
+      },
+      objectFit: {
+        default: "cover",
+        parseHTML: (element) => element.getAttribute("data-fit") ?? "cover",
+      },
+      objectPosition: {
+        default: "50% 50%",
+        parseHTML: (element) => element.getAttribute("data-position") ?? "50% 50%",
+      },
+      aspectRatio: {
+        default: "",
+        parseHTML: (element) => element.getAttribute("data-ratio") ?? "",
+      },
     };
+  },
+  renderHTML({ HTMLAttributes }) {
+    const {
+      caption,
+      layout,
+      width,
+      wrapMode,
+      objectFit,
+      objectPosition,
+      aspectRatio,
+      style: _style,
+      ...imageAttributes
+    } = HTMLAttributes;
+    const imageStyle = [
+      objectFit ? `object-fit: ${objectFit}` : "",
+      objectPosition ? `object-position: ${objectPosition}` : "",
+      aspectRatio ? `aspect-ratio: ${aspectRatio}` : "",
+    ].filter(Boolean).join("; ");
+
+    return [
+      "figure",
+      {
+        class: "editor-media-node",
+        "data-media-type": "image",
+        "data-layout": layout || "center",
+        "data-wrap": wrapMode || "top-bottom",
+        "data-width": width || "",
+        style: width ? `width: ${width};` : undefined,
+      },
+      ["img", {
+        ...imageAttributes,
+        "data-layout": layout || "center",
+        "data-fit": objectFit || "cover",
+        "data-position": objectPosition || "50% 50%",
+        "data-ratio": aspectRatio || "",
+        style: imageStyle || undefined,
+      }],
+      ["figcaption", { "data-empty": caption ? "false" : "true" }, caption || ""],
+    ];
   },
 });
 
@@ -133,16 +215,78 @@ const VideoEmbed = TiptapNode.create({
   atom: true,
   addAttributes() {
     return {
-      src: { default: null },
-      caption: { default: "" },
-      size: { default: "medium" },
+      src: {
+        default: null,
+        parseHTML: (element) => element.querySelector?.("video")?.getAttribute("src") ?? element.getAttribute("src"),
+      },
+      caption: {
+        default: "",
+        parseHTML: (element) => element.querySelector?.("figcaption")?.textContent ?? element.getAttribute("data-caption") ?? "",
+      },
+      size: {
+        default: "medium",
+        parseHTML: (element) => element.querySelector?.("video")?.getAttribute("data-size") ?? element.getAttribute("data-size") ?? "medium",
+      },
+      layout: {
+        default: "center",
+        parseHTML: (element) => element.getAttribute("data-layout") ?? element.closest("figure")?.getAttribute("data-layout") ?? "center",
+      },
+      width: {
+        default: MEDIA_SIZES.medium,
+        parseHTML: (element) => element.getAttribute("data-width") ?? element.closest("figure")?.getAttribute("data-width") ?? MEDIA_SIZES.medium,
+      },
+      wrapMode: {
+        default: "top-bottom",
+        parseHTML: (element) => element.getAttribute("data-wrap") ?? element.closest("figure")?.getAttribute("data-wrap") ?? "top-bottom",
+      },
+      objectFit: {
+        default: "cover",
+        parseHTML: (element) => element.querySelector?.("video")?.getAttribute("data-fit") ?? element.getAttribute("data-fit") ?? "cover",
+      },
+      objectPosition: {
+        default: "50% 50%",
+        parseHTML: (element) => element.querySelector?.("video")?.getAttribute("data-position") ?? element.getAttribute("data-position") ?? "50% 50%",
+      },
+      aspectRatio: {
+        default: "16 / 9",
+        parseHTML: (element) => element.querySelector?.("video")?.getAttribute("data-ratio") ?? element.getAttribute("data-ratio") ?? "16 / 9",
+      },
     };
   },
   parseHTML() {
-    return [{ tag: "video[src]" }];
+    return [{ tag: "figure[data-media-type=\"video\"]" }, { tag: "video[src]" }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ["video", { ...HTMLAttributes, "data-size": HTMLAttributes.size || "medium", controls: "true" }];
+    const video = HTMLAttributes;
+    const width = video.width || MEDIA_SIZES[video.size as keyof typeof MEDIA_SIZES] || MEDIA_SIZES.medium;
+    const videoStyle = [
+      video.objectFit ? `object-fit: ${video.objectFit}` : "",
+      video.objectPosition ? `object-position: ${video.objectPosition}` : "",
+      video.aspectRatio ? `aspect-ratio: ${video.aspectRatio}` : "",
+    ].filter(Boolean).join("; ");
+
+    return [
+      "figure",
+      {
+        class: "editor-media-node",
+        "data-media-type": "video",
+        "data-layout": video.layout || "center",
+        "data-wrap": video.wrapMode || "top-bottom",
+        "data-width": width,
+        style: width ? `width: ${width};` : undefined,
+      },
+      ["video", {
+        src: video.src,
+        "data-size": video.size || "medium",
+        "data-layout": video.layout || "center",
+        "data-fit": video.objectFit || "cover",
+        "data-position": video.objectPosition || "50% 50%",
+        "data-ratio": video.aspectRatio || "16 / 9",
+        controls: "true",
+        style: videoStyle || undefined,
+      }],
+      ["figcaption", { "data-empty": video.caption ? "false" : "true" }, video.caption || ""],
+    ];
   },
 });
 
@@ -199,6 +343,11 @@ type LegacyBlock = {
   alt?: string;
   caption?: string;
   align?: string;
+  wrapMode?: string;
+  objectFit?: string;
+  objectPosition?: string;
+  aspectRatio?: string;
+  width?: string;
   url?: string;
   label?: string;
   value?: string;
@@ -255,13 +404,14 @@ function legacyContentToHtml(content?: string) {
         return `<ol>${(block.items ?? []).map((item) => `<li>${inlineToHtml(item)}</li>`).join("")}</ol>`;
       }
       if (block.type === "image" && block.src) {
-        return `<figure><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt ?? block.caption ?? "Imagen editorial")}">${block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ""}</figure>`;
+        return `<figure data-media-type="image" data-layout="${escapeHtml(block.align ?? "center")}" data-wrap="${escapeHtml(block.wrapMode ?? "top-bottom")}" data-width="${escapeHtml(block.width ?? "")}"${block.width ? ` style="width: ${escapeHtml(block.width)};"` : ""}><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt ?? block.caption ?? "Imagen editorial")}" data-layout="${escapeHtml(block.align ?? "center")}" data-fit="${escapeHtml(block.objectFit ?? "cover")}" data-position="${escapeHtml(block.objectPosition ?? "50% 50%")}" data-ratio="${escapeHtml(block.aspectRatio ?? "")}">${block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : "<figcaption data-empty=\"true\"></figcaption>"}</figure>`;
       }
       if ((block.type === "gallery" || block.type === "collage") && block.images?.length) {
         return block.images.map((image) => image.src ? `<figure><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt ?? "Imagen editorial")}">${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}</figure>` : "").join("");
       }
       if (block.type === "video" && block.url) {
-        return `<video src="${escapeHtml(block.url)}" controls></video>`;
+        const width = block.width ?? MEDIA_SIZES[(block.label as keyof typeof MEDIA_SIZES) ?? "medium"] ?? MEDIA_SIZES.medium;
+        return `<figure data-media-type="video" data-layout="${escapeHtml(block.align ?? "center")}" data-wrap="${escapeHtml(block.wrapMode ?? "top-bottom")}" data-width="${escapeHtml(width)}" style="width: ${escapeHtml(width)};"><video src="${escapeHtml(block.url)}" data-size="${escapeHtml(block.label ?? "medium")}" data-layout="${escapeHtml(block.align ?? "center")}" data-fit="${escapeHtml(block.objectFit ?? "cover")}" data-position="${escapeHtml(block.objectPosition ?? "50% 50%")}" data-ratio="${escapeHtml(block.aspectRatio ?? "16 / 9")}" controls></video>${block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : "<figcaption data-empty=\"true\"></figcaption>"}</figure>`;
       }
       if (block.type === "embed" && block.url) {
         if (block.caption === "spotify") {
@@ -363,15 +513,20 @@ function htmlToEditorialJson(html: string) {
 
     const imageElement = node.matches("img") ? node : node.querySelector("img");
     if (imageElement) {
+      const figure = imageElement.closest("figure");
       const src = imageElement.getAttribute("src") ?? "";
       if (src) {
         blocks.push({
           type: "image",
           src,
           alt: imageElement.getAttribute("alt") ?? "Imagen editorial",
-          caption: node.querySelector("figcaption")?.textContent ?? "",
-          align: imageElement.getAttribute("data-layout") ?? "center",
-          width: imageElement.getAttribute("style") ?? undefined,
+          caption: figure?.querySelector("figcaption")?.textContent ?? imageElement.getAttribute("data-caption") ?? "",
+          align: figure?.getAttribute("data-layout") ?? imageElement.getAttribute("data-layout") ?? "center",
+          width: figure?.getAttribute("data-width") ?? imageElement.getAttribute("style") ?? undefined,
+          wrapMode: figure?.getAttribute("data-wrap") ?? "top-bottom",
+          objectFit: imageElement.getAttribute("data-fit") ?? "cover",
+          objectPosition: imageElement.getAttribute("data-position") ?? "50% 50%",
+          aspectRatio: imageElement.getAttribute("data-ratio") ?? "",
         });
       }
       return;
@@ -379,8 +534,20 @@ function htmlToEditorialJson(html: string) {
 
     const videoElement = node.matches("video") ? node : node.querySelector("video");
     if (videoElement) {
+      const figure = videoElement.closest("figure");
       const src = videoElement.getAttribute("src") ?? "";
-      if (src) blocks.push({ type: "video", url: src, caption: videoElement.getAttribute("data-caption") ?? "", label: videoElement.getAttribute("data-size") ?? "medium" });
+      if (src) blocks.push({
+        type: "video",
+        url: src,
+        caption: figure?.querySelector("figcaption")?.textContent ?? videoElement.getAttribute("data-caption") ?? "",
+        label: videoElement.getAttribute("data-size") ?? "medium",
+        align: figure?.getAttribute("data-layout") ?? videoElement.getAttribute("data-layout") ?? "center",
+        width: figure?.getAttribute("data-width") ?? undefined,
+        wrapMode: figure?.getAttribute("data-wrap") ?? "top-bottom",
+        objectFit: videoElement.getAttribute("data-fit") ?? "cover",
+        objectPosition: videoElement.getAttribute("data-position") ?? "50% 50%",
+        aspectRatio: videoElement.getAttribute("data-ratio") ?? "16 / 9",
+      });
       return;
     }
 
@@ -403,8 +570,12 @@ function htmlToEditorialJson(html: string) {
           src,
           alt: image?.getAttribute("alt") ?? "Imagen editorial",
           caption: node.querySelector("figcaption")?.textContent ?? "",
-          align: image?.getAttribute("data-layout") ?? "center",
-          width: image?.getAttribute("style") ?? undefined,
+          align: node.getAttribute("data-layout") ?? image?.getAttribute("data-layout") ?? "center",
+          width: node.getAttribute("data-width") ?? image?.getAttribute("style") ?? undefined,
+          wrapMode: node.getAttribute("data-wrap") ?? "top-bottom",
+          objectFit: image?.getAttribute("data-fit") ?? "cover",
+          objectPosition: image?.getAttribute("data-position") ?? "50% 50%",
+          aspectRatio: image?.getAttribute("data-ratio") ?? "",
         });
       }
     } else {
@@ -504,16 +675,24 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [serverSave, setServerSave] = useState("Guardado");
   const [linkModal, setLinkModal] = useState({ open: false, title: "", url: "", newTab: true });
   const [spotifyModal, setSpotifyModal] = useState({ open: false, pos: -1, title: "", url: "" });
+  const [spotifyCreateModal, setSpotifyCreateModal] = useState({ open: false, title: "Contenido de Spotify", url: "" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
+  const [insertOpen, setInsertOpen] = useState(false);
+  const [mediaContext, setMediaContext] = useState({ open: false, x: 0, y: 0 });
+  const [cropOpen, setCropOpen] = useState(false);
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [zoom, setZoom] = useState(100);
   const [pageSize, setPageSize] = useState<keyof typeof PAGE_SIZES>("magazineVertical");
   const [pages, setPages] = useState(1);
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
   const [selectedKind, setSelectedKind] = useState<"text" | "image" | "video" | null>(null);
+  const [selectedMediaPos, setSelectedMediaPos] = useState<number | null>(null);
   const [lastSelectedImage, setLastSelectedImage] = useState("");
+  const [mediaCaption, setMediaCaption] = useState("");
+  const [mediaObjectPosition, setMediaObjectPosition] = useState("50% 50%");
+  const [mediaAspectRatio, setMediaAspectRatio] = useState("");
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
   const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
   const [activeEditor, setActiveEditor] = useState<TiptapEditor | null>(null);
@@ -549,15 +728,99 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     editorProps: {
       handleClick(view, _pos, event) {
         const target = (event.target as HTMLElement).closest("a[data-spotify-card]") as HTMLAnchorElement | null;
-        if (!target) return false;
-        event.preventDefault();
-        setSpotifyModal({
-          open: true,
-          pos: view.posAtDOM(target, 0),
-          title: target.dataset.title || target.textContent || "Contenido de Spotify",
-          url: target.href,
-        });
-        return true;
+        if (target) {
+          event.preventDefault();
+          setSpotifyModal({
+            open: true,
+            pos: view.posAtDOM(target, 0),
+            title: target.dataset.title || target.textContent || "Contenido de Spotify",
+            url: target.href,
+          });
+          return true;
+        }
+
+        const media = (event.target as HTMLElement).closest("figure[data-media-type], img, video") as HTMLElement | null;
+        if (!media) return false;
+        const pos = view.posAtDOM(media.closest("figure") ?? media, 0);
+        const node = view.state.doc.nodeAt(pos);
+        if (node?.type.name === "image" || node?.type.name === "videoEmbed") {
+          view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+          setSelectedMediaPos(pos);
+          setActiveEditor(editor);
+          return true;
+        }
+        return false;
+      },
+      handleDOMEvents: {
+        contextmenu(view, event) {
+          const media = (event.target as HTMLElement).closest("figure[data-media-type], img, video") as HTMLElement | null;
+          if (!media) return false;
+          const mouseEvent = event as MouseEvent;
+          event.preventDefault();
+          const pos = view.posAtDOM(media.closest("figure") ?? media, 0);
+          const node = view.state.doc.nodeAt(pos);
+          if (node?.type.name === "image" || node?.type.name === "videoEmbed") {
+            view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+            setSelectedMediaPos(pos);
+          }
+          setMediaContext({ open: true, x: mouseEvent.clientX, y: mouseEvent.clientY });
+          setActiveEditor(editor);
+          return true;
+        },
+        mouseup(view) {
+          const selection = view.state.selection;
+          if (!(selection instanceof NodeSelection)) return false;
+          const nodeName = selection.node.type.name;
+          if (nodeName !== "image" && nodeName !== "videoEmbed") return false;
+          const dom = view.nodeDOM(selection.from);
+          if (!(dom instanceof HTMLElement) || !dom.matches("figure[data-media-type]")) return false;
+          const nextWidth = `${Math.round(dom.getBoundingClientRect().width)}px`;
+          const currentWidth = String(selection.node.attrs.width ?? "");
+          if (nextWidth !== currentWidth) {
+            editor?.chain().focus().updateAttributes(nodeName, { width: nextWidth }).run();
+          }
+          return false;
+        },
+        keydown(view, event) {
+          const keyboardEvent = event as KeyboardEvent;
+          const selection = view.state.selection;
+          if (!(selection instanceof NodeSelection)) return false;
+          const nodeName = selection.node.type.name;
+          if (nodeName !== "image" && nodeName !== "videoEmbed") return false;
+
+          if (keyboardEvent.key === "Delete" || keyboardEvent.key === "Backspace") {
+            event.preventDefault();
+            view.dispatch(view.state.tr.deleteSelection().scrollIntoView());
+            setMediaContext({ open: false, x: 0, y: 0 });
+            setSelectedKind(null);
+            setSelectedMediaPos(null);
+            return true;
+          }
+
+          if (keyboardEvent.key === "Escape") {
+            event.preventDefault();
+            setMediaContext({ open: false, x: 0, y: 0 });
+            setCropOpen(false);
+            return true;
+          }
+
+          if (keyboardEvent.key === "Enter") {
+            event.preventDefault();
+            editor?.chain().focus().insertContentAt(selection.to, { type: "paragraph" }).run();
+            return true;
+          }
+
+          if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(keyboardEvent.key)) {
+            event.preventDefault();
+            const currentWidth = Number.parseInt(String(selection.node.attrs.width ?? MEDIA_SIZES.medium).replace(/\D/g, ""), 10) || 640;
+            const delta = keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowUp" ? -10 : 10;
+            const nextWidth = `${Math.max(220, currentWidth + delta)}px`;
+            editor?.chain().focus().updateAttributes(nodeName, { width: nextWidth }).run();
+            return true;
+          }
+
+          return false;
+        },
       },
     },
     onFocus: ({ editor: currentEditor }) => {
@@ -570,14 +833,26 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       const image = currentEditor.getAttributes("image").src as string | undefined;
       const video = currentEditor.getAttributes("videoEmbed").src as string | undefined;
       if (image) {
+        const attrs = currentEditor.getAttributes("image");
+        if (currentEditor.state.selection instanceof NodeSelection) setSelectedMediaPos(currentEditor.state.selection.from);
         setSelectedKind("image");
         setLastSelectedImage(image);
+        setMediaCaption(String(attrs.caption ?? ""));
+        setMediaObjectPosition(String(attrs.objectPosition ?? "50% 50%"));
+        setMediaAspectRatio(String(attrs.aspectRatio ?? ""));
       } else if (video) {
+        const attrs = currentEditor.getAttributes("videoEmbed");
+        if (currentEditor.state.selection instanceof NodeSelection) setSelectedMediaPos(currentEditor.state.selection.from);
         setSelectedKind("video");
+        setMediaCaption(String(attrs.caption ?? ""));
+        setMediaObjectPosition(String(attrs.objectPosition ?? "50% 50%"));
+        setMediaAspectRatio(String(attrs.aspectRatio ?? "16 / 9"));
       } else if (!currentEditor.state.selection.empty) {
         setSelectedKind("text");
+        setSelectedMediaPos(null);
       } else {
         setSelectedKind(null);
+        setSelectedMediaPos(null);
       }
     },
   });
@@ -859,16 +1134,94 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setEditorHtml(editor.getHTML());
   }
 
+  function selectedMediaType() {
+    if (!editor) return null;
+    const selection = editor.state.selection;
+    if (selection instanceof NodeSelection && selection.node.type.name === "image") return "image";
+    if (selection instanceof NodeSelection && selection.node.type.name === "videoEmbed") return "videoEmbed";
+    if (selectedKind === "image") return "image";
+    if (selectedKind === "video") return "videoEmbed";
+    return null;
+  }
+
+  function updateSelectedMedia(attrs: Record<string, unknown>) {
+    if (!editor) return;
+    const type = selectedMediaType();
+    if (!type) return;
+    const pos = selectedMediaPos;
+    const node = pos !== null ? editor.state.doc.nodeAt(pos) : null;
+    if (pos !== null && node?.type.name === type) {
+      const safePos = pos;
+      editor
+        .chain()
+        .focus()
+        .command(({ tr }) => {
+          const current = tr.doc.nodeAt(safePos);
+          if (!current || current.type.name !== type) return false;
+          tr.setNodeMarkup(safePos, undefined, { ...current.attrs, ...attrs });
+          return true;
+        })
+        .run();
+    } else {
+      editor.chain().focus().updateAttributes(type, attrs).run();
+    }
+    setEditorHtml(editor.getHTML());
+  }
+
+  function applyMediaSize(size: keyof typeof MEDIA_SIZES) {
+    const attrs = { width: MEDIA_SIZES[size], size: size === "full" ? "large" : size };
+    updateSelectedMedia(attrs);
+  }
+
+  function applyMediaLayout(layout: "center" | "left" | "right" | "full") {
+    updateSelectedMedia({ layout, width: layout === "full" ? MEDIA_SIZES.full : undefined });
+  }
+
+  function applyWrapMode(wrapMode: string) {
+    updateSelectedMedia({ wrapMode });
+  }
+
+  function applyMediaCaption(caption: string) {
+    setMediaCaption(caption);
+    updateSelectedMedia({ caption });
+  }
+
+  function applyCrop(next: { objectPosition?: string; aspectRatio?: string; objectFit?: string }) {
+    if (next.objectPosition !== undefined) setMediaObjectPosition(next.objectPosition);
+    if (next.aspectRatio !== undefined) setMediaAspectRatio(next.aspectRatio);
+    updateSelectedMedia(next);
+  }
+
   function applyImageWidth(width: string) {
     if (!editor) return;
-    editor.chain().focus().updateAttributes("image", { width }).run();
-    setEditorHtml(editor.getHTML());
+    updateSelectedMedia({ width });
   }
 
   function applyVideoSize(size: "small" | "medium" | "large") {
     if (!editor) return;
-    editor.chain().focus().updateAttributes("videoEmbed", { size }).run();
-    setEditorHtml(editor.getHTML());
+    updateSelectedMedia({ size, width: MEDIA_SIZES[size] });
+  }
+
+  function openSpotifyCreate() {
+    setInsertOpen(false);
+    setSpotifyCreateModal({ open: true, title: "Contenido de Spotify", url: "" });
+  }
+
+  function confirmSpotifyCreate() {
+    const targetEditor = currentEditor();
+    const url = spotifyCreateModal.url.trim();
+    if (!targetEditor || !url) return;
+    if (!/^https?:\/\/(open\.)?spotify\.com\//i.test(url)) {
+      setClientMessage("Pega un enlace válido de Spotify.");
+      return;
+    }
+    targetEditor.chain().focus().insertContent({
+      type: "spotifyEmbed",
+      attrs: { url, title: spotifyCreateModal.title.trim() || "Contenido de Spotify" },
+    }).run();
+    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+    setSpotifyCreateModal({ open: false, title: "Contenido de Spotify", url: "" });
+    setClientMessage("");
   }
 
   function changeZoom(nextZoom: number) {
@@ -987,6 +1340,68 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         </div>
       ) : null}
 
+      {spotifyCreateModal.open ? (
+        <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label="Insertar Spotify">
+          <div className="link-modal spotify-edit-modal">
+            <strong>Insertar Spotify</strong>
+            <label>
+              Título del enlace
+              <input value={spotifyCreateModal.title} onChange={(event) => setSpotifyCreateModal((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label>
+              URL
+              <input autoFocus value={spotifyCreateModal.url} onChange={(event) => setSpotifyCreateModal((current) => ({ ...current, url: event.target.value }))} placeholder="https://open.spotify.com/..." />
+            </label>
+            <div className="link-modal-actions">
+              <button type="button" className="ghost-button" onClick={() => setSpotifyCreateModal({ open: false, title: "Contenido de Spotify", url: "" })}>Cancelar</button>
+              <button type="button" className="button" onClick={confirmSpotifyCreate}>Insertar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {mediaContext.open ? (
+        <div className="media-context-menu" style={{ left: mediaContext.x, top: mediaContext.y }}>
+          <button type="button" onClick={() => { setCropOpen(true); setMediaContext({ open: false, x: 0, y: 0 }); }}>Recortar</button>
+          <div className="media-context-submenu">
+            <span>Ajustar imagen/video</span>
+            {WRAP_MODES.map((mode) => (
+              <button type="button" key={mode.value} onClick={() => { applyWrapMode(mode.value); setMediaContext({ open: false, x: 0, y: 0 }); }}>{mode.label}</button>
+            ))}
+          </div>
+          <button type="button" onClick={() => { setActivePanel("design"); setMediaContext({ open: false, x: 0, y: 0 }); }}>Pie de foto</button>
+        </div>
+      ) : null}
+
+      {cropOpen ? (
+        <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label="Recortar media">
+          <div className="link-modal crop-modal">
+            <strong>Recorte visual</strong>
+            <label>
+              Aspect ratio
+              <select value={mediaAspectRatio} onChange={(event) => applyCrop({ aspectRatio: event.target.value })}>
+                {ASPECT_RATIOS.map((ratio) => <option value={ratio.value} key={ratio.label}>{ratio.label}</option>)}
+              </select>
+            </label>
+            <label>
+              Posición horizontal
+              <input type="range" min="0" max="100" value={Number.parseInt(mediaObjectPosition.split(" ")[0] || "50", 10)} onChange={(event) => applyCrop({ objectPosition: `${event.target.value}% ${mediaObjectPosition.split(" ")[1] || "50%"}` })} />
+            </label>
+            <label>
+              Posición vertical
+              <input type="range" min="0" max="100" value={Number.parseInt(mediaObjectPosition.split(" ")[1] || "50", 10)} onChange={(event) => applyCrop({ objectPosition: `${mediaObjectPosition.split(" ")[0] || "50%"} ${event.target.value}%` })} />
+            </label>
+            <div className="design-button-row">
+              <button type="button" onClick={() => applyCrop({ objectFit: "cover" })}>Recortar</button>
+              <button type="button" onClick={() => applyCrop({ objectFit: "contain" })}>Ajustar completo</button>
+            </div>
+            <div className="link-modal-actions">
+              <button type="button" className="button" onClick={() => setCropOpen(false)}>Listo</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className={`document-editor-frame ${leftRailCollapsed ? "left-rail-collapsed" : ""} ${rightRailCollapsed ? "right-rail-collapsed" : ""}`}>
         <aside className="document-left-rail">
           <button className="rail-collapse-button" type="button" onClick={toggleLeftRail} aria-label={leftRailCollapsed ? "Expandir documentos" : "Contraer documentos"}>
@@ -1089,9 +1504,16 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}>Bullets</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}>1.</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}>Divider</button>
-              <button type="button" disabled={!canUseToolbar || uploading} onClick={openImagePicker}>Imagen</button>
-              <button type="button" disabled={!canUseToolbar || uploading} onClick={openVideoPicker}>Video</button>
-              <button type="button" disabled={!canUseToolbar} onClick={insertSpotifyCard}>Spotify</button>
+              <div className="toolbar-dropdown insert-dropdown">
+                <button type="button" disabled={!canUseToolbar || uploading} onClick={() => setInsertOpen((open) => !open)}>Insertar</button>
+                {insertOpen ? (
+                  <div className="toolbar-menu insert-menu">
+                    <button type="button" onClick={() => { setInsertOpen(false); openImagePicker(); }}>Subir imagen</button>
+                    <button type="button" onClick={() => { setInsertOpen(false); openVideoPicker(); }}>Subir video</button>
+                    <button type="button" onClick={openSpotifyCreate}>Spotify</button>
+                  </div>
+                ) : null}
+              </div>
               <input ref={imageInputRef} hidden type="file" accept={IMAGE_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
               <input ref={videoInputRef} hidden type="file" accept={VIDEO_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
             </div>
@@ -1106,6 +1528,23 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={pages === 1} onClick={removePage}>Eliminar hoja</button>
             </div>
           </nav>
+
+          {selectedKind === "image" || selectedKind === "video" ? (
+            <div className="media-selection-toolbar">
+              <span>{selectedKind === "image" ? "Imagen seleccionada" : "Video seleccionado"}</span>
+              <button type="button" onClick={() => applyMediaSize("small")}>Pequeño</button>
+              <button type="button" onClick={() => applyMediaSize("medium")}>Mediano</button>
+              <button type="button" onClick={() => applyMediaSize("large")}>Grande</button>
+              <button type="button" onClick={() => applyMediaSize("full")}>Ancho completo</button>
+              <button type="button" onClick={() => applyMediaLayout("left")}>Izquierda</button>
+              <button type="button" onClick={() => applyMediaLayout("center")}>Centro</button>
+              <button type="button" onClick={() => applyMediaLayout("right")}>Derecha</button>
+              <label>
+                Pie de foto
+                <input value={mediaCaption} onChange={(event) => applyMediaCaption(event.target.value)} placeholder="Escribe un caption..." />
+              </label>
+            </div>
+          ) : null}
 
           <div className="editor-page-stage" style={{ "--page-zoom": zoom / 100 } as CSSProperties}>
             <motion.main

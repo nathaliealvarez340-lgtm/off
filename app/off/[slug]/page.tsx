@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
@@ -28,6 +29,20 @@ function sanitizeInlineHtml(text: string) {
 
 function plainText(text: string) {
   return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
+function mediaWidthStyle(width?: string): CSSProperties | undefined {
+  if (!width) return undefined;
+  const cleanWidth = width.replace(/^width:\s*/i, "").replace(/;$/, "");
+  return { width: cleanWidth };
+}
+
+function mediaFitStyle(block: { objectFit?: string; objectPosition?: string; aspectRatio?: string }): CSSProperties {
+  return {
+    objectFit: (block.objectFit ?? "cover") as CSSProperties["objectFit"],
+    objectPosition: block.objectPosition ?? "50% 50%",
+    aspectRatio: block.aspectRatio || undefined,
+  };
 }
 
 function renderInline(text: string) {
@@ -154,8 +169,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 return <hr key={index} />;
               case "image":
                 return (
-                  <figure className={`reader-image align-${block.align ?? "center"}`} key={index}>
-                    <img src={block.src} alt={block.alt} style={block.width ? { width: block.width.replace(/^width:\s*/i, "").replace(/;$/, ""), height: "auto" } : undefined} />
+                  <figure
+                    className={`reader-image align-${block.align ?? "center"} wrap-${block.wrapMode ?? "top-bottom"}`}
+                    style={mediaWidthStyle(block.width)}
+                    key={index}
+                  >
+                    <img src={block.src} alt={block.alt} style={mediaFitStyle(block)} />
                     {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                   </figure>
                 );
@@ -180,8 +199,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 );
               case "video":
                 return (
-                <figure className={`reader-video video-${block.label ?? "medium"}`} key={index}>
-                    <video src={block.url} controls />
+                  <figure
+                    className={`reader-video video-${block.label ?? "medium"} align-${block.align ?? "center"} wrap-${block.wrapMode ?? "top-bottom"}`}
+                    style={mediaWidthStyle(block.width)}
+                    key={index}
+                  >
+                    <video src={block.url} style={mediaFitStyle(block)} controls />
                     {block.caption ? <figcaption>{block.caption}</figcaption> : null}
                   </figure>
                 );
