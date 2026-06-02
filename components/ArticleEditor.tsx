@@ -440,18 +440,18 @@ async function uploadEditorFile(file: File) {
   formData.append("file", file);
   formData.append("kind", kind);
 
-  const response = await fetch("/api/uploads", {
+  const response = await fetch("/api/upload", {
     method: "POST",
     body: formData,
   });
-  let data: { url?: string; error?: string };
+  let data: { success?: boolean; url?: string; error?: string };
   try {
-    data = await response.json() as { url?: string; error?: string };
+    data = await response.json() as { success?: boolean; url?: string; error?: string };
   } catch {
     throw new Error("No se pudo subir el archivo. Revisa formato o tamaño.");
   }
 
-  if (!response.ok || !data.url) {
+  if (!response.ok || !data.success || !data.url) {
     throw new Error(data.error || "No se pudo subir el archivo. Revisa formato o tamaño.");
   }
 
