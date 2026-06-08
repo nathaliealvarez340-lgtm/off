@@ -13,23 +13,39 @@ import {
   getPublishedArticles,
   getPublishedComments,
   parseArticleContent,
+  stripHtml,
 } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/site-url";
 
 function sanitizeInlineHtml(text: string) {
-  return text
+  const withoutUnsafeMarkup = text
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/\son\w+="[^"]*"/gi, "")
-    .replace(/\son\w+='[^']*'/gi, "")
-    .replace(/\shref=["']javascript:[^"']*["']/gi, "")
-    .replace(/\sstyle=["'][^"']*(url|expression|javascript)[^"']*["']/gi, "")
-    .replace(/<(?!\/?(strong|em|u|s|mark|a|br|span)(\s|>|\/))/gi, "&lt;")
-    .replace(/<a\s/gi, "<a rel=\"noreferrer\" ");
-}
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+    .replace(/<(?!\/?(strong|em|u|s|mark|a|br|span)(\s|>|\/))[^>]*>/gi, "");
 
-function plainText(text: string) {
-  return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  return withoutUnsafeMarkup.replace(/<(\/?)(strong|em|u|s|mark|a|br|span)\b([^>]*)>/gi, (_, closing: string, rawTag: string, rawAttributes: string) => {
+    const tag = rawTag.toLowerCase();
+    if (closing) return `</${tag}>`;
+    if (tag === "br") return "<br>";
+    if (tag === "a") {
+      const href = rawAttributes.match(/\shref=["']([^"']+)["']/i)?.[1] ?? "";
+      const target = rawAttributes.match(/\starget=["'](_blank|_self)["']/i)?.[1];
+      const safeHref = /^(https?:\/\/|\/|#|mailto:)/i.test(href) ? href.replace(/"/g, "&quot;") : "#";
+      return `<a href="${safeHref}"${target ? ` target="${target}"` : ""} rel="noreferrer">`;
+    }
+    if (tag === "span" || tag === "mark") {
+      const style = rawAttributes.match(/\sstyle=["']([^"']*)["']/i)?.[1] ?? "";
+      const safeStyle = style
+        .split(";")
+        .map((rule: string) => rule.trim())
+        .filter((rule: string) => /^(color|background-color|font-size|line-height|font-family|font-variation-settings|text-decoration)\s*:/i.test(rule))
+        .filter((rule: string) => !/url|expression|javascript|[<>]/i.test(rule))
+        .join("; ");
+      return `<${tag}${safeStyle ? ` style="${safeStyle.replace(/"/g, "&quot;")}"` : ""}>`;
+    }
+    return `<${tag}>`;
+  });
 }
 
 function mediaWidthStyle(width?: string): CSSProperties | undefined {
@@ -80,8 +96,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const title = plainText(article.title);
-  const description = plainText(article.excerpt);
+  const title = stripHtml(article.title);
+  const description = stripHtml(article.excerpt);
   const canonicalUrl = `${getSiteUrl()}/off/${article.slug}`;
   const images = article.coverImage ? [{ url: article.coverImage, alt: title }] : [];
 
@@ -125,7 +141,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   }
 
   const blocks = parseArticleContent(article.content);
-  const isFirstChapter = article.title.trim().toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
+  const isFirstChapter = stripHtml(article.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
   const canReadFull = Boolean(user) || isFirstChapter;
   const visibleBlocks = canReadFull ? blocks : blocks.slice(0, 2);
   const comments = user ? await getPublishedComments(article.id) : [];
@@ -151,17 +167,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       <header className="article-hero">
         <p className="eyebrow">{article.category}</p>
         <h1>{renderInline(article.title)}</h1>
-        <p>{renderInline(article.excerpt)}</p>
+        <p>{stripHtml(article.excerpt)}</p>
         <div className="meta">
           <span>{formatDate(article.publishedAt)}</span>
           <span>{article.author}</span>
           <span>{article.readTime}</span>
         </div>
-        <ShareButtons title={plainText(article.title)} />
+        <ShareButtons title={stripHtml(article.title)} />
       </header>
 
       <div className="article-cover">
-        <Image src={article.coverImage} alt={article.title} width={1200} height={720} priority />
+        <Image src={article.coverImage} alt={stripHtml(article.title)} width={1200} height={720} priority />
       </div>
 
       <div className="article-reader-layout">
@@ -200,7 +216,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     key={index}
                   >
                     <img src={block.src} alt={block.alt} style={mediaFitStyle(block)} />
-                    {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                    {block.caption ? <figcaption>{stripHtml(block.caption)}</figcaption> : null}
                   </figure>
                 );
               case "gallery":
@@ -210,7 +226,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     {block.images.map((image, imageIndex) => (
                       <figure key={`${image.src}-${imageIndex}`}>
                         <img src={image.src} alt={image.alt ?? "Imagen editorial"} />
-                        {image.caption ? <figcaption>{image.caption}</figcaption> : null}
+                        {image.caption ? <figcaption>{stripHtml(image.caption)}</figcaption> : null}
                       </figure>
                     ))}
                   </div>
@@ -219,7 +235,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 return (
                   <a className={block.caption === "spotify" ? "spotify-pill" : "reader-embed"} href={block.url} target="_blank" key={index}>
                     {block.caption === "spotify" ? <span className="spotify-pill-logo" aria-hidden="true" /> : null}
-                    <span className={block.caption === "spotify" ? "spotify-pill-title" : undefined}>{block.caption === "spotify" ? block.label ?? "Contenido de Spotify" : block.url}</span>
+                    <span className={block.caption === "spotify" ? "spotify-pill-title" : undefined}>{block.caption === "spotify" ? stripHtml(block.label ?? "Contenido de Spotify") : block.url}</span>
                   </a>
                 );
               case "video":
@@ -230,13 +246,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     key={index}
                   >
                     <video src={block.url} style={mediaFitStyle(block)} controls />
-                    {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+                    {block.caption ? <figcaption>{stripHtml(block.caption)}</figcaption> : null}
                   </figure>
                 );
               case "cta":
                 return (
                   <aside className="reader-cta" key={index}>
-                    <p>{block.text}</p>
+                    <p>{renderInline(block.text)}</p>
                     <Link className="button violet-button" href={block.url}>{block.label}</Link>
                   </aside>
                 );
@@ -244,14 +260,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               case "share":
                 return (
                   <aside className="reader-cta" key={index}>
-                    <p>{block.text}</p>
+                    <p>{renderInline(block.text)}</p>
                   </aside>
                 );
               case "stat":
                 return (
                   <aside className="reader-stat" key={index}>
-                    <strong>{block.value}</strong>
-                    <span>{block.label}</span>
+                    <strong>{stripHtml(block.value)}</strong>
+                    <span>{stripHtml(block.label)}</span>
                   </aside>
                 );
               case "columns":
@@ -265,7 +281,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 return (
                   <aside className="special-block" key={index}>
                     <strong>{block.label}</strong>
-                    <p>{block.text}</p>
+                    <p>{renderInline(block.text)}</p>
                   </aside>
                 );
             }
