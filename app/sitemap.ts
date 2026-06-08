@@ -7,10 +7,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const articles = await getPublishedArticles();
 
   return [
-    { url: siteUrl, lastModified: new Date() },
+    {
+      url: `${siteUrl}/`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 1,
+    },
     ...articles.map((article) => ({
       url: `${siteUrl}/off/${article.slug}`,
       lastModified: article.updatedAt,
+      changeFrequency: "monthly" as const,
+      priority: article.featured ? 0.9 : 0.7,
     })),
   ];
 }

@@ -15,6 +15,7 @@ import {
   parseArticleContent,
 } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
+import { getSiteUrl } from "@/lib/site-url";
 
 function sanitizeInlineHtml(text: string) {
   return text
@@ -72,20 +73,44 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const article = await getArticleBySlug(slug);
 
-  if (!article) {
-    return { title: "CapÃ­tulo no encontrado | OFF" };
+  if (!article || article.status !== "published") {
+    return {
+      title: "Capítulo no encontrado | OFF",
+      robots: { index: false, follow: false },
+    };
   }
 
+  const title = plainText(article.title);
+  const description = plainText(article.excerpt);
+  const canonicalUrl = `${getSiteUrl()}/off/${article.slug}`;
+  const images = article.coverImage ? [{ url: article.coverImage, alt: title }] : [];
+
   return {
-    title: `${plainText(article.title)} | OFF`,
-    description: plainText(article.excerpt),
+    title: { absolute: title },
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
     openGraph: {
-      title: plainText(article.title),
-      description: plainText(article.excerpt),
-      images: [article.coverImage],
+      title,
+      description,
+      siteName: "OFF",
+      url: canonicalUrl,
+      images,
       type: "article",
       publishedTime: article.publishedAt?.toISOString(),
+      modifiedTime: article.updatedAt.toISOString(),
       authors: [article.author],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: article.coverImage ? [article.coverImage] : [],
     },
   };
 }

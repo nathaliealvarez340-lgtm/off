@@ -2,17 +2,52 @@ import type { Metadata } from "next";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
+const SITE_TITLE = "Se ve bien pero se siente OFF";
+const SITE_DESCRIPTION = "OFF es una plataforma editorial para una generación que busca crecimiento personal, salud mental, claridad, propósito y éxito profesional mientras construye su futuro sin perderse a sí misma.";
+
 export const metadata: Metadata = {
-  title: "OFF | Revista digital editorial",
-  description:
-    "OFF es una editorial digital para una generación que está construyendo su vida mientras intenta entender por qué se siente desconectada.",
   metadataBase: new URL(getSiteUrl()),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "crecimiento personal", "salud mental", "éxito profesional", "desarrollo personal",
+    "propósito", "claridad mental", "crisis de los 20", "sentirse perdido",
+    "bienestar emocional", "autoconocimiento", "desarrollo profesional", "hábitos",
+    "inteligencia emocional", "ansiedad por el futuro", "jóvenes profesionales",
+    "generación z", "superación personal", "identidad personal", "OFF", "OFF Journal",
+    "Nathalie Garcia", "cómo encontrar propósito", "cómo tener éxito sin sentirse vacío",
+    "crisis existencial", "reconstruirte", "desconexión emocional",
+  ],
+  applicationName: "OFF",
+  authors: [{ name: "Nathalie Garcia" }],
+  creator: "Nathalie Garcia",
+  publisher: "OFF",
+  alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: "OFF | Revista digital editorial",
-    description:
-      "Capítulos sobre vida, carrera, negocios, mentalidad y crecimiento para una generación emocionalmente saturada.",
-    images: ["/covers/off-chapter-1.svg"],
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: "OFF",
+    url: "/",
+    locale: "es_MX",
+    images: [{ url: "/images/hero-off.webp", alt: SITE_TITLE }],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/images/hero-off.webp"],
   },
   icons: {
     icon: "/logo/favicon-off.png.jpeg",
