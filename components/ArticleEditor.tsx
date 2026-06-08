@@ -671,6 +671,38 @@ function isSafeMediaUrl(kind: "image" | "video", url: string) {
   }
 }
 
+function canLoadRemoteMedia(kind: "image" | "video", url: string) {
+  return new Promise<boolean>((resolve) => {
+    if (kind === "image") {
+      const image = new window.Image();
+      const timeout = window.setTimeout(() => resolve(false), 8000);
+      image.onload = () => {
+        window.clearTimeout(timeout);
+        resolve(true);
+      };
+      image.onerror = () => {
+        window.clearTimeout(timeout);
+        resolve(false);
+      };
+      image.src = url;
+      return;
+    }
+
+    const video = document.createElement("video");
+    const timeout = window.setTimeout(() => resolve(false), 10000);
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      window.clearTimeout(timeout);
+      resolve(true);
+    };
+    video.onerror = () => {
+      window.clearTimeout(timeout);
+      resolve(false);
+    };
+    video.src = url;
+  });
+}
+
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
   const [state, formAction, pending] = useActionState(saveArticleAction, initialState);
   const [clientMessage, setClientMessage] = useState("");
@@ -700,10 +732,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [headingOpen, setHeadingOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
+  const [insertView, setInsertView] = useState<"main" | "image" | "video">("main");
   const [mediaContext, setMediaContext] = useState({ open: false, x: 0, y: 0, pos: null as number | null });
   const [mediaCaptionPanel, setMediaCaptionPanel] = useState({ open: false, x: 0, y: 0, width: 320, pos: null as number | null });
   const [cropOpen, setCropOpen] = useState(false);
-  const [mediaUrlModal, setMediaUrlModal] = useState({ open: false, kind: "image" as "image" | "video", url: "" });
+  const [mediaUrlModal, setMediaUrlModal] = useState({ open: false, kind: "image" as "image" | "video", title: "", url: "" });
   const [captionFocusTick, setCaptionFocusTick] = useState(0);
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [zoom, setZoom] = useState(100);
@@ -724,6 +757,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const captionInputRef = useRef<HTMLInputElement | null>(null);
   const captionPanelInputRef = useRef<HTMLInputElement | null>(null);
+  const insertMenuRef = useRef<HTMLDivElement | null>(null);
   const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
@@ -906,6 +940,24 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     const storedPageSize = window.localStorage.getItem("off-editor-page-size") as keyof typeof PAGE_SIZES | null;
     if (storedPageSize && storedPageSize in PAGE_SIZES) setPageSize(storedPageSize);
   }, []);
+
+  useEffect(() => {
+    if (!insertOpen) return;
+
+    function closeInsertMenu(event: MouseEvent | KeyboardEvent) {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      if (event instanceof MouseEvent && insertMenuRef.current?.contains(event.target as Node)) return;
+      setInsertOpen(false);
+      setInsertView("main");
+    }
+
+    document.addEventListener("mousedown", closeInsertMenu);
+    document.addEventListener("keydown", closeInsertMenu);
+    return () => {
+      document.removeEventListener("mousedown", closeInsertMenu);
+      document.removeEventListener("keydown", closeInsertMenu);
+    };
+  }, [insertOpen]);
 
   useEffect(() => {
     if (!mediaContext.open || mediaContext.pos === null || !editor) return;
@@ -1129,6 +1181,17 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setLinkModal({ open: true, title: selectedTitle, url: currentHref ?? "", newTab: true });
   }
 
+  function openGeneralLinkFromInsert() {
+    if (!editor) return;
+    const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
+    const selectedTitle = editor.state.doc.textBetween(range.from, range.to, " ").trim();
+    editor.chain().focus().setTextSelection(range).run();
+    setActiveEditor(editor);
+    setInsertOpen(false);
+    setInsertView("main");
+    setLinkModal({ open: true, title: selectedTitle, url: "", newTab: true });
+  }
+
   function confirmLink() {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
@@ -1139,6 +1202,10 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       setLinkModal({ open: false, title: "", url: "", newTab: true });
       return;
     }
+    if (!isSafeMediaUrl("image", url)) {
+      setClientMessage("Pega una URL valida para el enlace.");
+      return;
+    }
 
     const { from, to } = targetEditor.state.selection;
     const selectedTitle = targetEditor.state.doc.textBetween(from, to, " ").trim();
@@ -1146,6 +1213,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     targetEditor.chain().focus().insertContentAt({ from, to }, `<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(label)}</a>`).run();
     if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setLinkModal({ open: false, title: "", url: "", newTab: true });
+    setClientMessage("");
   }
 
   function applyColor(color: string, close = false) {
@@ -1354,32 +1422,41 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
 
   function openSpotifyCreate() {
     setInsertOpen(false);
+    setInsertView("main");
     setSpotifyCreateModal({ open: true, title: "Contenido de Spotify", url: "" });
   }
 
   function openMediaUrlModal(kind: "image" | "video") {
     if (editor) bodySelectionRef.current = { from: editor.state.selection.from, to: editor.state.selection.to };
     setInsertOpen(false);
-    setMediaUrlModal({ open: true, kind, url: "" });
+    setInsertView("main");
+    setMediaUrlModal({ open: true, kind, title: "", url: "" });
   }
 
-  function confirmMediaUrl() {
+  async function confirmMediaUrl() {
     if (!editor) return;
     const url = mediaUrlModal.url.trim();
     if (!isSafeMediaUrl(mediaUrlModal.kind, url)) {
       setClientMessage("Pega una URL valida de imagen o video.");
       return;
     }
+    setClientMessage("Validando enlace...");
+    const validMedia = await canLoadRemoteMedia(mediaUrlModal.kind, url);
+    if (!validMedia) {
+      setClientMessage(mediaUrlModal.kind === "image" ? "La URL no contiene una imagen valida." : "La URL no contiene un video reproducible.");
+      return;
+    }
     const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
+    const title = mediaUrlModal.title.trim();
     const inserted = mediaUrlModal.kind === "video"
-      ? insertMediaNode(editor, "videoEmbed", { src: url, size: "medium", layout: "center", width: MEDIA_SIZES.medium }, range)
-      : insertMediaNode(editor, "image", { src: url, alt: "Imagen editorial", layout: "center", width: MEDIA_SIZES.large }, range);
+      ? insertMediaNode(editor, "videoEmbed", { src: url, caption: title, size: "medium", layout: "center", width: MEDIA_SIZES.medium }, range)
+      : insertMediaNode(editor, "image", { src: url, alt: title || "Imagen editorial", caption: title, layout: "center", width: MEDIA_SIZES.large }, range);
     if (!inserted) {
       setClientMessage("No se pudo insertar la URL en la hoja.");
       return;
     }
     setEditorHtml(editor.getHTML());
-    setMediaUrlModal({ open: false, kind: "image", url: "" });
+    setMediaUrlModal({ open: false, kind: "image", title: "", url: "" });
     setClientMessage("");
   }
 
@@ -1489,7 +1566,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
             </label>
             <div className="link-modal-actions">
               <button type="button" className="ghost-button" onClick={() => setLinkModal({ open: false, title: "", url: "", newTab: true })}>Cancelar</button>
-              <button type="button" className="button" onClick={confirmLink}>Aplicar</button>
+              <button type="button" className="button" onClick={confirmLink}>Insertar</button>
             </div>
           </div>
         </div>
@@ -1539,7 +1616,15 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
       {mediaUrlModal.open ? (
         <div className="link-modal-backdrop" role="dialog" aria-modal="true" aria-label={mediaUrlModal.kind === "image" ? "Insertar imagen desde URL" : "Insertar video desde URL"}>
           <div className="link-modal">
-            <strong>{mediaUrlModal.kind === "image" ? "Imagen desde URL" : "Video desde URL"}</strong>
+            <strong>{mediaUrlModal.kind === "image" ? "Insertar imagen por enlace" : "Insertar video por enlace"}</strong>
+            <label>
+              {mediaUrlModal.kind === "image" ? "Título de imagen" : "Título de video"}
+              <input
+                value={mediaUrlModal.title}
+                onChange={(event) => setMediaUrlModal((current) => ({ ...current, title: event.target.value }))}
+                placeholder={mediaUrlModal.kind === "image" ? "Imagen editorial" : "Video editorial"}
+              />
+            </label>
             <label>
               URL
               <input
@@ -1550,8 +1635,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               />
             </label>
             <div className="link-modal-actions">
-              <button type="button" className="ghost-button" onClick={() => setMediaUrlModal({ open: false, kind: "image", url: "" })}>Cancelar</button>
-              <button type="button" className="button" onClick={confirmMediaUrl}>Insertar</button>
+              <button type="button" className="ghost-button" onClick={() => setMediaUrlModal({ open: false, kind: "image", title: "", url: "" })}>Cancelar</button>
+              <button type="button" className="button" onClick={() => void confirmMediaUrl()}>Insertar</button>
             </div>
           </div>
         </div>
@@ -1725,25 +1810,53 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}>Bullets</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}>1.</button>
               <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}>Divider</button>
-              <div className="toolbar-dropdown insert-dropdown">
-                <button type="button" disabled={!canUseToolbar || uploading} onClick={() => setInsertOpen((open) => !open)}>Insertar</button>
+              <div className="toolbar-dropdown insert-dropdown" ref={insertMenuRef}>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={insertOpen}
+                  disabled={!canUseToolbar || uploading}
+                  onClick={() => {
+                    setInsertOpen((open) => !open);
+                    setInsertView("main");
+                  }}
+                >
+                  Insertar
+                </button>
                 {insertOpen ? (
-                  <div className="toolbar-menu insert-menu">
-                    <div className="insert-menu-item">
-                      <button type="button">Imagen</button>
-                      <div className="insert-submenu">
-                        <button type="button" onClick={() => { setInsertOpen(false); openImagePicker(); }}>Desde mi dispositivo</button>
-                        <button type="button" onClick={() => openMediaUrlModal("image")}>Desde URL</button>
-                      </div>
+                  <div className="insert-menu" role="menu" aria-label="Insertar">
+                    <div className="insert-menu-heading">
+                      {insertView === "main" ? "Insertar" : insertView === "image" ? "Imagen" : "Video"}
                     </div>
-                    <div className="insert-menu-item">
-                      <button type="button">Video</button>
-                      <div className="insert-submenu">
-                        <button type="button" onClick={() => { setInsertOpen(false); openVideoPicker(); }}>Desde mi dispositivo</button>
-                        <button type="button" onClick={() => openMediaUrlModal("video")}>Desde URL</button>
+                    {insertView === "main" ? (
+                      <div className="insert-menu-panel">
+                        <button type="button" role="menuitem" onClick={() => setInsertView("image")}>Imagen</button>
+                        <button type="button" role="menuitem" onClick={() => setInsertView("video")}>Video</button>
+                        <button type="button" role="menuitem" onClick={openSpotifyCreate}>Spotify</button>
+                        <button type="button" role="menuitem" onClick={openGeneralLinkFromInsert}>Enlace</button>
                       </div>
-                    </div>
-                    <button type="button" onClick={openSpotifyCreate}>Spotify</button>
+                    ) : (
+                      <div className="insert-menu-panel">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setInsertOpen(false);
+                            setInsertView("main");
+                            if (insertView === "image") openImagePicker();
+                            else openVideoPicker();
+                          }}
+                        >
+                          Local
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => openMediaUrlModal(insertView === "image" ? "image" : "video")}>
+                          Enlace
+                        </button>
+                        <button type="button" role="menuitem" className="insert-back-button" onClick={() => setInsertView("main")}>
+                          Volver
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
