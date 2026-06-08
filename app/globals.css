@@ -558,10 +558,12 @@ textarea:focus {
 
 .reader h2 {
   font-size: 42px;
+  line-height: 1.08;
 }
 
 .reader h3 {
   font-size: 30px;
+  line-height: 1.18;
 }
 
 .reader .align-center {
@@ -2286,6 +2288,34 @@ textarea:focus {
   justify-content: center;
 }
 
+.toolbar-menu > span {
+  grid-column: 1 / -1;
+  padding: 2px 4px 6px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.line-height-menu {
+  min-width: 156px;
+}
+
+.editor-command-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.editor-command-bar button > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  stroke-width: 1.8;
+}
+
 .palette-popover span,
 .autosave-state,
 .document-section-label {
@@ -3023,6 +3053,14 @@ textarea:focus {
   line-height: 1.8;
 }
 
+.tiptap-editor .ProseMirror p {
+  margin: 0 0 1em;
+}
+
+.tiptap-editor .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
 .tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -3039,7 +3077,7 @@ textarea:focus {
 .tiptap-editor .ProseMirror h1,
 .tiptap-editor .ProseMirror h2,
 .tiptap-editor .ProseMirror h3 {
-  margin: 1.1em 0 0.35em;
+  margin: 0.9em 0 0.3em;
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 400;
@@ -3048,7 +3086,7 @@ textarea:focus {
 
 .tiptap-editor .ProseMirror h1 {
   font-size: clamp(2.6rem, 4.4vw, 4.8rem);
-  line-height: 0.98;
+  line-height: 1;
 }
 
 .tiptap-editor .ProseMirror h2 {
@@ -3058,7 +3096,7 @@ textarea:focus {
 
 .tiptap-editor .ProseMirror h3 {
   font-size: clamp(1.35rem, 2vw, 2rem);
-  line-height: 1.25;
+  line-height: 1.15;
 }
 
 .tiptap-editor .ProseMirror blockquote {

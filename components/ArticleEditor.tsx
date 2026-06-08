@@ -14,6 +14,22 @@ import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlignVerticalSpaceAround,
+  Bold,
+  Highlighter,
+  Italic,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+  Minus,
+  Palette,
+  Pilcrow,
+  Plus,
+  Quote,
+  Strikethrough,
+  Underline as UnderlineIcon,
+} from "lucide-react";
 import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
@@ -34,6 +50,17 @@ const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/
 const IMAGE_MAX_SIZE = 25 * 1024 * 1024;
 const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const ZOOM_LEVELS = [75, 100, 125, 150];
+const LINE_HEIGHT_OPTIONS = ["0.5", "1", "1.5", "2", "2.5"] as const;
+const HEADING_TOKENS = {
+  H1: { fontSize: "48px", lineHeight: "1" },
+  H2: { fontSize: "38px", lineHeight: "1.1" },
+  H3: { fontSize: "30px", lineHeight: "1.15" },
+  H4: { fontSize: "24px", lineHeight: "1.18" },
+  H5: { fontSize: "20px", lineHeight: "1.22" },
+  H6: { fontSize: "18px", lineHeight: "1.25" },
+  H7: { fontSize: "16px", lineHeight: "1.3" },
+  H8: { fontSize: "14px", lineHeight: "1.3" },
+} as const;
 const MEDIA_SIZES = {
   small: "360px",
   medium: "640px",
@@ -730,6 +757,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [spotifyCreateModal, setSpotifyCreateModal] = useState({ open: false, title: "Contenido de Spotify", url: "" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
+  const [lineHeightOpen, setLineHeightOpen] = useState(false);
   const [fontOpen, setFontOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const [insertView, setInsertView] = useState<"main" | "image" | "video">("main");
@@ -1247,31 +1275,41 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     setFontOpen(false);
   }
 
-  function applyLineHeight(lineHeight: string) {
+  function applyTextStyleToSelectionOrBlock(attributes: Record<string, string | null>) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
-    targetEditor.chain().focus().setMark("textStyle", { lineHeight }).run();
-    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+
+    const { from, to, empty, $from } = targetEditor.state.selection;
+    const range = empty
+      ? { from: $from.start(), to: $from.end() }
+      : { from, to };
+    const chain = targetEditor
+      .chain()
+      .focus()
+      .setTextSelection(range)
+      .setMark("textStyle", attributes)
+      .setTextSelection({ from, to });
+
+    if (empty) chain.setMark("textStyle", attributes);
+    chain.run();
+
+    if (targetEditor === editor) setEditorHtml(targetEditor.getHTML());
+  }
+
+  function applyLineHeight(lineHeight: string) {
+    applyTextStyleToSelectionOrBlock({ lineHeight });
+    setLineHeightOpen(false);
   }
 
   function applyHeadingToken(token: string) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
-    const map: Record<string, string> = {
-      H1: "48px",
-      H2: "38px",
-      H3: "30px",
-      H4: "24px",
-      H5: "20px",
-      H6: "18px",
-      H7: "16px",
-      H8: "14px",
-    };
+    const style = HEADING_TOKENS[token as keyof typeof HEADING_TOKENS];
+    if (!style) return;
     if (token === "H1") targetEditor.chain().focus().toggleHeading({ level: 1 }).run();
     else if (token === "H2") targetEditor.chain().focus().toggleHeading({ level: 2 }).run();
     else if (token === "H3") targetEditor.chain().focus().toggleHeading({ level: 3 }).run();
-    else targetEditor.chain().focus().setMark("textStyle", { fontSize: map[token] }).run();
-    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+    applyTextStyleToSelectionOrBlock(style);
     setHeadingOpen(false);
   }
 
@@ -1746,9 +1784,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
         <section className="document-workspace">
           <nav className="editor-command-bar doc-toolbar tiptap-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>Parrafo</button>
+              <button type="button" title="Párrafo" aria-label="Párrafo" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>
+                <Pilcrow aria-hidden="true" />
+              </button>
               <div className="toolbar-dropdown font-dropdown">
-                <button type="button" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>Tipografías</button>
+                <button type="button" title="Tipografías" aria-label="Tipografías" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>Tipografías</button>
                 {fontOpen ? (
                   <div className="toolbar-menu font-menu">
                     {EDITOR_FONTS.map((font) => (
@@ -1765,28 +1805,52 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 ) : null}
               </div>
               <div className="toolbar-dropdown">
-                <button type="button" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
+                <button type="button" title="Tamaño de título" aria-label="Tamaño de título" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
                 {headingOpen ? (
                   <div className="toolbar-menu">
-                    {["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"].map((token) => (
+                    {Object.keys(HEADING_TOKENS).map((token) => (
                       <button type="button" key={token} onClick={() => applyHeadingToken(token)}>{token}</button>
                     ))}
                   </div>
                 ) : null}
               </div>
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>Quote</button>
+              <div className="toolbar-dropdown line-height-dropdown">
+                <button
+                  type="button"
+                  title="Interlineado"
+                  aria-label="Interlineado"
+                  aria-expanded={lineHeightOpen}
+                  disabled={!canUseToolbar}
+                  onClick={() => setLineHeightOpen((open) => !open)}
+                >
+                  <AlignVerticalSpaceAround aria-hidden="true" />
+                </button>
+                {lineHeightOpen ? (
+                  <div className="toolbar-menu line-height-menu" aria-label="Interlineado">
+                    <span>Interlineado</span>
+                    {LINE_HEIGHT_OPTIONS.map((value) => (
+                      <button type="button" key={value} onClick={() => applyLineHeight(value)}>
+                        {Number(value).toFixed(1)}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <button type="button" title="Cita" aria-label="Cita" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
+                <Quote aria-hidden="true" />
+              </button>
             </div>
             <div className="doc-toolbar-group">
-              <button type="button" className={toolbarEditor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBold().run()}>B</button>
-              <button type="button" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}>I</button>
-              <button type="button" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}>U</button>
-              <button type="button" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}>S</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}>Highlight</button>
-              <button type="button" disabled={!canUseToolbar} onClick={applyLink}>Link</button>
+              <button type="button" title="Negrita" aria-label="Negrita" className={toolbarEditor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBold().run()}><Bold aria-hidden="true" /></button>
+              <button type="button" title="Cursiva" aria-label="Cursiva" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}><Italic aria-hidden="true" /></button>
+              <button type="button" title="Subrayado" aria-label="Subrayado" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}><UnderlineIcon aria-hidden="true" /></button>
+              <button type="button" title="Tachado" aria-label="Tachado" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}><Strikethrough aria-hidden="true" /></button>
+              <button type="button" title="Resaltar" aria-label="Resaltar" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
+              <button type="button" title="Enlace" aria-label="Enlace" disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
             </div>
             <div className="doc-toolbar-group">
               <div className="palette-wrap">
-                <button type="button" disabled={!canUseToolbar} onClick={() => setPaletteOpen((open) => !open)}>Paleta</button>
+                <button type="button" title="Paleta" aria-label="Paleta" disabled={!canUseToolbar} onClick={() => setPaletteOpen((open) => !open)}><Palette aria-hidden="true" /></button>
                 {paletteOpen ? (
                   <div className="palette-popover">
                     <span>Colores OFF</span>
@@ -1807,12 +1871,13 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   </div>
                 ) : null}
               </div>
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}>Bullets</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}>1.</button>
-              <button type="button" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}>Divider</button>
+              <button type="button" title="Lista con viñetas" aria-label="Lista con viñetas" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}><List aria-hidden="true" /></button>
+              <button type="button" title="Lista numerada" aria-label="Lista numerada" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}><ListOrdered aria-hidden="true" /></button>
+              <button type="button" title="Separador" aria-label="Separador" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}><Minus aria-hidden="true" /></button>
               <div className="toolbar-dropdown insert-dropdown" ref={insertMenuRef}>
                 <button
                   type="button"
+                  title="Insertar"
                   aria-haspopup="menu"
                   aria-expanded={insertOpen}
                   disabled={!canUseToolbar || uploading}
@@ -1821,7 +1886,8 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                     setInsertView("main");
                   }}
                 >
-                  Insertar
+                  <Plus aria-hidden="true" />
+                  <span>Insertar</span>
                 </button>
                 {insertOpen ? (
                   <div className="insert-menu" role="menu" aria-label="Insertar">
@@ -2005,11 +2071,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <label className="field">Espaciado
                 <select onChange={(event) => applyLineHeight(event.target.value)} defaultValue="">
                   <option value="" disabled>Seleccionar</option>
-                  <option value="0.5em">0.5</option>
-                  <option value="1em">1.0</option>
-                  <option value="1.5em">1.5</option>
-                  <option value="2em">2.0</option>
-                  <option value="2.5em">2.5</option>
+                  {LINE_HEIGHT_OPTIONS.map((value) => <option value={value} key={value}>{Number(value).toFixed(1)}</option>)}
                 </select>
               </label>
               {selectedKind === "image" || lastSelectedImage ? (
