@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { LocalDate } from "@/components/LocalDate";
 
 export function MembershipWelcome({ memberSince, memberNumber }: { memberSince: string; memberNumber: string }) {
   return (
@@ -23,7 +24,7 @@ export function MembershipWelcome({ memberSince, memberNumber }: { memberSince: 
         <dl className="membership-credentials">
           <div>
             <dt>Miembro desde</dt>
-            <dd>{memberSince}</dd>
+            <dd><LocalDate value={memberSince} /></dd>
           </div>
           <div>
             <dt>Miembro OFF</dt>

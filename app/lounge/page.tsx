@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MemberLounge } from "@/components/MemberLounge";
+import { getPlainTextPreview, INTERNAL_CONTENT_CATEGORIES } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
@@ -19,31 +20,37 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [articles, drafts, position] = await Promise.all([
-    db.article.findMany({ where: { status: "published" }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
-    db.article.findMany({ where: { status: "draft" }, orderBy: { updatedAt: "desc" }, take: 4 }),
+  const [articles, drafts, position, internalContent] = await Promise.all([
+    db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
+    db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     db.user.count({ where: { createdAt: { lte: user.createdAt } } }),
+    db.article.findMany({ where: { status: "published", category: { in: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" } }),
   ]);
-  const memberSince = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" }).format(user.createdAt);
 
   return (
     <MemberLounge
       name={user.name}
-      memberSince={memberSince}
+      memberSince={user.createdAt.toISOString()}
       memberNumber={memberNumber(position)}
       articles={articles.map((article) => ({
         id: article.id,
-        title: article.title,
+        title: getPlainTextPreview(article.title, 140),
         slug: article.slug,
-        excerpt: article.excerpt,
+        excerpt: getPlainTextPreview(article.excerpt),
         coverImage: article.coverImage,
         readTime: article.readTime,
       }))}
       earlyEditions={drafts.map((article) => ({
         id: article.id,
-        title: article.title,
-        excerpt: article.excerpt,
-        date: new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" }).format(article.updatedAt),
+        title: getPlainTextPreview(article.title, 140),
+        excerpt: getPlainTextPreview(article.excerpt),
+        date: article.updatedAt.toISOString(),
+      }))}
+      internalContent={internalContent.map((item) => ({
+        id: item.id,
+        title: getPlainTextPreview(item.title, 140),
+        excerpt: getPlainTextPreview(item.excerpt),
+        category: item.category,
       }))}
     />
   );

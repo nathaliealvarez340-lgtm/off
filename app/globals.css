@@ -6080,6 +6080,245 @@ textarea:focus {
   }
 }
 
+/* Admin editorial controls and fixed navigation */
+@media (min-width: 1181px) {
+  .admin-dashboard .admin-sidebar {
+    position: fixed;
+    top: 18px;
+    bottom: 18px;
+    left: 18px;
+    width: 280px;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .admin-dashboard .admin-main {
+    grid-column: 2;
+  }
+}
+
+.admin-create-circle {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(123, 61, 255, 0.34);
+  border-radius: 50%;
+  background: rgba(123, 61, 255, 0.13);
+  color: #fff;
+  transition: 180ms ease;
+}
+
+.admin-create-circle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-create-circle:hover {
+  border-color: rgba(170, 130, 255, 0.76);
+  background: rgba(123, 61, 255, 0.24);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 961px) {
+  .member-lounge {
+    padding-left: 220px;
+  }
+
+  .lounge-nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 220px;
+    height: 100vh;
+    margin: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 28px 22px;
+    background: rgba(3, 3, 5, 0.92);
+    backdrop-filter: blur(20px);
+  }
+
+  .lounge-nav > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    margin-top: 54px;
+  }
+
+  .lounge-nav a,
+  .lounge-nav button {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    text-align: left;
+  }
+}
+
+/* Editable document pages */
+.editor-paper-sheet-extra {
+  display: block;
+}
+
+.extra-page-editor {
+  position: relative;
+  z-index: 2;
+  min-height: calc(var(--page-min-height) - 120px);
+  outline: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: Georgia, serif;
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.extra-page-editor:empty::before {
+  color: rgba(255, 255, 255, 0.25);
+  content: "Empieza a escribir en esta hoja…";
+}
+
+/* Editorial collage */
+.collage-design-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+}
+
+.collage-design-panel > p,
+.collage-slot-controls > span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.collage-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.collage-template-grid button {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.66);
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.collage-template-preview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  height: 38px;
+}
+
+.collage-template-preview::before,
+.collage-template-preview::after {
+  border-radius: 2px;
+  background: rgba(123, 61, 255, 0.28);
+  content: "";
+}
+
+.collage-slot-controls {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(123, 61, 255, 0.2);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.editorial-collage {
+  width: 100%;
+  margin: 34px auto;
+}
+
+.editorial-collage-grid,
+.reader-gallery.collage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.collage-slot {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed rgba(123, 61, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(123, 61, 255, 0.04);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+}
+
+.collage-slot img,
+.reader-gallery.collage figure img {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  object-fit: cover;
+}
+
+.collage-three-equal .editorial-collage-grid,
+.reader-gallery.collage-three-equal {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.collage-large-left .collage-slot:first-child,
+.reader-gallery.collage-large-left figure:first-child,
+.collage-large-right .collage-slot:last-child,
+.reader-gallery.collage-large-right figure:last-child {
+  grid-row: span 2;
+}
+
+.collage-hero-thumbs .collage-slot:first-child,
+.reader-gallery.collage-hero-thumbs figure:first-child {
+  grid-column: 1 / -1;
+  min-height: 320px;
+}
+
+.collage-asymmetric .collage-slot:first-child,
+.reader-gallery.collage-asymmetric figure:first-child {
+  grid-column: span 2;
+}
+
+.editorial-collage figcaption,
+.collage-caption {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .admin-top-actions {
+    flex-wrap: wrap;
+  }
+
+  .editorial-collage-grid,
+  .reader-gallery.collage,
+  .collage-three-equal .editorial-collage-grid,
+  .reader-gallery.collage-three-equal {
+    grid-template-columns: 1fr;
+  }
+
+  .collage-slot,
+  .collage-slot img,
+  .reader-gallery.collage figure img {
+    min-height: 220px;
+  }
+}
+
 /* Public article experience */
 .article-translation-notice {
   width: fit-content;

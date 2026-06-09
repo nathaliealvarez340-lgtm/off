@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArchiveRestore, BookOpen, Clock3, Plus, StickyNote } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
@@ -6,7 +7,7 @@ import { AdminGreeting } from "@/components/AdminGreeting";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { AdminSidebarToggle } from "@/components/AdminSidebarToggle";
 import { DeleteArticleButton } from "@/components/DeleteArticleButton";
-import { formatDate, getAllArticles } from "@/lib/articles";
+import { formatDate, getAllArticles, getPlainTextPreview, isInternalContentCategory } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
@@ -67,8 +68,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     }),
   ]);
 
-  const publishedArticles = articles.filter((article) => article.status === "published");
-  const draftArticles = articles.filter((article) => article.status !== "published");
+  const internalArticles = articles.filter((article) => isInternalContentCategory(article.category));
+  const editorialArticles = articles.filter((article) => !isInternalContentCategory(article.category));
+  const publishedArticles = editorialArticles.filter((article) => article.status === "published");
+  const draftArticles = editorialArticles.filter((article) => article.status !== "published");
   const recentActivities = [
     ...users.slice(0, 3).map((user) => ({
       label: "Nuevo registro",
@@ -85,12 +88,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     ...comments.slice(0, 3).map((comment) => ({
       label: "Comentario",
       title: comment.user.name,
-      detail: comment.article.title,
+      detail: getPlainTextPreview(comment.article.title, 120),
       date: formatDate(comment.createdAt),
     })),
     ...publishedArticles.slice(0, 3).map((article) => ({
       label: "Articulo publicado",
-      title: article.title,
+      title: getPlainTextPreview(article.title, 120),
       detail: article.category,
       date: formatDate(article.publishedAt),
     })),
@@ -183,12 +186,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <p>Las personas no buscan contenido. Buscan sentirse entendidas.</p>
           </div>
           <div className="admin-top-actions">
-            <button className="notification-button" type="button" aria-label="Notificaciones">
-              <span />
-            </button>
-            <Link className="new-article-button" href="/admin/new">
-              Nuevo articulo
-            </Link>
+            <Link className="admin-create-circle" href="/admin/new" title="Nuevo artículo" aria-label="Nuevo artículo"><Plus /></Link>
+            <Link className="admin-create-circle" href="/admin/new?category=Biblioteca%20curada" title="Nueva biblioteca curada" aria-label="Nueva biblioteca curada"><BookOpen /></Link>
+            <Link className="admin-create-circle" href="/admin/new?category=Nota%20privada" title="Nueva nota privada" aria-label="Nueva nota privada"><StickyNote /></Link>
+            <Link className="admin-create-circle" href="/admin/new?category=Archivo%20desbloqueado" title="Nuevo archivo desbloqueado" aria-label="Nuevo archivo desbloqueado"><ArchiveRestore /></Link>
+            <Link className="admin-create-circle" href="/admin/new?category=Early%20Access" title="Nuevo early access" aria-label="Nuevo early access"><Clock3 /></Link>
           </div>
         </header>
 
@@ -271,8 +273,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </div>
 
           <div className="admin-article-list">
-            {articles.length > 0 ? (
-              articles.slice(0, 8).map((article) => (
+            {editorialArticles.length > 0 ? (
+              editorialArticles.slice(0, 8).map((article) => (
                 <article className="admin-article-item" key={article.id}>
                   <img src={article.coverImage} alt="" />
                   <div>
@@ -282,8 +284,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       <span>{article.readTime}</span>
                       {article.featured ? <span className="featured-pill">Destacado</span> : null}
                     </div>
-                    <h3>{article.title}</h3>
-                    <p>{article.excerpt}</p>
+                    <h3>{getPlainTextPreview(article.title, 150)}</h3>
+                    <p>{getPlainTextPreview(article.excerpt)}</p>
                     <div className="article-analytics">
                       <span>Lecturas: sin tracking</span>
                       <span>Guardados: sin tracking</span>
@@ -305,6 +307,32 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             ) : (
               <div className="empty-dashboard-state">Todavia no hay articulos. Crea el primer capitulo desde Nuevo articulo.</div>
             )}
+          </div>
+        </section>
+
+        <section className="dashboard-card articles-dashboard-card" id="contenido-lounge">
+          <div className="card-heading">
+            <div>
+              <p className="eyebrow">Member Lounge</p>
+              <h2>Contenido privado</h2>
+            </div>
+            <span>{internalArticles.length} piezas</span>
+          </div>
+          <div className="admin-article-list">
+            {internalArticles.length ? internalArticles.map((article) => (
+              <article className="admin-article-item" key={article.id}>
+                <img src={article.coverImage} alt="" />
+                <div>
+                  <div className="article-mini-meta"><span>{article.category}</span><span>{article.status}</span></div>
+                  <h3>{getPlainTextPreview(article.title, 150)}</h3>
+                  <p>{getPlainTextPreview(article.excerpt)}</p>
+                </div>
+                <div className="article-actions">
+                  <Link className="button" href={`/admin/${article.id}`}>Editar</Link>
+                  <DeleteArticleButton articleId={article.id} compact />
+                </div>
+              </article>
+            )) : <div className="empty-dashboard-state">Crea contenido privado desde las acciones circulares superiores.</div>}
           </div>
         </section>
 
@@ -367,7 +395,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <div className="comment-dashboard-row" key={comment.id}>
                     <strong>{comment.user.name}</strong>
                     <p>{comment.content}</p>
-                    <span>{comment.article.title}</span>
+                    <span>{getPlainTextPreview(comment.article.title, 120)}</span>
                   </div>
                 ))
               ) : (
@@ -391,7 +419,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <strong>{suggestion.user.name}</strong>
                     <span>{suggestion.user.email}</span>
                     <p>{suggestion.content}</p>
-                    <span>{suggestion.article?.title ?? "Sin artículo origen"} · {formatDate(suggestion.createdAt)}</span>
+                    <span>{suggestion.article ? getPlainTextPreview(suggestion.article.title, 120) : "Sin artículo origen"} · {formatDate(suggestion.createdAt)}</span>
                   </div>
                 ))
               ) : (

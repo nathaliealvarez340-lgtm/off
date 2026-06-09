@@ -38,7 +38,7 @@ import { slugify } from "@/lib/slug";
 const LIMIT = 70000;
 const initialState: SaveArticleState = { ok: false, message: "" };
 const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-const EDITOR_CATEGORIES = ["Negocios", "Vida", "Sociedad", "Tips", "Crecimiento"];
+const EDITOR_CATEGORIES = ["Negocios", "Vida", "Sociedad", "Tips", "Crecimiento", "Biblioteca curada", "Nota privada", "Archivo desbloqueado", "Early Access"];
 const PALETTE_COLORS = [
   "#FFFFFF", "#F5F1FF", "#D8D1E6", "#A7A1B3", "#6F687A",
   "#000000", "#07060A", "#111116", "#1B1723", "#2A2237",
@@ -98,6 +98,15 @@ const PAGE_SIZES = {
   magazineHorizontal: { label: "Revista horizontal", width: 1080, minHeight: 760 },
   custom: { label: "Custom", width: 920, minHeight: 1040 },
 } as const;
+const COLLAGE_TEMPLATES = [
+  { id: "two-equal", label: "2 columnas iguales", slots: 2 },
+  { id: "three-equal", label: "3 columnas iguales", slots: 3 },
+  { id: "large-left", label: "Grande izquierda + 2 derecha", slots: 3 },
+  { id: "large-right", label: "2 izquierda + grande derecha", slots: 3 },
+  { id: "grid-2x2", label: "Grid 2x2", slots: 4 },
+  { id: "asymmetric", label: "Editorial asimétrico", slots: 4 },
+  { id: "hero-thumbs", label: "Full width + 3 miniaturas", slots: 4 },
+] as const;
 const EDITOR_FONTS = [
   { label: "JA Jayagiri Sans", family: '"JA Jayagiri Sans", "Open Sans", sans-serif' },
   { label: "Open Sans", family: '"Open Sans", Arial, sans-serif' },
@@ -388,6 +397,48 @@ const SpotifyEmbed = TiptapNode.create({
   },
 });
 
+const EditorialCollage = TiptapNode.create({
+  name: "editorialCollage",
+  group: "block",
+  atom: true,
+  addAttributes() {
+    return {
+      template: { default: "two-equal" },
+      images: {
+        default: [],
+        parseHTML: (element) => Array.from(element.querySelectorAll("[data-collage-slot] img")).map((image) => ({
+          src: image.getAttribute("src") ?? "",
+          alt: image.getAttribute("alt") ?? "Imagen de collage",
+        })),
+      },
+      caption: {
+        default: "",
+        parseHTML: (element) => element.querySelector("figcaption")?.textContent ?? "",
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "figure[data-editorial-collage]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const images = Array.isArray(HTMLAttributes.images) ? HTMLAttributes.images : [];
+    return [
+      "figure",
+      {
+        class: `editorial-collage collage-${HTMLAttributes.template || "two-equal"}`,
+        "data-editorial-collage": "true",
+        "data-template": HTMLAttributes.template || "two-equal",
+      },
+      ["div", { class: "editorial-collage-grid" }, ...images.map((image: { src?: string; alt?: string }, index: number) => [
+        "div",
+        { class: "collage-slot", "data-collage-slot": String(index) },
+        image.src ? ["img", { src: image.src, alt: image.alt || "Imagen de collage" }] : ["span", {}, `Imagen ${index + 1}`],
+      ])],
+      ["figcaption", { "data-empty": HTMLAttributes.caption ? "false" : "true" }, HTMLAttributes.caption || ""],
+    ];
+  },
+});
+
 function editorExtensions(placeholder: string) {
   return [
     StarterKit,
@@ -399,6 +450,7 @@ function editorExtensions(placeholder: string) {
     EditorialImage.configure({ allowBase64: false, inline: false }),
     VideoEmbed,
     SpotifyEmbed,
+    EditorialCollage,
     TextAlign.configure({ types: ["heading", "paragraph"] }),
     Link.configure({
       openOnClick: false,
@@ -482,7 +534,7 @@ function legacyContentToHtml(content?: string) {
         return `<figure data-media-type="image" data-layout="${escapeHtml(block.align ?? "center")}" data-wrap="${escapeHtml(block.wrapMode ?? "top-bottom")}" data-width="${escapeHtml(block.width ?? "")}"${block.width ? ` style="width: ${escapeHtml(block.width)};"` : ""}><img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt ?? block.caption ?? "Imagen editorial")}" data-layout="${escapeHtml(block.align ?? "center")}" data-fit="${escapeHtml(block.objectFit ?? "cover")}" data-position="${escapeHtml(block.objectPosition ?? "50% 50%")}" data-ratio="${escapeHtml(block.aspectRatio ?? "")}">${block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : "<figcaption data-empty=\"true\"></figcaption>"}</figure>`;
       }
       if ((block.type === "gallery" || block.type === "collage") && block.images?.length) {
-        return block.images.map((image) => image.src ? `<figure><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt ?? "Imagen editorial")}">${image.caption ? `<figcaption>${escapeHtml(image.caption)}</figcaption>` : ""}</figure>` : "").join("");
+        return `<figure class="editorial-collage collage-grid-2x2" data-editorial-collage="true" data-template="grid-2x2"><div class="editorial-collage-grid">${block.images.map((image, index) => `<div class="collage-slot" data-collage-slot="${index}">${image.src ? `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt ?? "Imagen editorial")}">` : `<span>Imagen ${index + 1}</span>`}</div>`).join("")}</div></figure>`;
       }
       if (block.type === "video" && block.url) {
         const width = block.width ?? MEDIA_SIZES[(block.label as keyof typeof MEDIA_SIZES) ?? "medium"] ?? MEDIA_SIZES.medium;
@@ -613,6 +665,20 @@ function htmlToEditorialJson(html: string) {
     if (spotifyCard) {
       const url = spotifyCard.getAttribute("href") ?? "";
       if (url) blocks.push({ type: "embed", url, caption: "spotify", label: spotifyCard.getAttribute("data-title") ?? spotifyCard.textContent ?? "Contenido de Spotify" });
+      return;
+    }
+
+    const collage = node.matches("figure[data-editorial-collage]") ? node : node.querySelector("figure[data-editorial-collage]");
+    if (collage) {
+      blocks.push({
+        type: "collage",
+        images: Array.from(collage.querySelectorAll("[data-collage-slot]")).map((slot) => ({
+          src: slot.querySelector("img")?.getAttribute("src") ?? "",
+          alt: slot.querySelector("img")?.getAttribute("alt") ?? "Imagen editorial",
+        })),
+        caption: collage.querySelector("figcaption")?.textContent ?? "",
+        template: collage.getAttribute("data-template") ?? "two-equal",
+      });
       return;
     }
 
@@ -800,7 +866,7 @@ function canLoadRemoteMedia(kind: "image" | "video", url: string) {
   });
 }
 
-export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
+export function ArticleEditor({ article, articles = [], initialCategory }: { article?: Article | null; articles?: Article[]; initialCategory?: string }) {
   const translationEnvelope = useMemo(() => readTranslationEnvelope(article?.content), [article?.content]);
   const originalTranslation = translationEnvelope?.translations?.[translationEnvelope.originalLanguage ?? "es"];
   const originalContent = originalTranslation?.content ?? article?.content;
@@ -817,11 +883,12 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [cover, setCover] = useState(article?.coverImage ?? "");
   const [coverPreview, setCoverPreview] = useState(article?.coverImage ?? "");
   const [statusValue, setStatusValue] = useState(article?.status ?? "draft");
-  const [category, setCategory] = useState(article?.category && EDITOR_CATEGORIES.includes(article.category) ? article.category : "Vida");
+  const [category, setCategory] = useState(article?.category && EDITOR_CATEGORIES.includes(article.category) ? article.category : initialCategory && EDITOR_CATEGORIES.includes(initialCategory) ? initialCategory : "Vida");
   const [readTime, setReadTime] = useState(article?.readTime ?? "5 min leer");
   const [featured, setFeatured] = useState(article?.featured ?? false);
   const initialEditorContent = useMemo(() => legacyContentToHtml(originalContent), [originalContent]);
-  const [editorHtml, setEditorHtml] = useState(initialEditorContent);
+  const initialDocumentPages = useMemo(() => initialEditorContent.split(/<hr\s*\/?>/i), [initialEditorContent]);
+  const [editorHtml, setEditorHtml] = useState(initialDocumentPages[0] || "<p></p>");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [localSave, setLocalSave] = useState("Autosave local listo");
   const [serverSave, setServerSave] = useState("Guardado");
@@ -842,10 +909,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [hexColor, setHexColor] = useState("#7B3DFF");
   const [zoom, setZoom] = useState(100);
   const [pageSize, setPageSize] = useState<keyof typeof PAGE_SIZES>("magazineVertical");
-  const [pages, setPages] = useState(1);
+  const [extraPages, setExtraPages] = useState<string[]>(initialDocumentPages.slice(1));
   const [activePanel, setActivePanel] = useState<"content" | "design">("content");
   const [selectedKind, setSelectedKind] = useState<"text" | "image" | "video" | null>(null);
   const [selectedMediaPos, setSelectedMediaPos] = useState<number | null>(null);
+  const [selectedCollage, setSelectedCollage] = useState<{ pos: number; slot: number } | null>(null);
   const [lastSelectedImage, setLastSelectedImage] = useState("");
   const [mediaCaption, setMediaCaption] = useState("");
   const [mediaObjectPosition, setMediaObjectPosition] = useState("50% 50%");
@@ -856,6 +924,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const collageInputRef = useRef<HTMLInputElement | null>(null);
   const captionInputRef = useRef<HTMLInputElement | null>(null);
   const captionPanelInputRef = useRef<HTMLInputElement | null>(null);
   const insertMenuRef = useRef<HTMLDivElement | null>(null);
@@ -887,6 +956,18 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     content: initialEditorContent,
     editorProps: {
       handleClick(view, _pos, event) {
+        const collageSlot = (event.target as HTMLElement).closest("[data-collage-slot]") as HTMLElement | null;
+        if (collageSlot) {
+          const collage = collageSlot.closest("figure[data-editorial-collage]");
+          if (collage) {
+            const pos = view.posAtDOM(collage, 0);
+            view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, pos)));
+            setSelectedCollage({ pos, slot: Number(collageSlot.dataset.collageSlot ?? 0) });
+            setActivePanel("design");
+            return true;
+          }
+        }
+
         const target = (event.target as HTMLElement).closest("a[data-spotify-card]") as HTMLAnchorElement | null;
         if (target) {
           event.preventDefault();
@@ -1021,11 +1102,15 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     },
   });
 
-  const contentJson = useMemo(
-    () => preserveTranslationEnvelope(article?.content, title, excerpt, htmlToEditorialJson(editorHtml)),
-    [article?.content, editorHtml, excerpt, title],
+  const combinedEditorHtml = useMemo(
+    () => [editorHtml, ...extraPages.map((pageHtml) => `<hr>${pageHtml}`)].join(""),
+    [editorHtml, extraPages],
   );
-  const characterCount = useMemo(() => htmlToText(editorHtml).length, [editorHtml]);
+  const contentJson = useMemo(
+    () => preserveTranslationEnvelope(article?.content, title, excerpt, htmlToEditorialJson(combinedEditorHtml)),
+    [article?.content, combinedEditorHtml, excerpt, title],
+  );
+  const characterCount = useMemo(() => htmlToText(combinedEditorHtml).length, [combinedEditorHtml]);
   const overLimit = characterCount > LIMIT;
   const viewSlug = state.slug ?? slug;
   const storageKey = `off-editor-${savedId || slug || "new"}`;
@@ -1128,14 +1213,14 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   useEffect(() => {
     setLocalSave("Guardando local...");
     const timeout = window.setTimeout(() => {
-      window.localStorage.setItem(storageKey, JSON.stringify({ title, excerpt, slug, cover, editorHtml, updatedAt: new Date().toISOString() }));
+      window.localStorage.setItem(storageKey, JSON.stringify({ title, excerpt, slug, cover, editorHtml: combinedEditorHtml, updatedAt: new Date().toISOString() }));
       setLocalSave("Guardado local");
     }, 1800);
     return () => window.clearTimeout(timeout);
-  }, [cover, editorHtml, excerpt, slug, storageKey, title]);
+  }, [combinedEditorHtml, cover, excerpt, slug, storageKey, title]);
 
   useEffect(() => {
-    const readableText = htmlToText(editorHtml).trim();
+    const readableText = htmlToText(combinedEditorHtml).trim();
     if (!titleText.trim() && !excerptText.trim() && !readableText) return;
     if (overLimit || uploading) return;
 
@@ -1164,7 +1249,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     }, 3500);
 
     return () => window.clearTimeout(timeout);
-  }, [category, contentJson, cover, editorHtml, excerpt, excerptText, featured, overLimit, readTime, savedId, slug, statusValue, title, titleText, uploading]);
+  }, [category, combinedEditorHtml, contentJson, cover, excerpt, excerptText, featured, overLimit, readTime, savedId, slug, statusValue, title, titleText, uploading]);
 
   function currentEditor() {
     return activeEditor ?? editor;
@@ -1211,6 +1296,51 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     } finally {
       setUploading(false);
     }
+  }
+
+  function insertCollage(templateId: string, slots: number) {
+    if (!editor) return;
+    editor.chain().focus().insertContent({
+      type: "editorialCollage",
+      attrs: {
+        template: templateId,
+        images: Array.from({ length: slots }, () => ({ src: "", alt: "Imagen de collage" })),
+        caption: "",
+      },
+    }).run();
+    setEditorHtml(editor.getHTML());
+  }
+
+  function updateCollageSlot(src: string) {
+    if (!editor || !selectedCollage) return;
+    const node = editor.state.doc.nodeAt(selectedCollage.pos);
+    if (!node || node.type.name !== "editorialCollage") return;
+    const images = [...(Array.isArray(node.attrs.images) ? node.attrs.images : [])];
+    images[selectedCollage.slot] = { src, alt: `Imagen ${selectedCollage.slot + 1} del collage` };
+    const transaction = editor.state.tr.setNodeMarkup(selectedCollage.pos, undefined, { ...node.attrs, images });
+    editor.view.dispatch(transaction);
+    setEditorHtml(editor.getHTML());
+  }
+
+  async function handleCollageFile(file?: File) {
+    if (!file || !selectedCollage) return;
+    setUploading(true);
+    try {
+      updateCollageSlot(await uploadEditorFile(file));
+      setClientMessage("");
+    } catch (error) {
+      setClientMessage(error instanceof Error ? error.message : "No se pudo subir la imagen del collage.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function updateCollageCaption(caption: string) {
+    if (!editor || !selectedCollage) return;
+    const node = editor.state.doc.nodeAt(selectedCollage.pos);
+    if (!node || node.type.name !== "editorialCollage") return;
+    editor.view.dispatch(editor.state.tr.setNodeMarkup(selectedCollage.pos, undefined, { ...node.attrs, caption }));
+    setEditorHtml(editor.getHTML());
   }
 
   function openImagePicker() {
@@ -1602,13 +1732,11 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   }
 
   function addPage() {
-    editor?.chain().focus().setHorizontalRule().run();
-    if (editor) setEditorHtml(editor.getHTML());
-    setPages((current) => current + 1);
+    setExtraPages((current) => [...current, "<p></p>"]);
   }
 
   function removePage() {
-    setPages((current) => Math.max(1, current - 1));
+    setExtraPages((current) => current.slice(0, -1));
   }
 
   const toolbarEditor = activeEditor ?? editor;
@@ -2004,6 +2132,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               </div>
               <input ref={imageInputRef} hidden type="file" accept={IMAGE_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
               <input ref={videoInputRef} hidden type="file" accept={VIDEO_ACCEPT} onChange={(event) => { void handleInlineImageFile(event.target.files?.[0]); event.target.value = ""; }} />
+              <input ref={collageInputRef} hidden type="file" accept={IMAGE_ACCEPT} onChange={(event) => { void handleCollageFile(event.target.files?.[0]); event.target.value = ""; }} />
             </div>
             <div className="doc-toolbar-group page-toolbar-group">
               <select value={pageSize} onChange={(event) => changePageSize(event.target.value as keyof typeof PAGE_SIZES)} aria-label="Tamaño de hoja">
@@ -2013,7 +2142,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                 {ZOOM_LEVELS.map((level) => <option value={level} key={level}>{level}%</option>)}
               </select>
               <button type="button" onClick={addPage}>+ Hoja</button>
-              <button type="button" disabled={pages === 1} onClick={removePage}>Eliminar hoja</button>
+              <button type="button" disabled={extraPages.length === 0} onClick={removePage}>Eliminar hoja</button>
             </div>
           </nav>
 
@@ -2058,9 +2187,9 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
               <EditorContent editor={editor} className="tiptap-editor" />
             </motion.main>
             <AnimatePresence>
-              {Array.from({ length: Math.max(0, pages - 1) }).map((_, index) => (
+              {extraPages.map((pageHtml, index) => (
                 <motion.section
-                  className="editor-paper-sheet editor-paper-sheet-empty"
+                  className="editor-paper-sheet editor-paper-sheet-extra"
                   style={{ "--page-width": `${page.width}px`, "--page-min-height": `${page.minHeight}px` } as CSSProperties}
                   key={`page-${index + 2}`}
                   initial={{ opacity: 0, y: 28, scale: 0.96 }}
@@ -2068,8 +2197,17 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   exit={{ opacity: 0, y: -18, scale: 0.96 }}
                   transition={{ duration: 0.36, ease: "easeOut" }}
                 >
-                  <span>Hoja {index + 2}</span>
-                  <p>Continúa escribiendo en el documento principal. Esta hoja marca la estructura visual del artículo.</p>
+                  <span className="paper-label">Hoja {index + 2}</span>
+                  <div
+                    className="extra-page-editor"
+                    contentEditable
+                    suppressContentEditableWarning
+                    dangerouslySetInnerHTML={{ __html: pageHtml }}
+                    onInput={(event) => {
+                      const html = event.currentTarget.innerHTML;
+                      setExtraPages((current) => current.map((page, pageIndex) => pageIndex === index ? html : page));
+                    }}
+                  />
                 </motion.section>
               ))}
             </AnimatePresence>
@@ -2168,6 +2306,32 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
                   <button type="button" onClick={() => applyVideoSize("large")}>Video grande</button>
                 </div>
               ) : null}
+              <section className="collage-design-panel">
+                <strong>Collage</strong>
+                <p>Inserta una plantilla en la posición actual del cursor.</p>
+                <div className="collage-template-grid">
+                  {COLLAGE_TEMPLATES.map((template) => (
+                    <button type="button" title={template.label} onClick={() => insertCollage(template.id, template.slots)} key={template.id}>
+                      <span className={`collage-template-preview preview-${template.id}`} />
+                      {template.label}
+                    </button>
+                  ))}
+                </div>
+                {selectedCollage ? (
+                  <div className="collage-slot-controls">
+                    <span>Cuadro {selectedCollage.slot + 1} seleccionado</span>
+                    <button type="button" onClick={() => collageInputRef.current?.click()}>Subir imagen local</button>
+                    <button type="button" onClick={() => {
+                      const url = window.prompt("Pega la URL de la imagen");
+                      if (url && isSafeMediaUrl("image", url)) updateCollageSlot(url);
+                    }}>Pegar URL</button>
+                    <button type="button" onClick={() => updateCollageSlot("")}>Eliminar imagen</button>
+                    <label className="field">Caption del collage
+                      <input onBlur={(event) => updateCollageCaption(event.target.value)} placeholder="Caption opcional" />
+                    </label>
+                  </div>
+                ) : <p className="empty-dashboard-state">Selecciona un cuadro del collage para cambiar su imagen.</p>}
+              </section>
             </div>
           )}
         </aside>
@@ -2181,7 +2345,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
             <p className="eyebrow">Vista previa</p>
             <h1 dangerouslySetInnerHTML={{ __html: safePreviewHtml(title || "Titulo del articulo") }} />
             <div className="preview-excerpt" dangerouslySetInnerHTML={{ __html: safePreviewHtml(excerpt || "Extracto editorial") }} />
-            <div className="reader" dangerouslySetInnerHTML={{ __html: safePreviewHtml(editorHtml) }} />
+            <div className="reader" dangerouslySetInnerHTML={{ __html: safePreviewHtml(combinedEditorHtml) }} />
           </section>
         </div>
       ) : null}

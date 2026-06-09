@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { LocalDate } from "@/components/LocalDate";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 
 type LoungeArticle = {
@@ -20,6 +21,13 @@ type EarlyEdition = {
   title: string;
   excerpt: string;
   date: string;
+};
+
+type InternalContent = {
+  id: string;
+  title: string;
+  excerpt: string;
+  category: string;
 };
 
 const collections = [
@@ -56,14 +64,20 @@ export function MemberLounge({
   memberNumber,
   articles,
   earlyEditions,
+  internalContent,
 }: {
   name: string;
   memberSince: string;
   memberNumber: string;
   articles: LoungeArticle[];
   earlyEditions: EarlyEdition[];
+  internalContent: InternalContent[];
 }) {
   const current = articles[0];
+  const privateNotes = internalContent.filter((item) => item.category === "Nota privada");
+  const curated = internalContent.filter((item) => item.category === "Biblioteca curada");
+  const unlocked = internalContent.filter((item) => item.category === "Archivo desbloqueado");
+  const earlyAccess = internalContent.filter((item) => item.category === "Early Access");
 
   return (
     <main className="member-lounge">
@@ -99,7 +113,7 @@ export function MemberLounge({
       <section className="lounge-intro">
         <p>Una sala privada para leer sin prisa, encontrar dirección y volver a ideas que merecen quedarse contigo.</p>
         <dl>
-          <div><dt>Miembro desde</dt><dd>{memberSince}</dd></div>
+          <div><dt>Miembro desde</dt><dd><LocalDate value={memberSince} /></dd></div>
           <div><dt>Miembro OFF</dt><dd>#{memberNumber}</dd></div>
           <div><dt>Insignia</dt><dd>Founding Member</dd></div>
         </dl>
@@ -130,12 +144,13 @@ export function MemberLounge({
         </div>
         <div className="archive-volumes">
           {collections.map(([volume, title], index) => {
+            const curatedItem = curated[index];
             const article = articles[index % Math.max(articles.length, 1)];
             return (
               <article className="archive-volume" key={volume}>
                 <span>{volume}</span>
                 <h3>{title}</h3>
-                <p>{article ? cleanText(article.title) : "Volumen en preparación"}</p>
+                <p>{curatedItem?.title ?? (article ? cleanText(article.title) : "Volumen en preparación")}</p>
                 {article ? <Link href={`/off/${article.slug}`}>Abrir volumen</Link> : <em>Próximamente</em>}
               </article>
             );
@@ -149,7 +164,7 @@ export function MemberLounge({
           <h2>Signals</h2>
         </div>
         <div className="signals-list">
-          {signals.map((signal) => (
+          {(privateNotes.length ? privateNotes.map((note, index) => ({ number: String(index + 1).padStart(3, "0"), text: note.excerpt })) : signals).map((signal) => (
             <article className="signal-note" key={signal.number}>
               <span>Signal #{signal.number}</span>
               <p>{signal.text}</p>
@@ -168,9 +183,11 @@ export function MemberLounge({
           <h2>Recursos desbloqueados</h2>
         </div>
         <div className="exclusive-ledger">
-          <div><span>01</span><strong>Journaling prompts</strong><p>Preguntas para escuchar lo que la velocidad suele esconder.</p></div>
-          <div><span>02</span><strong>Framework de dirección</strong><p>Una estructura breve para distinguir movimiento de progreso.</p></div>
-          <div><span>03</span><strong>Habit tracker consciente</strong><p>Seguimiento sin convertir tu vida en otra lista de rendimiento.</p></div>
+          {(unlocked.length ? unlocked : [
+            { id: "01", title: "Journaling prompts", excerpt: "Preguntas para escuchar lo que la velocidad suele esconder." },
+            { id: "02", title: "Framework de dirección", excerpt: "Una estructura breve para distinguir movimiento de progreso." },
+            { id: "03", title: "Habit tracker consciente", excerpt: "Seguimiento sin convertir tu vida en otra lista de rendimiento." },
+          ]).map((item, index) => <div key={item.id}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item.title}</strong><p>{item.excerpt}</p></div>)}
         </div>
       </section>
 
@@ -180,9 +197,9 @@ export function MemberLounge({
           <h2>Próximamente en OFF</h2>
         </div>
         <div className="early-editions">
-          {earlyEditions.length ? earlyEditions.map((edition) => (
+          {(earlyAccess.length ? earlyAccess.map((item) => ({ ...item, date: new Date().toISOString() })) : earlyEditions).length ? (earlyAccess.length ? earlyAccess.map((item) => ({ ...item, date: new Date().toISOString() })) : earlyEditions).map((edition) => (
             <article key={edition.id}>
-              <time>{edition.date}</time>
+              <time><LocalDate value={edition.date} /></time>
               <h3>{cleanText(edition.title)}</h3>
               <p>{cleanText(edition.excerpt)}</p>
             </article>

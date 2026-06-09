@@ -19,7 +19,5 @@ export default async function WelcomePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const position = await getDb().user.count({ where: { createdAt: { lte: user.createdAt } } });
-  const memberSince = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", year: "numeric" }).format(user.createdAt);
-
-  return <MembershipWelcome memberSince={memberSince} memberNumber={memberNumber(position)} />;
+  return <MembershipWelcome memberSince={user.createdAt.toISOString()} memberNumber={memberNumber(position)} />;
 }

@@ -19,7 +19,7 @@ export type EditorialBlock =
       objectPosition?: string;
       aspectRatio?: string;
     }
-  | { type: "gallery" | "collage"; images: Array<{ src: string; alt?: string; caption?: string }> }
+  | { type: "gallery" | "collage"; images: Array<{ src: string; alt?: string; caption?: string }>; caption?: string; template?: string }
   | {
       type: "embed" | "video";
       url: string;
@@ -76,6 +76,11 @@ export function stripHtml(value: string) {
       .replace(/<\/(?:p|div|h[1-6]|blockquote|li)>/gi, " ")
       .replace(/<[^>]+>/g, ""),
   ).replace(/\s+/g, " ").trim();
+}
+
+export function getPlainTextPreview(value: string, maxLength = 180) {
+  const text = stripHtml(value);
+  return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text;
 }
 
 function safeInlineStyle(attrs?: Record<string, unknown>) {
@@ -233,6 +238,21 @@ export function parseArticleContent(content: string): EditorialBlock[] {
   });
 }
 
+export function renderRichContent(content: string) {
+  return parseArticleContent(content);
+}
+
+export const INTERNAL_CONTENT_CATEGORIES = [
+  "Biblioteca curada",
+  "Nota privada",
+  "Archivo desbloqueado",
+  "Early Access",
+] as const;
+
+export function isInternalContentCategory(category: string) {
+  return INTERNAL_CONTENT_CATEGORIES.includes(category as (typeof INTERNAL_CONTENT_CATEGORIES)[number]);
+}
+
 export function formatDate(date: Date | null) {
   if (!date) return "Borrador";
   return new Intl.DateTimeFormat("es-MX", {
@@ -244,7 +264,7 @@ export function formatDate(date: Date | null) {
 
 export async function getPublishedArticles() {
   return getDb().article.findMany({
-    where: { status: "published" },
+    where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } },
     orderBy: [{ featured: "desc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
   });
 }

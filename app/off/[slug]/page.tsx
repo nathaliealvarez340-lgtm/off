@@ -10,11 +10,13 @@ import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import {
   formatDate,
+  getPlainTextPreview,
   getArticleBySlug,
   getFirstPublishedArticle,
   getPublishedArticles,
   getPublishedComments,
-  parseArticleContent,
+  isInternalContentCategory,
+  renderRichContent,
   stripHtml,
 } from "@/lib/articles";
 import { articleSpeechText, articleUi, normalizeArticleLanguage, resolveArticleTranslation } from "@/lib/article-i18n";
@@ -99,8 +101,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  const title = stripHtml(article.title);
-  const description = stripHtml(article.excerpt);
+  const title = getPlainTextPreview(article.title, 160);
+  const description = getPlainTextPreview(article.excerpt);
   const canonicalUrl = `${getSiteUrl()}/off/${article.slug}`;
   const images = article.coverImage ? [{ url: article.coverImage, alt: title }] : [];
 
@@ -149,10 +151,11 @@ export default async function ArticlePage({
   if (!article || article.status !== "published") {
     notFound();
   }
+  if (isInternalContentCategory(article.category) && !user) notFound();
 
   const language = normalizeArticleLanguage(lang);
   const translatedArticle = resolveArticleTranslation(article, language);
-  const blocks = parseArticleContent(translatedArticle.content);
+  const blocks = renderRichContent(translatedArticle.content);
   const isFirstChapter = stripHtml(translatedArticle.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
   const canReadFull = Boolean(user) || isFirstChapter;
   const visibleBlocks = canReadFull ? blocks : blocks.slice(0, 2);
@@ -254,14 +257,15 @@ export default async function ArticlePage({
               case "gallery":
               case "collage":
                 return (
-                  <div className={`reader-gallery ${block.type}`} key={index}>
-                    {block.images.map((image, imageIndex) => (
+                  <figure className={`reader-gallery ${block.type} collage-${block.template ?? "two-equal"}`} key={index}>
+                    {block.images.filter((image) => image.src).map((image, imageIndex) => (
                       <figure key={`${image.src}-${imageIndex}`}>
                         <img src={image.src} alt={image.alt ?? "Imagen editorial"} />
                         {image.caption ? <figcaption>{stripHtml(image.caption)}</figcaption> : null}
                       </figure>
                     ))}
-                  </div>
+                    {block.caption ? <figcaption className="collage-caption">{stripHtml(block.caption)}</figcaption> : null}
+                  </figure>
                 );
               case "embed":
                 return (

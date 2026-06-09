@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { notifySubscribers } from "@/lib/newsletter";
+import { isInternalContentCategory } from "@/lib/articles";
 import { slugify } from "@/lib/slug";
 
 function stringValue(formData: FormData, key: string) {
@@ -323,7 +324,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       publishedAt,
     };
 
-    if (featured) {
+    if (featured && !isInternalContentCategory(category)) {
       await db.article.updateMany({
         where: id ? { NOT: { id } } : undefined,
         data: { featured: false },
@@ -334,7 +335,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       ? await db.article.update({ where: { id }, data })
       : await db.article.create({ data });
 
-    if (status === "published") {
+    if (status === "published" && !isInternalContentCategory(category)) {
       const subscribers = await db.subscriber.findMany({ where: { consent: true } });
       try {
         await notifySubscribers(article, subscribers);
