@@ -4,9 +4,10 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
+import { ArticleActions } from "@/components/ArticleActions";
+import { ArticleFooter } from "@/components/ArticleFooter";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 import { ReadingProgress } from "@/components/ReadingProgress";
-import { ShareButtons } from "@/components/ShareButtons";
 import {
   formatDate,
   getArticleBySlug,
@@ -16,6 +17,7 @@ import {
   parseArticleContent,
   stripHtml,
 } from "@/lib/articles";
+import { articleSpeechText, articleUi, normalizeArticleLanguage, resolveArticleTranslation } from "@/lib/article-i18n";
 import { getCurrentUser } from "@/lib/auth";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -132,8 +134,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ArticlePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string }>;
+}) {
   const { slug } = await params;
+  const { lang } = await searchParams;
   const article = await getArticleBySlug(slug);
   const [user, firstArticle] = await Promise.all([getCurrentUser(), getFirstPublishedArticle()]);
 
@@ -141,11 +150,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  const blocks = parseArticleContent(article.content);
-  const isFirstChapter = stripHtml(article.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
+  const language = normalizeArticleLanguage(lang);
+  const translatedArticle = resolveArticleTranslation(article, language);
+  const blocks = parseArticleContent(translatedArticle.content);
+  const isFirstChapter = stripHtml(translatedArticle.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
   const canReadFull = Boolean(user) || isFirstChapter;
   const visibleBlocks = canReadFull ? blocks : blocks.slice(0, 2);
   const comments = user ? await getPublishedComments(article.id) : [];
+  const speechBody = visibleBlocks.map((block) => {
+    if ("text" in block) return stripHtml(block.text);
+    if ("items" in block) return block.items.map(stripHtml).join(". ");
+    if ("caption" in block && block.caption !== "spotify") return stripHtml(block.caption ?? "");
+    return "";
+  }).join(". ");
+  const t = articleUi[language];
 
   return (
     <main className="site-shell">
@@ -170,19 +188,29 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       <header className="article-hero">
         <p className="eyebrow">{article.category}</p>
-        <h1>{renderInline(article.title)}</h1>
-        <p>{stripHtml(article.excerpt)}</p>
+        <h1>{renderInline(translatedArticle.title)}</h1>
+        <p>{stripHtml(translatedArticle.excerpt)}</p>
+        {!translatedArticle.hasTranslation ? <p className="article-translation-notice">{t.unavailable}</p> : null}
         <div className="meta">
           <span>{formatDate(article.publishedAt)}</span>
           <span>{article.author}</span>
           <span>{article.readTime}</span>
         </div>
-        <ShareButtons title={stripHtml(article.title)} />
       </header>
 
       <div className="article-cover">
-        <Image src={article.coverImage} alt={stripHtml(article.title)} width={1200} height={720} priority />
+        <Image src={article.coverImage} alt={stripHtml(translatedArticle.title)} width={1200} height={720} priority />
       </div>
+
+      <ArticleActions
+        isLoggedIn={Boolean(user)}
+        language={language}
+        loginPath={`/login?next=${encodeURIComponent(`/off/${article.slug}?lang=${language}`)}`}
+        slug={article.slug}
+        speechText={articleSpeechText(translatedArticle.title, translatedArticle.excerpt, speechBody)}
+        title={stripHtml(translatedArticle.title)}
+        userKey={user?.id}
+      />
 
       <div className="article-reader-layout">
         <article className="reader">
@@ -393,6 +421,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </section>
         </aside>
       </div>
+      <ArticleFooter />
     </main>
   );
 }

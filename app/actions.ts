@@ -37,7 +37,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   }
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return { ok: false, message: "Correo o contraseÃ±a incorrectos." };
+    return { ok: false, message: "Correo o contraseña incorrectos." };
   }
 
   await createSession(user.id);
@@ -55,11 +55,11 @@ export async function registerAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
   if (!name || !email || password.length < 8) {
-    return { ok: false, message: "Escribe tu nombre, correo y una contraseÃ±a de al menos 8 caracteres." };
+    return { ok: false, message: "Escribe tu nombre, correo y una contraseña de al menos 8 caracteres." };
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: "Escribe un correo vÃ¡lido." };
+    return { ok: false, message: "Escribe un correo válido." };
   }
 
   try {
@@ -74,7 +74,7 @@ export async function registerAction(_: unknown, formData: FormData) {
 
     await createSession(user.id);
   } catch {
-    return { ok: false, message: "Ese correo ya estÃ¡ registrado o no pudimos crear tu cuenta." };
+    return { ok: false, message: "Ese correo ya está registrado o no pudimos crear tu cuenta." };
   }
 
   redirect("/welcome");
@@ -219,6 +219,41 @@ export type AutosaveArticleState = SaveArticleState & {
   updatedAt?: string;
 };
 
+function contentVersions(content: string) {
+  try {
+    const parsed = JSON.parse(content) as {
+      type?: string;
+      translations?: Record<string, { content?: string }>;
+    };
+    if (parsed?.type === "off-article-translations" && parsed.translations) {
+      return Object.values(parsed.translations).map((translation) => translation.content ?? "").filter(Boolean);
+    }
+  } catch {
+    // Existing article formats continue through the normal validation path.
+  }
+  return [content];
+}
+
+function hasReadableArticleContent(content: string) {
+  return contentVersions(content).some((version) => {
+    try {
+      const parsedContent = JSON.parse(version) as Array<Record<string, unknown>>;
+      return Array.isArray(parsedContent) && parsedContent.some((block) => {
+        if (typeof block.text === "string" && block.text.trim()) return true;
+        if (typeof block.src === "string" && block.src.trim()) return true;
+        if (Array.isArray(block.items) && block.items.length > 0) return true;
+        if (typeof block.url === "string" && block.url.trim()) return true;
+        if (typeof block.value === "string" && block.value.trim()) return true;
+        if (typeof block.left === "string" && block.left.trim()) return true;
+        if (Array.isArray(block.images) && block.images.length > 0) return true;
+        return false;
+      });
+    } catch {
+      return Boolean(version.trim());
+    }
+  });
+}
+
 export async function saveArticleAction(_: SaveArticleState, formData: FormData): Promise<SaveArticleState> {
   try {
     await requireAdmin();
@@ -254,22 +289,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       return { ok: false, message: "El artÃ­culo contiene imÃ¡genes en base64. Sube las imÃ¡genes correctamente antes de publicar." };
     }
 
-    try {
-      const parsedContent = JSON.parse(content) as Array<Record<string, unknown>>;
-      const hasReadableContent = Array.isArray(parsedContent) && parsedContent.some((block) => {
-        if (typeof block.text === "string" && block.text.trim()) return true;
-        if (typeof block.src === "string" && block.src.trim()) return true;
-        if (Array.isArray(block.items) && block.items.length > 0) return true;
-        if (typeof block.url === "string" && block.url.trim()) return true;
-        if (typeof block.value === "string" && block.value.trim()) return true;
-        if (typeof block.left === "string" && block.left.trim()) return true;
-        if (Array.isArray(block.images) && block.images.length > 0) return true;
-        return false;
-      });
-      if (!hasReadableContent) return { ok: false, message: "Falta contenido." };
-    } catch {
-      if (!content.trim()) return { ok: false, message: "Falta contenido." };
-    }
+    if (!hasReadableArticleContent(content)) return { ok: false, message: "Falta contenido." };
 
     if (content.length > 70000) {
       return { ok: false, message: "El contenido supera el lÃ­mite de 70,000 caracteres." };

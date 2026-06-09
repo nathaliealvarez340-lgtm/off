@@ -208,16 +208,29 @@ function htmlBlocks(content: string): EditorialBlock[] {
 }
 
 export function parseArticleContent(content: string): EditorialBlock[] {
+  let blocks: EditorialBlock[];
   try {
     const parsed = JSON.parse(content) as EditorialBlock[] | TiptapNode;
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed?.type === "doc") return tiptapBlocks(parsed.content);
+    if (Array.isArray(parsed)) blocks = parsed;
+    else if (parsed?.type === "doc") blocks = tiptapBlocks(parsed.content);
+    else blocks = htmlBlocks(content);
   } catch {
-    if (/<[a-z][\s\S]*>/i.test(content)) return htmlBlocks(content);
-    return content.split(/\n{2,}/).filter(Boolean).map((text) => ({ type: "paragraph", text }));
+    blocks = /<[a-z][\s\S]*>/i.test(content)
+      ? htmlBlocks(content)
+      : content.split(/\n{2,}/).filter(Boolean).map((text) => ({ type: "paragraph", text }));
   }
 
-  return htmlBlocks(content);
+  return blocks.filter((block, index) => {
+    if (block.type === "paragraph") {
+      const normalizedText = stripHtml(block.text).trim().toUpperCase();
+      if (["INSTAGRAM", "LINKEDIN", "SUBSTACK"].includes(normalizedText)) return false;
+      if (normalizedText.includes("© 2026 NATHALIE GARCIA FOR MAIA")) return false;
+    }
+    if (block.type !== "paragraph" || index === 0) return true;
+    const previous = blocks[index - 1];
+    if ((previous.type !== "image" && previous.type !== "video") || !previous.caption) return true;
+    return stripHtml(block.text) !== stripHtml(previous.caption);
+  });
 }
 
 export function formatDate(date: Date | null) {

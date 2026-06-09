@@ -165,6 +165,46 @@ const FontSize = Extension.create({
 });
 
 const EditorialImage = Image.extend({
+  parseHTML() {
+    return [
+      {
+        tag: "figure[data-media-type=\"image\"]",
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const image = element.querySelector("img");
+          if (!image) return false;
+          return {
+            src: image.getAttribute("src"),
+            alt: image.getAttribute("alt") ?? "Imagen editorial",
+            title: image.getAttribute("title"),
+            caption: element.querySelector("figcaption")?.textContent ?? "",
+            layout: element.getAttribute("data-layout") ?? image.getAttribute("data-layout") ?? "center",
+            width: element.getAttribute("data-width") ?? null,
+            wrapMode: element.getAttribute("data-wrap") ?? "top-bottom",
+            objectFit: image.getAttribute("data-fit") ?? "cover",
+            objectPosition: image.getAttribute("data-position") ?? "50% 50%",
+            aspectRatio: image.getAttribute("data-ratio") ?? "",
+          };
+        },
+      },
+      {
+        tag: "img[src]",
+        getAttrs: (element) => {
+          if (!(element instanceof HTMLElement) || element.closest("figure[data-media-type=\"image\"]")) return false;
+          return {
+            src: element.getAttribute("src"),
+            alt: element.getAttribute("alt") ?? "Imagen editorial",
+            title: element.getAttribute("title"),
+            caption: element.getAttribute("data-caption") ?? "",
+            layout: element.getAttribute("data-layout") ?? "center",
+            objectFit: element.getAttribute("data-fit") ?? "cover",
+            objectPosition: element.getAttribute("data-position") ?? "50% 50%",
+            aspectRatio: element.getAttribute("data-ratio") ?? "",
+          };
+        },
+      },
+    ];
+  },
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -512,6 +552,36 @@ function htmlToText(value: string) {
   return template.content.textContent ?? "";
 }
 
+type TranslationEnvelope = {
+  type: "off-article-translations";
+  originalLanguage?: "es" | "en" | "it" | "pt";
+  translations?: Partial<Record<"es" | "en" | "it" | "pt", { title?: string; excerpt?: string; content?: string }>>;
+};
+
+function readTranslationEnvelope(content?: string): TranslationEnvelope | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as TranslationEnvelope;
+    return parsed?.type === "off-article-translations" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function preserveTranslationEnvelope(source: string | undefined, title: string, excerpt: string, content: string) {
+  const envelope = readTranslationEnvelope(source);
+  if (!envelope) return content;
+  const originalLanguage = envelope.originalLanguage ?? "es";
+  return JSON.stringify({
+    ...envelope,
+    originalLanguage,
+    translations: {
+      ...envelope.translations,
+      [originalLanguage]: { title, excerpt, content },
+    },
+  });
+}
+
 function isVideoFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
   return file.type.startsWith("video/") || ["mp4", "mov", "mkv", "wmv", "webm"].includes(extension ?? "");
@@ -731,12 +801,15 @@ function canLoadRemoteMedia(kind: "image" | "video", url: string) {
 }
 
 export function ArticleEditor({ article, articles = [] }: { article?: Article | null; articles?: Article[] }) {
+  const translationEnvelope = useMemo(() => readTranslationEnvelope(article?.content), [article?.content]);
+  const originalTranslation = translationEnvelope?.translations?.[translationEnvelope.originalLanguage ?? "es"];
+  const originalContent = originalTranslation?.content ?? article?.content;
   const [state, formAction, pending] = useActionState(saveArticleAction, initialState);
   const [clientMessage, setClientMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [savedId, setSavedId] = useState(article?.id ?? "");
-  const [title, setTitle] = useState(inlineToHtml(article?.title ?? ""));
-  const [excerpt, setExcerpt] = useState(inlineToHtml(article?.excerpt ?? ""));
+  const [title, setTitle] = useState(inlineToHtml(originalTranslation?.title ?? article?.title ?? ""));
+  const [excerpt, setExcerpt] = useState(inlineToHtml(originalTranslation?.excerpt ?? article?.excerpt ?? ""));
   const titleText = useMemo(() => htmlToText(title), [title]);
   const excerptText = useMemo(() => htmlToText(excerpt), [excerpt]);
   const generatedSlug = useMemo(() => slugify(titleText), [titleText]);
@@ -747,7 +820,7 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
   const [category, setCategory] = useState(article?.category && EDITOR_CATEGORIES.includes(article.category) ? article.category : "Vida");
   const [readTime, setReadTime] = useState(article?.readTime ?? "5 min leer");
   const [featured, setFeatured] = useState(article?.featured ?? false);
-  const initialEditorContent = useMemo(() => legacyContentToHtml(article?.content), [article?.content]);
+  const initialEditorContent = useMemo(() => legacyContentToHtml(originalContent), [originalContent]);
   const [editorHtml, setEditorHtml] = useState(initialEditorContent);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [localSave, setLocalSave] = useState("Autosave local listo");
@@ -948,7 +1021,10 @@ export function ArticleEditor({ article, articles = [] }: { article?: Article | 
     },
   });
 
-  const contentJson = useMemo(() => htmlToEditorialJson(editorHtml), [editorHtml]);
+  const contentJson = useMemo(
+    () => preserveTranslationEnvelope(article?.content, title, excerpt, htmlToEditorialJson(editorHtml)),
+    [article?.content, editorHtml, excerpt, title],
+  );
   const characterCount = useMemo(() => htmlToText(editorHtml).length, [editorHtml]);
   const overLimit = characterCount > LIMIT;
   const viewSlug = state.slug ?? slug;
