@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
+import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
@@ -157,9 +158,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <Link href="/#capitulos">Capítulos</Link>
           <Link href="/#suscripcion">Suscripción</Link>
           {user ? (
-            <form action={logoutAction}>
-              <button className="nav-logout" type="submit">Cerrar sesión</button>
-            </form>
+            <>
+              <Link href="/lounge">Member Lounge</Link>
+              <form action={logoutAction}>
+                <button className="nav-logout" type="submit">Cerrar sesión</button>
+              </form>
+            </>
           ) : null}
         </div>
       </nav>
@@ -297,6 +301,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </Link>
             </aside>
           ) : null}
+
+          {user ? (
+            <section className="member-article-exclusive">
+              <p className="eyebrow">Archivo privado</p>
+              <h2>Exclusivo para miembros</h2>
+              <div>
+                <article><span>Ejercicio</span><p>Escribe qué parte de tu vida se ve bien por fuera, pero ya no se siente tuya.</p></article>
+                <article><span>Journaling prompt</span><p>¿Qué decisión tomarías si no tuvieras que explicársela a nadie?</p></article>
+                <article><span>Framework</span><p>Distingue entre lo que estás construyendo por dirección y lo que sostienes por inercia.</p></article>
+              </div>
+              <NotaDeNathalie>Guarda estas preguntas. No necesitas responderlas rápido; necesitas responderlas con honestidad.</NotaDeNathalie>
+            </section>
+          ) : null}
         </article>
 
         <aside className="article-side-panel">
@@ -318,13 +335,13 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
           <section className="comments-section">
             <div className="comments-head">
-              <p className="eyebrow">Conversación</p>
-              <h2>Comentarios</h2>
+              <p className="eyebrow">Sala privada</p>
+              <h2>OFF Conversations</h2>
             </div>
 
         {!user ? (
           <div className="comment-login locked-comments">
-            <h3><span aria-hidden="true">🔒</span> Comentar</h3>
+            <h3><span aria-hidden="true">🔒</span> Compartir reflexión</h3>
             <p>Tu historia también importa.<br />Únete a OFF para compartir tus pensamientos, responder y formar parte de la conversación.</p>
             <Link className="button violet-button locked-comment-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
               Unirme
@@ -337,10 +354,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <input name="articleSlug" type="hidden" value={article.slug} />
               <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
               <label className="field">
-                Escribe tu comentario
+                Compartir reflexión
                 <textarea name="content" required minLength={2} />
               </label>
-              <button className="button" type="submit">Publicar comentario</button>
+              <button className="button" type="submit">Continuar conversación</button>
             </form>
 
             <div className="comment-list">
@@ -354,8 +371,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                     <input name="articleSlug" type="hidden" value={article.slug} />
                     <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
                     <input name="parentId" type="hidden" value={comment.id} />
-                    <textarea name="content" placeholder="Responder..." required minLength={2} />
-                    <button type="submit">Responder</button>
+                    <textarea name="content" placeholder="Responder pensamiento..." required minLength={2} />
+                    <button type="submit">Responder pensamiento</button>
                   </form>
                   {comment.replies.length > 0 ? (
                     <div className="reply-list">

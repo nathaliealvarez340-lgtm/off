@@ -313,11 +313,14 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             </div>
           </div>
           {user ? (
-            <form action={logoutAction}>
-              <button className="publish-link nav-form-button" type="submit">
-                Cerrar sesión <span>→</span>
-              </button>
-            </form>
+            <>
+              <Link className="publish-link" href="/lounge">Member Lounge <span>→</span></Link>
+              <form action={logoutAction}>
+                <button className="publish-link nav-form-button" type="submit">
+                  Cerrar sesión <span>→</span>
+                </button>
+              </form>
+            </>
           ) : (
             <Link className="publish-link" href="/login">
               {t.login} <span>→</span>
@@ -333,6 +336,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             <p className="eyebrow">OFF / Mi espacio</p>
             <h2>{subscriberGreeting ? `${subscriberGreeting}, ${user.name}.` : `Bienvenida, ${user.name}.`}</h2>
             <p>Tu archivo está abierto. Sigue leyendo, pensando y construyendo sin vivir en automático.</p>
+            <Link className="text-link purple-link" href="/lounge">Entrar al Member Lounge <span>→</span></Link>
           </div>
         </section>
       ) : null}

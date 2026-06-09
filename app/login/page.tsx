@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
 
   if (user?.role === "ADMIN") redirect("/admin");
-  if (user?.role === "USER") redirect(safeNext);
+  if (user?.role === "USER") redirect(safeNext === "/" ? "/lounge" : safeNext);
 
   return (
     <main className="auth-page">

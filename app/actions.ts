@@ -46,15 +46,14 @@ export async function loginAction(_: unknown, formData: FormData) {
     redirect("/admin");
   }
 
-  redirect(next.startsWith("/") && !next.startsWith("//") ? `${next}${next.includes("?") ? "&" : "?"}welcome=1` : "/?welcome=1");
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/lounge";
+  redirect(safeNext === "/" ? "/lounge" : safeNext);
 }
 
 export async function registerAction(_: unknown, formData: FormData) {
   const name = stringValue(formData, "name");
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
-  const next = stringValue(formData, "next") || "/";
-
   if (!name || !email || password.length < 8) {
     return { ok: false, message: "Escribe tu nombre, correo y una contraseÃ±a de al menos 8 caracteres." };
   }
@@ -78,7 +77,7 @@ export async function registerAction(_: unknown, formData: FormData) {
     return { ok: false, message: "Ese correo ya estÃ¡ registrado o no pudimos crear tu cuenta." };
   }
 
-  redirect(next.startsWith("/") && !next.startsWith("//") ? `${next}${next.includes("?") ? "&" : "?"}welcome=1` : "/?welcome=1");
+  redirect("/welcome");
 }
 
 export async function logoutAction() {
