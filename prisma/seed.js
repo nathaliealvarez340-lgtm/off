@@ -2,9 +2,8 @@ const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@maiabusiness.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "OFFbyMA1A";
-
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@business.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Ma1AOFF06!";
 const articles = [
   {
     title: "Se ve bien… pero se siente OFF",
