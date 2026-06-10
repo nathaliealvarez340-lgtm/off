@@ -50,7 +50,18 @@ export const metadata: Metadata = {
     images: ["/images/hero-off.webp"],
   },
   icons: {
-    icon: "/logo/favicon-off.png",
+    icon: [
+      {
+        url: "/logo/favicon-off-black.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+      {
+        url: "/logo/favicon-off.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+    ],
     shortcut: "/logo/favicon-off.png",
     apple: "/logo/favicon-off.png",
   },
