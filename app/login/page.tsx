@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthForms } from "@/components/AuthForms";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
@@ -16,6 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <Link href="/" className="brand logo-brand">
         <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
       </Link>
+      <div className="auth-language"><LanguageSwitcher /></div>
       <div className="auth-editorial-layout">
         <section className="auth-form-column">
           <p className="eyebrow">OFF / Acceso</p>

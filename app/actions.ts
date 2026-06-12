@@ -460,6 +460,94 @@ export async function deleteArticleAction(formData: FormData) {
   redirect("/admin?deleted=1");
 }
 
+export type SaveLoungeContentState = {
+  ok: boolean;
+  message: string;
+  id?: string;
+};
+
+const LOUNGE_TYPES = ["LIBRARY", "SIGNAL", "RESOURCE", "NATHALIE_NOTE", "EARLY_ACCESS"] as const;
+
+export async function saveLoungeContentAction(
+  _: SaveLoungeContentState,
+  formData: FormData,
+): Promise<SaveLoungeContentState> {
+  try {
+    await requireAdmin();
+
+    const id = stringValue(formData, "id");
+    const type = stringValue(formData, "type") as (typeof LOUNGE_TYPES)[number];
+    const title = stringValue(formData, "title");
+    const number = stringValue(formData, "number") || null;
+    const description = stringValue(formData, "description") || null;
+    const content = stringValue(formData, "content") || null;
+    const relatedArticle = stringValue(formData, "relatedArticle") || null;
+    const releaseDateValue = stringValue(formData, "releaseDate");
+    const statusLabel = stringValue(formData, "statusLabel") || null;
+    const intent = stringValue(formData, "publishIntent");
+    const status = intent === "publish" ? "published" : "draft";
+    const links = stringValue(formData, "links")
+      .split("\n")
+      .map((line) => {
+        const [label, ...urlParts] = line.split("|");
+        return { label: label.trim(), url: urlParts.join("|").trim() };
+      })
+      .filter((link) => link.label || link.url);
+
+    if (!LOUNGE_TYPES.includes(type)) return { ok: false, message: "Selecciona un formato editorial válido." };
+    if (!title) return { ok: false, message: "Falta título." };
+    const wordCount = content?.split(/\s+/).filter(Boolean).length ?? 0;
+    if (type === "SIGNAL" && (wordCount < 100 || wordCount > 300)) {
+      return { ok: false, message: "El Signal debe contener entre 100 y 300 palabras." };
+    }
+    if (type === "EARLY_ACCESS" && !releaseDateValue) {
+      return { ok: false, message: "Falta fecha de lanzamiento." };
+    }
+
+    const db = getDb();
+    const existing = id ? await db.loungeContent.findUnique({ where: { id } }) : null;
+    if (id && !existing) return { ok: false, message: "No encontramos esta pieza editorial." };
+
+    const data = {
+      type,
+      title,
+      number,
+      description,
+      content,
+      links,
+      relatedArticle,
+      releaseDate: releaseDateValue ? new Date(releaseDateValue) : null,
+      statusLabel,
+      status,
+      publishedAt: status === "published" ? existing?.publishedAt ?? new Date() : existing?.publishedAt ?? null,
+    };
+
+    const item = existing
+      ? await db.loungeContent.update({ where: { id: existing.id }, data })
+      : await db.loungeContent.create({ data });
+
+    revalidatePath("/admin");
+    revalidatePath("/lounge");
+
+    return {
+      ok: true,
+      message: status === "published" ? "Contenido publicado en Member Lounge." : "Borrador guardado.",
+      id: item.id,
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar el contenido." };
+  }
+}
+
+export async function deleteLoungeContentAction(formData: FormData) {
+  await requireAdmin();
+  const id = stringValue(formData, "id");
+  if (id) await getDb().loungeContent.deleteMany({ where: { id } });
+  revalidatePath("/admin");
+  revalidatePath("/lounge");
+  redirect("/admin?loungeDeleted=1");
+}
+
 export async function commentAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) {

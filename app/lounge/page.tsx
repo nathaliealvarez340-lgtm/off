@@ -20,11 +20,10 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [articles, drafts, position, internalContent] = await Promise.all([
+  const [articles, position, loungeContent] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
-    db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     db.user.count({ where: { createdAt: { lte: user.createdAt } } }),
-    db.article.findMany({ where: { status: "published", category: { in: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" } }),
+    db.loungeContent.findMany({ where: { status: "published" }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
   ]);
 
   return (
@@ -40,17 +39,17 @@ export default async function LoungePage() {
         coverImage: article.coverImage,
         readTime: article.readTime,
       }))}
-      earlyEditions={drafts.map((article) => ({
-        id: article.id,
-        title: getPlainTextPreview(article.title, 140),
-        excerpt: getPlainTextPreview(article.excerpt),
-        date: article.updatedAt.toISOString(),
-      }))}
-      internalContent={internalContent.map((item) => ({
+      loungeContent={loungeContent.map((item) => ({
         id: item.id,
+        type: item.type,
         title: getPlainTextPreview(item.title, 140),
-        excerpt: getPlainTextPreview(item.excerpt),
-        category: item.category,
+        number: item.number,
+        description: item.description ? getPlainTextPreview(item.description) : null,
+        content: item.content ? getPlainTextPreview(item.content, 2400) : null,
+        links: Array.isArray(item.links) ? item.links : [],
+        relatedArticle: item.relatedArticle,
+        releaseDate: item.releaseDate?.toISOString() ?? null,
+        statusLabel: item.statusLabel,
       }))}
     />
   );

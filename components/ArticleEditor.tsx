@@ -33,12 +33,13 @@ import {
 import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { slugify } from "@/lib/slug";
 
 const LIMIT = 70000;
 const initialState: SaveArticleState = { ok: false, message: "" };
 const HEX_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-const EDITOR_CATEGORIES = ["Negocios", "Vida", "Sociedad", "Tips", "Crecimiento", "Biblioteca curada", "Nota privada", "Archivo desbloqueado", "Early Access"];
+const EDITOR_CATEGORIES = ["Negocios", "Vida", "Sociedad", "Tips", "Crecimiento"];
 const PALETTE_COLORS = [
   "#FFFFFF", "#F5F1FF", "#D8D1E6", "#A7A1B3", "#6F687A",
   "#000000", "#07060A", "#111116", "#1B1723", "#2A2237",
@@ -1766,6 +1767,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
           </div>
         </div>
         <div className="editor-actions">
+          <LanguageSwitcher compact />
           <button className="ghost-button" type="button" onClick={() => setPreviewOpen((open) => !open)}>Vista previa</button>
           <button className="ghost-button" formAction={logoutAction} formNoValidate type="submit">Cerrar sesion</button>
           {savedId ? (

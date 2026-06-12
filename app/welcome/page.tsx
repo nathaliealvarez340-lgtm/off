@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MembershipWelcome } from "@/components/MembershipWelcome";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
@@ -19,5 +20,10 @@ export default async function WelcomePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const position = await getDb().user.count({ where: { createdAt: { lte: user.createdAt } } });
-  return <MembershipWelcome memberSince={user.createdAt.toISOString()} memberNumber={memberNumber(position)} />;
+  return (
+    <>
+      <div className="welcome-language"><LanguageSwitcher /></div>
+      <MembershipWelcome memberSince={user.createdAt.toISOString()} memberNumber={memberNumber(position)} />
+    </>
+  );
 }

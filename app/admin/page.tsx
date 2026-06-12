@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArchiveRestore, BookOpen, Clock3, Plus, StickyNote } from "lucide-react";
+import { ArchiveRestore, BookOpen, Clock3, Plus, Radio, StickyNote } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
@@ -7,6 +7,7 @@ import { AdminGreeting } from "@/components/AdminGreeting";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { AdminSidebarToggle } from "@/components/AdminSidebarToggle";
 import { DeleteArticleButton } from "@/components/DeleteArticleButton";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatDate, getAllArticles, getPlainTextPreview, isInternalContentCategory } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -16,16 +17,25 @@ function formatCount(value: number) {
   return String(value);
 }
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+const loungeTypeLabels = {
+  LIBRARY: "Biblioteca",
+  SIGNAL: "Signal",
+  RESOURCE: "Recurso desbloqueado",
+  NATHALIE_NOTE: "Nota de Nathalie",
+  EARLY_ACCESS: "Early Access",
+} as const;
+
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string; loungeDeleted?: string }> }) {
   noStore();
   if (!(await isAdminSession())) {
     redirect("/login");
   }
 
-  const { deleted } = await searchParams;
+  const { deleted, loungeDeleted } = await searchParams;
   const db = getDb();
-  const [articles, users, subscribers, subscriberCount, commentCount, comments, topicSuggestions] = await Promise.all([
+  const [articles, loungeContent, users, subscribers, subscriberCount, commentCount, comments, topicSuggestions] = await Promise.all([
     getAllArticles(),
+    db.loungeContent.findMany({ orderBy: { updatedAt: "desc" } }),
     db.user.findMany({
       select: {
         id: true,
@@ -68,7 +78,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     }),
   ]);
 
-  const internalArticles = articles.filter((article) => isInternalContentCategory(article.category));
   const editorialArticles = articles.filter((article) => !isInternalContentCategory(article.category));
   const publishedArticles = editorialArticles.filter((article) => article.status === "published");
   const draftArticles = editorialArticles.filter((article) => article.status !== "published");
@@ -178,6 +187,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             {deleted === "1" ? "Articulo eliminado correctamente." : "No pudimos eliminar ese articulo."}
           </div>
         ) : null}
+        {loungeDeleted ? <div className="admin-flash success">Contenido del Lounge eliminado correctamente.</div> : null}
 
         <header className="admin-topbar">
           <div>
@@ -186,11 +196,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <p>Las personas no buscan contenido. Buscan sentirse entendidas.</p>
           </div>
           <div className="admin-top-actions">
+            <LanguageSwitcher compact />
             <Link className="admin-create-circle" href="/admin/new" title="Nuevo artículo" aria-label="Nuevo artículo"><Plus /></Link>
-            <Link className="admin-create-circle" href="/admin/new?category=Biblioteca%20curada" title="Nueva biblioteca curada" aria-label="Nueva biblioteca curada"><BookOpen /></Link>
-            <Link className="admin-create-circle" href="/admin/new?category=Nota%20privada" title="Nueva nota privada" aria-label="Nueva nota privada"><StickyNote /></Link>
-            <Link className="admin-create-circle" href="/admin/new?category=Archivo%20desbloqueado" title="Nuevo archivo desbloqueado" aria-label="Nuevo archivo desbloqueado"><ArchiveRestore /></Link>
-            <Link className="admin-create-circle" href="/admin/new?category=Early%20Access" title="Nuevo early access" aria-label="Nuevo early access"><Clock3 /></Link>
+            <Link className="admin-create-circle" href="/admin/lounge/new?type=LIBRARY" title="Nueva biblioteca" aria-label="Nueva biblioteca"><BookOpen /></Link>
+            <Link className="admin-create-circle" href="/admin/lounge/new?type=SIGNAL" title="Nuevo Signal" aria-label="Nuevo Signal"><Radio /></Link>
+            <Link className="admin-create-circle" href="/admin/lounge/new?type=RESOURCE" title="Nuevo recurso desbloqueado" aria-label="Nuevo recurso desbloqueado"><ArchiveRestore /></Link>
+            <Link className="admin-create-circle" href="/admin/lounge/new?type=NATHALIE_NOTE" title="Nueva nota de Nathalie" aria-label="Nueva nota de Nathalie"><StickyNote /></Link>
+            <Link className="admin-create-circle" href="/admin/lounge/new?type=EARLY_ACCESS" title="Nuevo early access" aria-label="Nuevo early access"><Clock3 /></Link>
           </div>
         </header>
 
@@ -316,23 +328,22 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <p className="eyebrow">Member Lounge</p>
               <h2>Contenido privado</h2>
             </div>
-            <span>{internalArticles.length} piezas</span>
+            <span>{loungeContent.length} piezas</span>
           </div>
           <div className="admin-article-list">
-            {internalArticles.length ? internalArticles.map((article) => (
-              <article className="admin-article-item" key={article.id}>
-                <img src={article.coverImage} alt="" />
+            {loungeContent.length ? loungeContent.map((item) => (
+              <article className="admin-article-item lounge-content-admin-item" key={item.id}>
+                <div className="lounge-content-type-mark">{loungeTypeLabels[item.type].slice(0, 2).toUpperCase()}</div>
                 <div>
-                  <div className="article-mini-meta"><span>{article.category}</span><span>{article.status}</span></div>
-                  <h3>{getPlainTextPreview(article.title, 150)}</h3>
-                  <p>{getPlainTextPreview(article.excerpt)}</p>
+                  <div className="article-mini-meta"><span>{loungeTypeLabels[item.type]}</span><span>{item.status}</span></div>
+                  <h3>{getPlainTextPreview(item.title, 150)}</h3>
+                  <p>{getPlainTextPreview(item.description ?? item.content ?? "")}</p>
                 </div>
                 <div className="article-actions">
-                  <Link className="button" href={`/admin/${article.id}`}>Editar</Link>
-                  <DeleteArticleButton articleId={article.id} compact />
+                  <Link className="button" href={`/admin/lounge/${item.id}`}>Editar</Link>
                 </div>
               </article>
-            )) : <div className="empty-dashboard-state">Crea contenido privado desde las acciones circulares superiores.</div>}
+            )) : <div className="empty-dashboard-state">Crea contenido del Lounge desde las acciones circulares superiores.</div>}
           </div>
         </section>
 

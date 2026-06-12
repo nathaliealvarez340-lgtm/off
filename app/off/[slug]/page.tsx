@@ -7,6 +7,7 @@ import { commentAction, logoutAction, topicSuggestionAction } from "@/app/action
 import { ArticleActions } from "@/components/ArticleActions";
 import { ArticleFooter } from "@/components/ArticleFooter";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import {
   formatDate,
@@ -176,6 +177,7 @@ export default async function ArticlePage({
           <img src="/logo/logo-off.png" alt="OFF" className="article-nav-logo" />
         </Link>
         <div className="nav-links">
+          <LanguageSwitcher compact />
           <Link href="/#capitulos">Capítulos</Link>
           <Link href="/#suscripcion">Suscripción</Link>
           {user ? (

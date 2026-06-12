@@ -17,6 +17,14 @@ enum CommentStatus {
   PENDING
 }
 
+enum LoungeContentType {
+  LIBRARY
+  SIGNAL
+  RESOURCE
+  NATHALIE_NOTE
+  EARLY_ACCESS
+}
+
 model Article {
   id          String    @id @default(cuid())
   title       String
@@ -34,6 +42,26 @@ model Article {
   updatedAt   DateTime  @updatedAt
   comments    Comment[]
   topicSuggestions TopicSuggestion[]
+}
+
+model LoungeContent {
+  id             String            @id @default(cuid())
+  type           LoungeContentType
+  title          String
+  number         String?
+  description    String?
+  content        String?
+  links          Json?
+  relatedArticle String?
+  releaseDate    DateTime?
+  statusLabel    String?
+  status         String            @default("draft")
+  publishedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([type, status])
+  @@index([publishedAt])
 }
 
 model Subscriber {
