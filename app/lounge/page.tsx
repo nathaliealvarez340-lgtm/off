@@ -20,8 +20,9 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [articles, position, loungeContent] = await Promise.all([
+  const [articles, drafts, position, loungeContent] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
+    db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     db.user.count({ where: { createdAt: { lte: user.createdAt } } }),
     db.loungeContent.findMany({ where: { status: "published" }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
   ]);
@@ -50,6 +51,12 @@ export default async function LoungePage() {
         relatedArticle: item.relatedArticle,
         releaseDate: item.releaseDate?.toISOString() ?? null,
         statusLabel: item.statusLabel,
+      }))}
+      draftEditions={drafts.map((article) => ({
+        id: article.id,
+        title: getPlainTextPreview(article.title, 140),
+        excerpt: getPlainTextPreview(article.excerpt),
+        date: article.updatedAt.toISOString(),
       }))}
     />
   );

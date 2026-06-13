@@ -79,6 +79,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ]);
 
   const editorialArticles = articles.filter((article) => !isInternalContentCategory(article.category));
+  const articleTitlesById = new Map(articles.map((article) => [article.id, getPlainTextPreview(article.title, 120)]));
   const publishedArticles = editorialArticles.filter((article) => article.status === "published");
   const draftArticles = editorialArticles.filter((article) => article.status !== "published");
   const recentActivities = [
@@ -338,6 +339,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <div className="article-mini-meta"><span>{loungeTypeLabels[item.type]}</span><span>{item.status}</span></div>
                   <h3>{getPlainTextPreview(item.title, 150)}</h3>
                   <p>{getPlainTextPreview(item.description ?? item.content ?? "")}</p>
+                  {item.relatedArticle ? <small>Origen: {articleTitlesById.get(item.relatedArticle) ?? "Artículo publicado"}</small> : <small>Creación manual</small>}
                 </div>
                 <div className="article-actions">
                   <Link className="button" href={`/admin/lounge/${item.id}`}>Editar</Link>

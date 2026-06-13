@@ -10,7 +10,7 @@ const languages = [
   { code: "pt", label: "PT" },
 ] as const;
 
-export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
+export function LanguageSwitcher({ compact = false, label }: { compact?: boolean; label?: string }) {
   const [language, setLanguage] = useState("es");
   const [open, setOpen] = useState(false);
 
@@ -31,7 +31,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`global-language-switcher ${open ? "open" : ""} ${compact ? "compact" : ""}`}>
       <button aria-expanded={open} aria-label="Cambiar idioma" onClick={() => setOpen((value) => !value)} type="button">
-        <Globe2 aria-hidden="true" />
+        {label ? <span>{label}</span> : <Globe2 aria-hidden="true" />}
       </button>
       <div className="global-language-options">
         {languages.map((item) => (

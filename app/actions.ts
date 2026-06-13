@@ -9,6 +9,7 @@ import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib
 import { getDb } from "@/lib/db";
 import { notifySubscribers } from "@/lib/newsletter";
 import { isInternalContentCategory } from "@/lib/articles";
+import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
 
 function stringValue(formData: FormData, key: string) {
@@ -336,6 +337,11 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       : await db.article.create({ data });
 
     if (status === "published" && !isInternalContentCategory(category)) {
+      try {
+        await deriveLoungeContentFromArticle(db, article);
+      } catch (error) {
+        console.error("No pudimos generar contenido derivado para Member Lounge.", error);
+      }
       const subscribers = await db.subscriber.findMany({ where: { consent: true } });
       try {
         await notifySubscribers(article, subscribers);
