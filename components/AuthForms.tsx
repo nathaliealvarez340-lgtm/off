@@ -10,6 +10,7 @@ import {
   type RegistrationState,
   type PasswordRecoveryState,
 } from "@/app/actions";
+import { PasswordField } from "@/components/PasswordField";
 
 const initialState = { ok: false, message: "" };
 const initialRegistrationState: RegistrationState = { ok: false, message: "", step: "register" };
@@ -93,10 +94,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             Correo
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <label className="field">
-            Contraseña
-            <input name="password" type="password" autoComplete="current-password" required />
-          </label>
+          <PasswordField label="Contraseña" name="password" autoComplete="current-password" required />
           <button className="button violet-button" type="submit" disabled={loginPending}>
             {loginPending ? "Entrando..." : "Entrar"}
           </button>
@@ -120,14 +118,8 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             Correo
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <label className="field">
-            Contraseña
-            <input name="password" type="password" autoComplete="new-password" minLength={6} maxLength={8} required />
-          </label>
-          <label className="field">
-            Repetir contraseña
-            <input name="repeatPassword" type="password" autoComplete="new-password" minLength={6} maxLength={8} required />
-          </label>
+          <PasswordField label="Contraseña" name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
+          <PasswordField label="Repetir contraseña" name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
           <button className="button violet-button" type="submit" disabled={registerPending}>
             {registerPending ? "Enviando código..." : "Continuar"}
           </button>

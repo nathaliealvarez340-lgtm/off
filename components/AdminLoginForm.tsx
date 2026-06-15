@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction } from "@/app/actions";
+import { PasswordField } from "@/components/PasswordField";
 
 const initialState = { ok: false, message: "" };
 
@@ -14,10 +15,7 @@ export function AdminLoginForm() {
         Correo admin
         <input name="email" type="email" defaultValue="nathaliegarcia@maiabusiness.com" required />
       </label>
-      <label className="field">
-        Contraseña
-        <input name="password" type="password" placeholder="Contraseña" required />
-      </label>
+      <PasswordField label="Contraseña" name="password" autoComplete="current-password" placeholder="Contraseña" required />
       <button className="button" type="submit" disabled={pending}>
         {pending ? "Entrando..." : "Entrar al panel"}
       </button>

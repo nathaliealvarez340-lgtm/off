@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GlobalFooter } from "@/components/GlobalFooter";
+import { AuthOrbit } from "@/components/AuthOrbit";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PasswordResetForm } from "@/components/PasswordResetForm";
 import { hashToken } from "@/lib/auth";
@@ -27,6 +28,7 @@ export default async function ResetPasswordPage({
         <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
       </Link>
       <div className="auth-language"><LanguageSwitcher /></div>
+      <AuthOrbit />
       <div className="auth-editorial-layout">
         <section className="auth-form-column">
           <p className="eyebrow">OFF / Recuperación</p>
@@ -44,15 +46,6 @@ export default async function ResetPasswordPage({
             )}
           </div>
         </section>
-        <aside className="auth-editorial-panel">
-          <div>
-            <p className="eyebrow">OFF / Acceso</p>
-            <blockquote>“Volver también es una forma de avanzar.”</blockquote>
-          </div>
-          <div className="auth-editorial-notes">
-            <p>Tu nueva contraseña reemplazará la anterior y cerrará las sesiones abiertas.</p>
-          </div>
-        </aside>
       </div>
       <GlobalFooter compact />
     </main>
