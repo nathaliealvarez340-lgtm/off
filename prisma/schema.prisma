@@ -42,6 +42,7 @@ model Article {
   updatedAt   DateTime  @updatedAt
   comments    Comment[]
   topicSuggestions TopicSuggestion[]
+  completions ArticleCompletion[]
 }
 
 model LoungeContent {
@@ -84,6 +85,36 @@ model User {
   sessions     Session[]
   comments     Comment[]
   topicSuggestions TopicSuggestion[]
+  activity     MemberActivity?
+  completions  ArticleCompletion[]
+  memberProfile MemberProfile?
+}
+
+model MemberProfile {
+  userId       String   @id
+  memberNumber Int      @unique
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MemberActivity {
+  userId       String   @id
+  totalSeconds Int      @default(0)
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ArticleCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  articleId   String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
 }
 
 model RegistrationVerification {

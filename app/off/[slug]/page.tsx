@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
 import { ArticleActions } from "@/components/ArticleActions";
 import { ArticleFooter } from "@/components/ArticleFooter";
+import { CompleteArticleButton } from "@/components/CompleteArticleButton";
+import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReadingProgress } from "@/components/ReadingProgress";
@@ -22,6 +24,7 @@ import {
 } from "@/lib/articles";
 import { articleSpeechText, articleUi, normalizeArticleLanguage, resolveArticleTranslation } from "@/lib/article-i18n";
 import { getCurrentUser } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
 
 function sanitizeInlineHtml(text: string) {
@@ -161,6 +164,10 @@ export default async function ArticlePage({
   const canReadFull = Boolean(user) || isFirstChapter;
   const visibleBlocks = canReadFull ? blocks : blocks.slice(0, 2);
   const comments = user ? await getPublishedComments(article.id) : [];
+  const completion = user ? await getDb().articleCompletion.findUnique({
+    where: { userId_articleId: { userId: user.id, articleId: article.id } },
+    select: { id: true },
+  }) : null;
   const speechBody = visibleBlocks.map((block) => {
     if ("text" in block) return stripHtml(block.text);
     if ("items" in block) return block.items.map(stripHtml).join(". ");
@@ -171,6 +178,7 @@ export default async function ArticlePage({
 
   return (
     <main className="site-shell">
+      {user ? <MemberActivityTracker /> : null}
       <ReadingProgress />
       <nav className="nav">
         <Link href="/" className="brand article-logo-brand">
@@ -348,6 +356,8 @@ export default async function ArticlePage({
               <NotaDeNathalie>Guarda estas preguntas. No necesitas responderlas rápido; necesitas responderlas con honestidad.</NotaDeNathalie>
             </section>
           ) : null}
+
+          {user ? <CompleteArticleButton articleId={article.id} initiallyCompleted={Boolean(completion)} /> : null}
         </article>
 
         <aside className="article-side-panel">

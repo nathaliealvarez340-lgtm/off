@@ -4,11 +4,11 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { logoutAction } from "@/app/actions";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { GlobalFooter } from "@/components/GlobalFooter";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LocalDate } from "@/components/LocalDate";
+import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
-import { NotaDeNathalie } from "@/components/NotaDeNathalie";
 
 type LoungeArticle = { id: string; title: string; slug: string; excerpt: string; coverImage: string; readTime: string };
 type DraftEdition = { id: string; title: string; excerpt: string; date: string };
@@ -25,13 +25,22 @@ type LoungeContent = {
   statusLabel: string | null;
 };
 
+const collectionNames = ["Reconstruirte", "Sueños Ajenos", "Dirección", "Identidad", "Ambición", "Relaciones"];
+
 function cleanText(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
 function Reveal({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
-    <motion.section className={className} id={id} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.58, ease: "easeOut" }}>
+    <motion.section
+      className={className}
+      id={id}
+      initial={{ opacity: 0, transform: "translateY(22px)" }}
+      whileInView={{ opacity: 1, transform: "translateY(0)" }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.58, ease: [0.23, 1, 0.32, 1] }}
+    >
       {children}
     </motion.section>
   );
@@ -41,6 +50,9 @@ export function MemberLounge({
   name,
   memberSince,
   memberNumber,
+  activeTime,
+  completedCount,
+  badges,
   articles,
   loungeContent,
   draftEditions,
@@ -48,20 +60,22 @@ export function MemberLounge({
   name: string;
   memberSince: string;
   memberNumber: string;
+  activeTime: string;
+  completedCount: number;
+  badges: string[];
   articles: LoungeArticle[];
   loungeContent: LoungeContent[];
   draftEditions: DraftEdition[];
 }) {
-  const [activeSection, setActiveSection] = useState("archive");
+  const [activeSection, setActiveSection] = useState("collections");
   const current = articles[0];
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
-  const signals = loungeContent.filter((item) => item.type === "SIGNAL");
-  const resources = loungeContent.filter((item) => item.type === "RESOURCE");
-  const notes = loungeContent.filter((item) => item.type === "NATHALIE_NOTE");
   const manualEarlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
   useEffect(() => {
-    const sections = ["archive", "signals", "exclusives"].map((id) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
+    const sections = ["collections", "early-access", "member-profile", "conoce-mas"]
+      .map((id) => document.getElementById(id))
+      .filter(Boolean) as HTMLElement[];
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -73,22 +87,13 @@ export function MemberLounge({
     return () => observer.disconnect();
   }, []);
 
-  function links(item: LoungeContent) {
-    return item.links.filter((link): link is { label: string; url: string } => Boolean(link && typeof link === "object" && "label" in link && "url" in link));
+  function links(item?: LoungeContent) {
+    return (item?.links ?? []).filter((link): link is { label: string; url: string } => Boolean(link && typeof link === "object" && "label" in link && "url" in link));
   }
-
-  const libraryCollections = Array.from(
-    libraries.reduce((collections, item) => {
-      const currentCollection = collections.get(item.title) ?? { ...item, links: [] as unknown[] };
-      currentCollection.links = [...currentCollection.links, ...item.links];
-      if (!currentCollection.description && item.description) currentCollection.description = item.description;
-      collections.set(item.title, currentCollection);
-      return collections;
-    }, new Map<string, LoungeContent>()).values(),
-  );
 
   return (
     <main className="member-lounge">
+      <MemberActivityTracker />
       <motion.header className="lounge-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.85 }}>
         <img src="/images/cap2-off.webp" alt="" />
         <div className="lounge-hero-overlay" />
@@ -105,58 +110,69 @@ export function MemberLounge({
 
       <div className="lounge-after-hero">
         <nav className="lounge-nav">
-          <Link href="/" aria-label="OFF inicio"><img src="/logo/logo-off.png" alt="OFF" /></Link>
+          <Link href="/lounge" aria-label="OFF Member Lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
           <div>
-            <a className={activeSection === "archive" ? "active" : ""} href="#archive">Biblioteca</a>
-            <a className={activeSection === "signals" ? "active" : ""} href="#signals">Signals</a>
-            <a className={activeSection === "exclusives" ? "active" : ""} href="#exclusives">Recursos</a>
+            <a className={activeSection === "collections" ? "active" : ""} href="#collections">Colecciones</a>
+            <a className={activeSection === "early-access" ? "active" : ""} href="#early-access">Early Access</a>
+            <a className={activeSection === "member-profile" ? "active" : ""} href="#member-profile">Perfil</a>
+            <a className={activeSection === "conoce-mas" ? "active" : ""} href="#conoce-mas">Conoce más</a>
             <LanguageSwitcher compact label="Idioma" />
             <form action={logoutAction}><button type="submit">Cerrar sesión</button></form>
           </div>
         </nav>
 
         <div className="lounge-content-column">
+          <Reveal className="lounge-about-off">
+            <div>
+              <p className="membership-kicker">Editorial psicológica</p>
+              <h2>Qué es <em>OFF</em></h2>
+              <p>OFF es el espacio donde una generación que aprendió a rendir puede detenerse, entender lo que está viviendo y volver a construir con dirección.</p>
+              <p>No es motivación vacía. Es narrativa, reflexión y estrategia para crecer sin perderte a ti mismo.</p>
+            </div>
+            <figure><img src="/images/off-quees.webp" alt="Imagen editorial sobre qué es OFF" /></figure>
+          </Reveal>
+
           <Reveal className="lounge-intro">
             <p>Una sala privada para leer sin prisa, encontrar dirección y volver a ideas que merecen quedarse contigo.</p>
             <dl>
               <div><dt>Miembro desde</dt><dd><LocalDate value={memberSince} /></dd></div>
               <div><dt>Miembro OFF</dt><dd>#{memberNumber}</dd></div>
-              <div><dt>Insignia</dt><dd>Founding Member</dd></div>
+              <div><dt>Insignia</dt><dd>{badges.at(-1) ?? "Founding Member"}</dd></div>
             </dl>
           </Reveal>
 
           <Reveal className="lounge-section continue-reading">
             <div className="lounge-heading"><span>En tu mesa</span><h2>Continuar leyendo</h2></div>
-            {current ? <Link className="continue-editorial" href={`/off/${current.slug}`}><img src={current.coverImage || "/images/cap1-off.webp"} alt="" /><div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div></Link> : <p className="lounge-empty">El portafolio se abrirá con la próxima edición.</p>}
+            {current ? (
+              <Link className="continue-editorial" href={`/off/${current.slug}`}>
+                <img src={current.coverImage || "/images/cap1-off.webp"} alt="" />
+                <div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div>
+              </Link>
+            ) : <p className="lounge-empty">El portafolio se abrirá con la próxima edición.</p>}
           </Reveal>
 
-          <Reveal className="lounge-section archive-section" id="archive">
-            <div className="lounge-heading"><span>Colecciones editoriales</span><h2>Biblioteca</h2></div>
-            <div className="archive-volumes">
-              {libraryCollections.map((item) => <article className="archive-volume" key={item.title}><span>Colección</span><h3>{item.title}</h3><p>{item.description}</p><div className="lounge-linked-resources">{links(item).map((link) => <a href={link.url} key={link.url}>{link.label}</a>)}</div>{links(item)[0] ? <a href={links(item)[0].url}>Abrir volumen</a> : <em>Volumen editorial</em>}</article>)}
-              {!libraryCollections.length ? <p className="lounge-empty">La Biblioteca todavía está tomando forma.</p> : null}
+          <Reveal className="lounge-section lounge-collection-arc" id="collections">
+            <div className="lounge-heading"><span>Biblioteca</span><h2>Colecciones editoriales</h2></div>
+            <div className="collection-arc">
+              {collectionNames.map((collectionName, index) => {
+                const item = libraries.find((library) => cleanText(library.title).toLowerCase() === collectionName.toLowerCase());
+                const firstLink = links(item)[0];
+                const card = (
+                  <>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <h3>{collectionName}</h3>
+                    <p>{item?.description ? cleanText(item.description) : "Próximamente en la Biblioteca OFF."}</p>
+                    <strong>{firstLink ? "Abrir volumen" : "En construcción"}</strong>
+                  </>
+                );
+                return firstLink
+                  ? <a className="collection-arc-card" href={firstLink.url} key={collectionName}>{card}</a>
+                  : <article className="collection-arc-card" key={collectionName}>{card}</article>;
+              })}
             </div>
           </Reveal>
 
-          <Reveal className="lounge-section signals-section" id="signals">
-            <div className="lounge-heading"><span>Notas breves</span><h2>Signals</h2></div>
-            <div className="signals-list">
-              {signals.map((signal, index) => <article className="signal-note" key={signal.id}><span>Signal #{signal.number ?? String(index + 1).padStart(3, "0")}</span><p>{signal.content ?? signal.description}</p></article>)}
-              {!signals.length ? <p className="lounge-empty">No hay Signals publicados todavía.</p> : null}
-            </div>
-          </Reveal>
-
-          {notes.map((note) => <NotaDeNathalie key={note.id}>{note.content ?? note.description ?? note.title}</NotaDeNathalie>)}
-
-          <Reveal className="lounge-section exclusives-section" id="exclusives">
-            <div className="lounge-heading"><span>Portafolio privado</span><h2>Recursos desbloqueados</h2></div>
-            <div className="exclusive-ledger">
-              {resources.map((item, index) => <div key={item.id}><span>{item.number ?? String(index + 1).padStart(2, "0")}</span><strong>{item.title}</strong><p>{item.description}</p><div className="lounge-linked-resources">{links(item).map((link) => <a href={link.url} key={link.url}>{link.label}</a>)}</div></div>)}
-              {!resources.length ? <p className="lounge-empty">No hay recursos desbloqueados todavía.</p> : null}
-            </div>
-          </Reveal>
-
-          <Reveal className="lounge-section early-access">
+          <Reveal className="lounge-section early-access" id="early-access">
             <div className="lounge-heading"><span>Early Access</span><h2>Próximamente en OFF</h2></div>
             <div className="early-editions">
               {manualEarlyAccess.map((edition) => <article key={edition.id}><time>{edition.releaseDate ? <LocalDate value={edition.releaseDate} /> : edition.statusLabel}</time><span>{edition.statusLabel}</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.description ?? edition.content ?? "")}</p></article>)}
@@ -165,12 +181,28 @@ export function MemberLounge({
             </div>
           </Reveal>
 
-          <Reveal className="member-profile-editorial">
+          <Reveal className="member-profile-editorial" id="member-profile">
             <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p>Actualmente estás explorando: <strong>{current ? "Reconstruirte" : "The OFF Portfolio"}</strong></p></div>
-            <dl><div><dt>Tiempo invertido en OFF</dt><dd>Aún sin registro</dd></div><div><dt>Artículos completados</dt><dd>Aún sin registro</dd></div><div><dt>Insignias</dt><dd>Founding Member · Early Reader</dd></div></dl>
+            <dl>
+              <div><dt>Tiempo invertido en OFF</dt><dd>{activeTime}</dd></div>
+              <div><dt>Artículos completados</dt><dd>{completedCount || "Aún sin registro"}</dd></div>
+              <div><dt>Insignias ganadas</dt><dd>{badges.length ? badges.join(" · ") : "Aún sin insignias"}</dd></div>
+            </dl>
           </Reveal>
 
-          <footer className="lounge-footer"><img src="/logo/logo-off.png" alt="OFF" /><p>No te suscribiste a un newsletter.<br />Entraste a un lugar al que quieres volver.</p></footer>
+          <Reveal className="lounge-more" id="conoce-mas">
+            <div>
+              <p className="membership-kicker">Detrás de OFF</p>
+              <h2>Conoce <em>más</em></h2>
+              <p>Detrás de OFF hay alguien que también está en construcción.</p>
+            </div>
+            <div className="lounge-social-cards">
+              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LinkedIn</strong><small>NATHALIE GARCIA A.</small></a>
+              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>◎</span><strong>Instagram</strong><small>@nathalie.garciaa</small></a>
+              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>◎</span><strong>OFF Journal</strong><small>@off_journal</small></a>
+            </div>
+          </Reveal>
+
           <GlobalFooter compact />
         </div>
       </div>

@@ -4,10 +4,7 @@ import { MemberLounge } from "@/components/MemberLounge";
 import { getPlainTextPreview, INTERNAL_CONTENT_CATEGORIES } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-
-function memberNumber(value: number) {
-  return String(value).padStart(6, "0");
-}
+import { earnedBadges, formatActiveTime, getOrCreateMemberNumber } from "@/lib/member-progress";
 
 export const metadata: Metadata = {
   title: "The Member Lounge | OFF",
@@ -20,18 +17,23 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [articles, drafts, position, loungeContent] = await Promise.all([
+  const [articles, drafts, memberNumber, loungeContent, activity, completedCount] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
-    db.user.count({ where: { createdAt: { lte: user.createdAt } } }),
+    getOrCreateMemberNumber(user.id),
     db.loungeContent.findMany({ where: { status: "published" }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
+    db.memberActivity.findUnique({ where: { userId: user.id } }),
+    db.articleCompletion.count({ where: { userId: user.id } }),
   ]);
 
   return (
     <MemberLounge
       name={user.name}
       memberSince={user.createdAt.toISOString()}
-      memberNumber={memberNumber(position)}
+      memberNumber={String(memberNumber)}
+      activeTime={formatActiveTime(activity?.totalSeconds ?? 0)}
+      completedCount={completedCount}
+      badges={earnedBadges(completedCount)}
       articles={articles.map((article) => ({
         id: article.id,
         title: getPlainTextPreview(article.title, 140),
