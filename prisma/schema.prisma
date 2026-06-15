@@ -86,6 +86,20 @@ model User {
   topicSuggestions TopicSuggestion[]
 }
 
+model RegistrationVerification {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  codeHash     String
+  attempts     Int      @default(0)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
 model Session {
   id        String   @id @default(cuid())
   tokenHash String   @unique

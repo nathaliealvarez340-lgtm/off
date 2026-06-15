@@ -338,7 +338,7 @@ export default async function ArticlePage({
 
           {user ? (
             <section className="member-article-exclusive">
-              <p className="eyebrow">Archivo privado</p>
+              <p className="eyebrow">Portafolio privado</p>
               <h2>Exclusivo para miembros</h2>
               <div>
                 <article><span>Ejercicio</span><p>Escribe qué parte de tu vida se ve bien por fuera, pero ya no se siente tuya.</p></article>

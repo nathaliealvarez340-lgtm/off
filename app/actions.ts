@@ -1,13 +1,14 @@
 ﻿"use server";
 
 import { mkdir, writeFile } from "fs/promises";
+import { randomInt } from "crypto";
 import path from "path";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { notifySubscribers } from "@/lib/newsletter";
+import { notifySubscribers, sendRegistrationCode } from "@/lib/newsletter";
 import { isInternalContentCategory } from "@/lib/articles";
 import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
@@ -52,34 +53,131 @@ export async function loginAction(_: unknown, formData: FormData) {
   redirect(safeNext === "/" ? "/lounge" : safeNext);
 }
 
-export async function registerAction(_: unknown, formData: FormData) {
+export type RegistrationState = {
+  ok: boolean;
+  message: string;
+  step?: "register" | "verify" | "login";
+  email?: string;
+};
+
+function validateRegistration(formData: FormData):
+  | { ok: false; error: string }
+  | { ok: true; name: string; email: string; password: string } {
   const name = stringValue(formData, "name");
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
-  if (!name || !email || password.length < 8) {
-    return { ok: false, message: "Escribe tu nombre, correo y una contraseña de al menos 8 caracteres." };
-  }
+  const repeatPassword = stringValue(formData, "repeatPassword");
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { ok: false, message: "Escribe un correo válido." };
-  }
+  if (name.length < 2) return { ok: false, error: "Escribe tu nombre." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Escribe un correo válido." };
+  if (password.length < 6 || password.length > 8) return { ok: false, error: "La contraseña debe tener entre 6 y 8 caracteres." };
+  if (password !== repeatPassword) return { ok: false, error: "Las contraseñas no coinciden." };
 
+  return { ok: true, name, email, password };
+}
+
+export async function registerAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
+  const values = validateRegistration(formData);
+  if (!values.ok) return { ok: false, message: values.error };
+
+  const { name, email, password } = values;
+  const db = getDb();
+  const existingUser = await db.user.findUnique({ where: { email } });
+  if (existingUser) return { ok: false, message: "Ese correo ya está registrado." };
+
+  const code = String(randomInt(1000, 10000));
   try {
-    const user = await getDb().user.create({
-      data: {
+    await db.registrationVerification.upsert({
+      where: { email },
+      update: {
+        name,
+        passwordHash: await bcrypt.hash(password, 12),
+        codeHash: await bcrypt.hash(code, 10),
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+      create: {
         name,
         email,
         passwordHash: await bcrypt.hash(password, 12),
-        role: "USER",
+        codeHash: await bcrypt.hash(code, 10),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
-
-    await createSession(user.id);
-  } catch {
-    return { ok: false, message: "Ese correo ya está registrado o no pudimos crear tu cuenta." };
+    await sendRegistrationCode(email, name, code);
+  } catch (error) {
+    await db.registrationVerification.deleteMany({ where: { email } });
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos iniciar el registro." };
   }
 
-  redirect("/welcome");
+  return { ok: true, message: "Enviamos un código de cuatro dígitos a tu correo.", step: "verify", email };
+}
+
+export async function verifyRegistrationAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
+  const email = stringValue(formData, "email").toLowerCase();
+  const code = stringValue(formData, "code");
+  const db = getDb();
+  const verification = await db.registrationVerification.findUnique({ where: { email } });
+
+  if (!verification) return { ok: false, message: "No encontramos una verificación activa. Regístrate de nuevo.", step: "register" };
+  if (verification.expiresAt < new Date()) {
+    await db.registrationVerification.delete({ where: { id: verification.id } });
+    return { ok: false, message: "El código expiró. Regístrate de nuevo.", step: "register" };
+  }
+  if (verification.attempts >= 5) {
+    await db.registrationVerification.delete({ where: { id: verification.id } });
+    return { ok: false, message: "Superaste el máximo de intentos. Regístrate de nuevo.", step: "register" };
+  }
+  if (!/^\d{4}$/.test(code) || !(await bcrypt.compare(code, verification.codeHash))) {
+    await db.registrationVerification.update({ where: { id: verification.id }, data: { attempts: { increment: 1 } } });
+    return { ok: false, message: "El código no es correcto.", step: "verify", email };
+  }
+
+  try {
+    await db.$transaction([
+      db.user.create({
+        data: {
+          name: verification.name,
+          email: verification.email,
+          passwordHash: verification.passwordHash,
+          role: "USER",
+        },
+      }),
+      db.subscriber.upsert({
+        where: { email: verification.email },
+        update: { name: verification.name, consent: true },
+        create: { name: verification.name, email: verification.email, interest: "Todos", consent: true },
+      }),
+      db.registrationVerification.delete({ where: { id: verification.id } }),
+    ]);
+  } catch {
+    return { ok: false, message: "No pudimos terminar el registro. Intenta iniciar sesión.", step: "login" };
+  }
+
+  return { ok: true, message: "Cuenta verificada. Ya puedes iniciar sesión.", step: "login" };
+}
+
+export async function resendRegistrationCodeAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
+  const email = stringValue(formData, "email").toLowerCase();
+  const db = getDb();
+  const verification = await db.registrationVerification.findUnique({ where: { email } });
+  if (!verification) return { ok: false, message: "No encontramos una verificación activa.", step: "register" };
+
+  const code = String(randomInt(1000, 10000));
+  try {
+    await sendRegistrationCode(email, verification.name, code);
+    await db.registrationVerification.update({
+      where: { id: verification.id },
+      data: {
+        codeHash: await bcrypt.hash(code, 10),
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      },
+    });
+    return { ok: true, message: "Enviamos un código nuevo. Expira en 10 minutos.", step: "verify", email };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos reenviar el código.", step: "verify", email };
+  }
 }
 
 export async function logoutAction() {

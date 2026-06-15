@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthForms } from "@/components/AuthForms";
+import { GlobalFooter } from "@/components/GlobalFooter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -27,7 +28,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </section>
         <aside className="auth-editorial-panel">
           <div>
-            <p className="eyebrow">Archivo privado</p>
+            <p className="eyebrow">Portafolio privado</p>
             <blockquote>“Todo parece avanzar. Pero algo dentro de ti sigue apagado.”</blockquote>
           </div>
           <div className="auth-editorial-notes">
@@ -36,6 +37,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </div>
         </aside>
       </div>
+      <GlobalFooter compact />
     </main>
   );
 }

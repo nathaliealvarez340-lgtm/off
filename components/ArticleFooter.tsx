@@ -13,7 +13,13 @@ export function ArticleFooter() {
           {socialLinks.map(([label, href]) => <a href={href} target="_blank" rel="noreferrer" key={label}>{label}</a>)}
         </nav>
       </div>
-      <p>© 2026 Nathalie Garcia for MAIA™. All rights reserved. | Built for a generation trying to grow without losing itself</p>
+      <p>© 2026 OFF. Todos los derechos reservados.</p>
+      <nav className="article-legal-links" aria-label="Información legal">
+        <Link href="/privacidad">Privacidad</Link>
+        <Link href="/terminos">Términos</Link>
+        <Link href="/contacto">Contacto</Link>
+      </nav>
     </footer>
   );
 }
+import Link from "next/link";

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { GlobalFooter } from "@/components/GlobalFooter";
 import { LocalDate } from "@/components/LocalDate";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
@@ -96,7 +97,7 @@ export function MemberLounge({
           <h1><MemberGreeting name={name} /></h1>
           <div className="currently-exploring">
             <span>Actualmente estás explorando</span>
-            <strong>{current ? cleanText(current.title) : "El archivo OFF"}</strong>
+            <strong>{current ? cleanText(current.title) : "El portafolio OFF"}</strong>
           </div>
           {current ? <Link href={`/off/${current.slug}`}>Continuar leyendo</Link> : null}
         </div>
@@ -126,7 +127,7 @@ export function MemberLounge({
 
           <Reveal className="lounge-section continue-reading">
             <div className="lounge-heading"><span>En tu mesa</span><h2>Continuar leyendo</h2></div>
-            {current ? <Link className="continue-editorial" href={`/off/${current.slug}`}><img src={current.coverImage || "/images/cap1-off.webp"} alt="" /><div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div></Link> : <p className="lounge-empty">El archivo se abrirá con la próxima edición.</p>}
+            {current ? <Link className="continue-editorial" href={`/off/${current.slug}`}><img src={current.coverImage || "/images/cap1-off.webp"} alt="" /><div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div></Link> : <p className="lounge-empty">El portafolio se abrirá con la próxima edición.</p>}
           </Reveal>
 
           <Reveal className="lounge-section archive-section" id="archive">
@@ -148,7 +149,7 @@ export function MemberLounge({
           {notes.map((note) => <NotaDeNathalie key={note.id}>{note.content ?? note.description ?? note.title}</NotaDeNathalie>)}
 
           <Reveal className="lounge-section exclusives-section" id="exclusives">
-            <div className="lounge-heading"><span>Archivo privado</span><h2>Recursos desbloqueados</h2></div>
+            <div className="lounge-heading"><span>Portafolio privado</span><h2>Recursos desbloqueados</h2></div>
             <div className="exclusive-ledger">
               {resources.map((item, index) => <div key={item.id}><span>{item.number ?? String(index + 1).padStart(2, "0")}</span><strong>{item.title}</strong><p>{item.description}</p><div className="lounge-linked-resources">{links(item).map((link) => <a href={link.url} key={link.url}>{link.label}</a>)}</div></div>)}
               {!resources.length ? <p className="lounge-empty">No hay recursos desbloqueados todavía.</p> : null}
@@ -165,11 +166,12 @@ export function MemberLounge({
           </Reveal>
 
           <Reveal className="member-profile-editorial">
-            <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p>Actualmente estás explorando: <strong>{current ? "Reconstruirte" : "The OFF Archive"}</strong></p></div>
+            <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p>Actualmente estás explorando: <strong>{current ? "Reconstruirte" : "The OFF Portfolio"}</strong></p></div>
             <dl><div><dt>Tiempo invertido en OFF</dt><dd>Aún sin registro</dd></div><div><dt>Artículos completados</dt><dd>Aún sin registro</dd></div><div><dt>Insignias</dt><dd>Founding Member · Early Reader</dd></div></dl>
           </Reveal>
 
           <footer className="lounge-footer"><img src="/logo/logo-off.png" alt="OFF" /><p>No te suscribiste a un newsletter.<br />Entraste a un lugar al que quieres volver.</p></footer>
+          <GlobalFooter compact />
         </div>
       </div>
     </main>

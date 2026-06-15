@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { MembershipWelcome } from "@/components/MembershipWelcome";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { GlobalFooter } from "@/components/GlobalFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
@@ -24,6 +25,7 @@ export default async function WelcomePage() {
     <>
       <div className="welcome-language"><LanguageSwitcher /></div>
       <MembershipWelcome memberSince={user.createdAt.toISOString()} memberNumber={memberNumber(position)} />
+      <GlobalFooter compact />
     </>
   );
 }

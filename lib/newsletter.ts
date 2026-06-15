@@ -2,6 +2,16 @@ import type { Article, Subscriber } from "@prisma/client";
 import { getPlainTextPreview } from "./articles";
 import { getSiteUrl } from "./site-url";
 
+function escapeEmailHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[character] ?? character);
+}
+
 export async function sendArticleToSubscriber(article: Article, subscriber: Subscriber) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.FROM_EMAIL;
@@ -48,4 +58,41 @@ export async function notifySubscribers(article: Article, subscribers: Subscribe
   }
 
   return results;
+}
+
+export async function sendRegistrationCode(email: string, name: string, code: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.FROM_EMAIL;
+
+  if (!apiKey || !from) {
+    throw new Error("El correo de verificación no está configurado. Intenta más tarde.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: email,
+      subject: "Tu código para entrar a OFF",
+      html: `
+        <div style="background:#050407;color:#f8f7fb;font-family:Arial,sans-serif;padding:32px">
+          <div style="max-width:560px;margin:0 auto;border:1px solid rgba(123,61,255,.3);border-radius:24px;padding:36px;background:#0b0910">
+            <p style="letter-spacing:.2em;text-transform:uppercase;color:#bda8ff;font-size:11px">OFF / Verificación</p>
+            <h1 style="font-family:Georgia,serif;font-size:34px;font-weight:400;line-height:1.05;margin:18px 0">Hola, ${escapeEmailHtml(name)}.</h1>
+            <p style="font-size:15px;line-height:1.7;color:#d7d1df">Usa este código para terminar de crear tu cuenta. Expira en 10 minutos.</p>
+            <div style="margin:28px 0;border:1px solid rgba(123,61,255,.4);border-radius:18px;padding:20px;text-align:center;font-size:36px;font-weight:700;letter-spacing:.35em;color:#fff">${code}</div>
+            <p style="font-size:12px;line-height:1.6;color:#8f8998">Si no solicitaste este acceso, puedes ignorar este correo.</p>
+          </div>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("No pudimos enviar el código de verificación. Intenta de nuevo.");
+  }
 }

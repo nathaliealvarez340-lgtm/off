@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { SubscribeForm } from "@/components/SubscribeForm";
@@ -52,17 +53,17 @@ const copy = {
     hero: ["Todo parece", "avanzar.", "Pero algo dentro", "de ti sigue", "apagado."],
     subtitle:
       "OFF nace para una generación que está en busca del éxito personal y profesional mientras están construyendo su futuro, cuestionando su camino y aprendiendo a crecer sin perderse a sí mismos.",
-    cta: "Entrar al archivo",
+    cta: "Entrar al portafolio",
     side: ["SE VE BIEN.", "PERO SE SIENTE"],
     orbit: "SENTIR · ENTENDER · ELEGIR · VOLVER · CONSTRUIR ·",
-    strip: "Un archivo para la generación funcionalmente agotada.",
+    strip: "Un portafolio para la generación funcionalmente agotada.",
     aboutTitle: "Qué es",
     aboutLines: ["No es motivación. Es claridad.", "No es productividad. Es comprensión.", "No es éxito vacío. Es reconexión."],
     aboutText: "OFF es el espacio donde la generación que aprendió a rendir, finalmente puede aprender a sentirse.",
     manifest: "Leer manifiesto",
     articles: ["Artículos", "recientes"],
     viewAll: "Ver todos los artículos",
-    emptyKicker: "Archivo en construcción",
+    emptyKicker: "Portafolio en construcción",
     emptyTitle: "Aún no hay capítulos publicados.",
     emptyText: "Cuando publiques desde el panel privado, aparecerán aquí con esta dirección editorial.",
     readMore: "Leer más",
@@ -96,17 +97,17 @@ const copy = {
     hero: ["Everything seems", "to move forward.", "But something inside", "you still feels", "switched off."],
     subtitle:
       "OFF is a psychological editorial platform for people building success while trying not to lose themselves.",
-    cta: "Enter the archive",
+    cta: "Enter the portfolio",
     side: ["IT LOOKS GOOD.", "BUT IT FEELS"],
     orbit: "FEEL · UNDERSTAND · CHOOSE · RETURN · BUILD ·",
-    strip: "An archive for the functionally exhausted generation.",
+    strip: "A portfolio for the functionally exhausted generation.",
     aboutTitle: "What is",
     aboutLines: ["It is not motivation. It is clarity.", "It is not productivity. It is understanding.", "It is not empty success. It is reconnection."],
     aboutText: "OFF is the space where the generation that learned to perform can finally learn to feel.",
     manifest: "Read manifesto",
     articles: ["Recent", "articles"],
     viewAll: "View all articles",
-    emptyKicker: "Archive in progress",
+    emptyKicker: "Portfolio in progress",
     emptyTitle: "No chapters published yet.",
     emptyText: "When you publish from the private panel, they will appear here with this editorial direction.",
     readMore: "Read more",
@@ -140,17 +141,17 @@ const copy = {
     hero: ["Tutto sembra", "andare avanti.", "Ma qualcosa dentro", "di te resta", "spento."],
     subtitle:
       "OFF è una piattaforma editoriale psicologica per chi sta costruendo successo senza volersi perdere.",
-    cta: "Entra nell'archivio",
+    cta: "Entra nel portafoglio",
     side: ["SEMBRA ANDARE BENE.", "MA SI SENTE"],
     orbit: "SENTIRE · CAPIRE · SCEGLIERE · TORNARE · COSTRUIRE ·",
-    strip: "Un archivio per la generazione funzionalmente esausta.",
+    strip: "Un portafoglio per la generazione funzionalmente esausta.",
     aboutTitle: "Che cos'è",
     aboutLines: ["Non è motivazione. È chiarezza.", "Non è produttività. È comprensione.", "Non è successo vuoto. È riconnessione."],
     aboutText: "OFF è lo spazio dove la generazione che ha imparato a rendere può finalmente imparare a sentire.",
     manifest: "Leggi manifesto",
     articles: ["Articoli", "recenti"],
     viewAll: "Vedi tutti gli articoli",
-    emptyKicker: "Archivio in costruzione",
+    emptyKicker: "Portafoglio in costruzione",
     emptyTitle: "Non ci sono ancora capitoli pubblicati.",
     emptyText: "Quando pubblicherai dal pannello privato, appariranno qui con questa direzione editoriale.",
     readMore: "Leggi di più",
@@ -184,17 +185,17 @@ const copy = {
     hero: ["Tudo parece", "avançar.", "Mas algo dentro", "de você segue", "apagado."],
     subtitle:
       "OFF é uma plataforma editorial psicológica para pessoas construindo sucesso enquanto tentam não se perder.",
-    cta: "Entrar no arquivo",
+    cta: "Entrar no portfólio",
     side: ["PARECE BEM.", "MAS SE SENTE"],
     orbit: "SENTIR · ENTENDER · ESCOLHER · VOLTAR · CONSTRUIR ·",
-    strip: "Um arquivo para a geração funcionalmente esgotada.",
+    strip: "Um portfólio para a geração funcionalmente esgotada.",
     aboutTitle: "O que é",
     aboutLines: ["Não é motivação. É clareza.", "Não é produtividade. É compreensão.", "Não é sucesso vazio. É reconexão."],
     aboutText: "OFF é o espaço onde a geração que aprendeu a performar finalmente pode aprender a sentir.",
     manifest: "Ler manifesto",
     articles: ["Artigos", "recentes"],
     viewAll: "Ver todos os artigos",
-    emptyKicker: "Arquivo em construção",
+    emptyKicker: "Portfólio em construção",
     emptyTitle: "Ainda não há capítulos publicados.",
     emptyText: "Quando você publicar pelo painel privado, eles aparecerão aqui com esta direção editorial.",
     readMore: "Ler mais",
@@ -330,18 +331,18 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
       </nav>
 
       {user ? (
-        <section className="subscriber-hero-card" id="mi-espacio" aria-label="Experiencia de suscriptor">
+        <motion.section className="subscriber-hero-card" id="mi-espacio" aria-label="Experiencia de suscriptor" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}>
           <Image src="/images/cap2-off.webp" alt="" fill priority={false} sizes="(max-width: 820px) 100vw, 1120px" />
           <div>
             <p className="eyebrow">OFF / Mi espacio</p>
             <h2>{subscriberGreeting ? `${subscriberGreeting}, ${user.name}.` : `Bienvenida, ${user.name}.`}</h2>
-            <p>Tu archivo está abierto. Sigue leyendo, pensando y construyendo sin vivir en automático.</p>
+            <p>Tu portafolio está abierto. Sigue leyendo, pensando y construyendo sin vivir en automático.</p>
             <Link className="text-link purple-link" href="/lounge">Entrar al Member Lounge <span>→</span></Link>
           </div>
-        </section>
+        </motion.section>
       ) : null}
 
-      <section className="hero-cinema" id="inicio">
+      <motion.section className="hero-cinema" id="inicio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.9 }}>
         <Image className="hero-background" src="/images/hero-off.webp" alt="" fill priority sizes="100vw" />
         <div className="hero-copy">
           <p className="eyebrow">{t.eyebrow}</p>
@@ -385,13 +386,13 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             </text>
           </svg>
         </div>
-      </section>
+      </motion.section>
 
       <div className="archive-strip" aria-hidden="true">
         <p>{t.strip}</p>
       </div>
 
-      <section className="about-cinema" id="revista">
+      <motion.section className="about-cinema" id="revista" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.14 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}>
         <div className="about-copy">
           <p className="section-kicker">
             {t.aboutTitle} <span>OFF</span>
@@ -412,9 +413,9 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           <Image src="/images/off-quees.webp" alt="" fill sizes="(max-width: 820px) 100vw, 62vw" />
           <div className="purple-block" />
         </div>
-      </section>
+      </motion.section>
 
-      <section className="articles-cinema" id="capitulos">
+      <motion.section className="articles-cinema" id="capitulos" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.08 }} transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}>
         <div className="articles-head cinematic-head">
           <div>
             <h2 className="section-title">
@@ -459,9 +460,9 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             ))}
           </div>
         )}
-      </section>
+      </motion.section>
 
-      <section className="philosophy-band" aria-label={t.philosophy}>
+      <motion.section className="philosophy-band" aria-label={t.philosophy} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.18 }} transition={{ duration: 0.62 }}>
         <div>
           <h2>
             {t.philosophy} <span>OFF</span>
@@ -471,9 +472,9 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
         {t.quotes.map((quote) => (
           <blockquote key={quote}>{quote}</blockquote>
         ))}
-      </section>
+      </motion.section>
 
-      <section className="impact-cinema" aria-label={t.impactTitle.join(" ")}>
+      <motion.section className="impact-cinema" aria-label={t.impactTitle.join(" ")} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.16 }} transition={{ duration: 0.65 }}>
         <div className="impact-title">
           <h2>
             {t.impactTitle[0]}
@@ -487,9 +488,9 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             <span>{label}</span>
           </div>
         ))}
-      </section>
+      </motion.section>
 
-      <section className="linkedin-cinema" aria-label={t.moreTitle.join(" ")}>
+      <motion.section className="linkedin-cinema" aria-label={t.moreTitle.join(" ")} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.12 }} transition={{ duration: 0.65 }}>
         <div>
           <h2>
             {t.moreTitle[0]} <em>{t.moreTitle[1]}</em>
@@ -545,7 +546,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             </div>
           </a>
         </div>
-      </section>
+      </motion.section>
 
       <footer className="off-footer" id="suscripcion">
         <div className="footer-logo">
@@ -564,7 +565,11 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
         </div>
         <div className="footer-bottom">
           <span>{t.footerRights}</span>
-          <span>{t.footerLinks}</span>
+          <nav aria-label="Información legal">
+            <Link href="/privacidad">Privacidad</Link>
+            <Link href="/terminos">Términos</Link>
+            <Link href="/contacto">Contacto</Link>
+          </nav>
         </div>
       </footer>
     </main>
