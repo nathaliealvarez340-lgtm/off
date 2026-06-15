@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { notifySubscribers, sendRegistrationCode } from "@/lib/newsletter";
+import { startOffOnboardingSafely } from "@/lib/off-onboarding";
 import { isInternalContentCategory } from "@/lib/articles";
 import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
@@ -133,8 +134,10 @@ export async function verifyRegistrationAction(_: RegistrationState, formData: F
     return { ok: false, message: "El código no es correcto.", step: "verify", email };
   }
 
+  let onboardingInput: Parameters<typeof startOffOnboardingSafely>[0] | null = null;
+
   try {
-    await db.$transaction([
+    const [user, subscriber] = await db.$transaction([
       db.user.create({
         data: {
           name: verification.name,
@@ -150,9 +153,18 @@ export async function verifyRegistrationAction(_: RegistrationState, formData: F
       }),
       db.registrationVerification.delete({ where: { id: verification.id } }),
     ]);
+
+    onboardingInput = {
+      email: user.email,
+      name: user.name,
+      userId: user.id,
+      subscriberId: subscriber.id,
+    };
   } catch {
     return { ok: false, message: "No pudimos terminar el registro. Intenta iniciar sesión.", step: "login" };
   }
+
+  await startOffOnboardingSafely(onboardingInput);
 
   return { ok: true, message: "Cuenta verificada. Ya puedes iniciar sesión.", step: "login" };
 }
@@ -203,9 +215,15 @@ export async function subscribeAction(_: unknown, formData: FormData) {
     return { ok: false, message: "Necesitamos tu consentimiento para enviarte OFF." };
   }
 
+  let onboardingInput: Parameters<typeof startOffOnboardingSafely>[0] | null = null;
+
   try {
     const db = getDb();
-    await db.subscriber.upsert({
+    const existingSubscriber = await db.subscriber.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    const subscriber = await db.subscriber.upsert({
       where: { email },
       update: { name, interest, consent },
       create: { name, email, interest, consent },
@@ -223,8 +241,21 @@ export async function subscribeAction(_: unknown, formData: FormData) {
     });
 
     await createSession(user.id);
+
+    if (!existingSubscriber) {
+      onboardingInput = {
+        email: user.email,
+        name: user.name,
+        userId: user.id,
+        subscriberId: subscriber.id,
+      };
+    }
   } catch {
     return { ok: false, message: "No pudimos guardar tu suscripcion. Intenta de nuevo." };
+  }
+
+  if (onboardingInput) {
+    await startOffOnboardingSafely(onboardingInput);
   }
 
   revalidatePath("/");
