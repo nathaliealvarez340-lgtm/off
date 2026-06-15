@@ -12,7 +12,7 @@ export function AdminLoginForm() {
     <form action={action} className="editor-form">
       <label className="field">
         Correo admin
-        <input name="email" type="email" defaultValue="nathalie@example.com" required />
+        <input name="email" type="email" defaultValue="nathaliegarcia@maiabusiness.com" required />
       </label>
       <label className="field">
         Contraseña

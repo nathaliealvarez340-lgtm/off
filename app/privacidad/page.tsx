@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <h2>Tu información no está en venta</h2>
       <p>OFF no vende tus datos personales. Solo compartimos información con proveedores indispensables para operar la plataforma y bajo medidas razonables de seguridad.</p>
       <h2>Contacto</h2>
-      <p>Para ejercer tus derechos o consultar esta política, escribe a <a href="mailto:nathaliegarcia@business.com">nathaliegarcia@business.com</a>.</p>
+      <p>Para ejercer tus derechos o consultar esta política, escribe a <a href="mailto:off@maiabusiness.com">off@maiabusiness.com</a>.</p>
     </LegalPage>
   );
 }

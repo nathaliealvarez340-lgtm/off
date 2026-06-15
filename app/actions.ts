@@ -1,25 +1,26 @@
 ﻿"use server";
 
 import { mkdir, writeFile } from "fs/promises";
-import { randomInt } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import path from "path";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { clearSession, createSession, getCurrentUser, requireAdmin } from "@/lib/auth";
+import { clearSession, createSession, getCurrentUser, hashToken, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { notifySubscribers, sendRegistrationCode } from "@/lib/newsletter";
+import { notifySubscribers, sendPasswordResetEmail, sendRegistrationCode } from "@/lib/newsletter";
 import { startOffOnboardingSafely } from "@/lib/off-onboarding";
 import { isInternalContentCategory } from "@/lib/articles";
 import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
+import { getSiteUrl } from "@/lib/site-url";
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
 }
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@maiabusiness.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "OFFbyMA1A";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Ma1a2727!!@";
 
 export async function loginAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email");
@@ -190,6 +191,124 @@ export async function resendRegistrationCodeAction(_: RegistrationState, formDat
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : "No pudimos reenviar el código.", step: "verify", email };
   }
+}
+
+export type PasswordRecoveryState = {
+  ok: boolean;
+  message: string;
+};
+
+const PASSWORD_RESET_REQUEST_MESSAGE =
+  "Si los datos coinciden con una cuenta, recibirás un enlace para restablecer tu contraseña.";
+
+export async function requestPasswordResetAction(
+  _: PasswordRecoveryState,
+  formData: FormData,
+): Promise<PasswordRecoveryState> {
+  const name = stringValue(formData, "name");
+  const email = stringValue(formData, "email").toLowerCase();
+
+  if (!name || !email) {
+    return { ok: false, message: "Completa nombre y correo." };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: "Escribe un correo válido." };
+  }
+  if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
+    return { ok: false, message: "La recuperación de contraseña no está disponible temporalmente." };
+  }
+
+  const db = getDb();
+  const user = await db.user.findUnique({ where: { email } });
+  const normalizedName = name.replace(/\s+/g, " ").trim().toLocaleLowerCase("es-MX");
+  const userName = user?.name.replace(/\s+/g, " ").trim().toLocaleLowerCase("es-MX");
+
+  if (!user || normalizedName !== userName) {
+    return { ok: true, message: PASSWORD_RESET_REQUEST_MESSAGE };
+  }
+
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = hashToken(token);
+
+  try {
+    await db.$transaction([
+      db.passwordResetToken.deleteMany({ where: { userId: user.id } }),
+      db.passwordResetToken.create({
+        data: {
+          tokenHash,
+          userId: user.id,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        },
+      }),
+    ]);
+
+    const resetUrl = `${getSiteUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+    await sendPasswordResetEmail(user.email, user.name, resetUrl);
+  } catch (error) {
+    await db.passwordResetToken.deleteMany({ where: { tokenHash } });
+    console.error("[password-reset] could not send recovery email", { userId: user.id, error });
+  }
+
+  return { ok: true, message: PASSWORD_RESET_REQUEST_MESSAGE };
+}
+
+export async function resetPasswordAction(
+  _: PasswordRecoveryState,
+  formData: FormData,
+): Promise<PasswordRecoveryState> {
+  const token = stringValue(formData, "token");
+  const password = stringValue(formData, "password");
+  const repeatPassword = stringValue(formData, "repeatPassword");
+
+  if (!token) return { ok: false, message: "El enlace de recuperación no es válido." };
+  if (password.length < 6 || password.length > 8) {
+    return { ok: false, message: "La contraseña debe tener entre 6 y 8 caracteres." };
+  }
+  if (password !== repeatPassword) {
+    return { ok: false, message: "Las contraseñas no coinciden." };
+  }
+
+  const db = getDb();
+  const tokenHash = hashToken(token);
+  const resetToken = await db.passwordResetToken.findUnique({ where: { tokenHash } });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date() || resetToken.attempts >= 5) {
+    if (resetToken && !resetToken.usedAt && resetToken.attempts < 5) {
+      await db.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { attempts: { increment: 1 } },
+      });
+    }
+    return { ok: false, message: "El enlace expiró o ya fue utilizado. Solicita uno nuevo." };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  try {
+    await db.$transaction(async (transaction) => {
+      const claimedToken = await transaction.passwordResetToken.updateMany({
+        where: {
+          id: resetToken.id,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+          attempts: { lt: 5 },
+        },
+        data: { usedAt: new Date() },
+      });
+
+      if (claimedToken.count !== 1) throw new Error("Password reset token is no longer valid");
+
+      await transaction.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      });
+      await transaction.session.deleteMany({ where: { userId: resetToken.userId } });
+    });
+  } catch {
+    return { ok: false, message: "No pudimos actualizar tu contraseña. Solicita un enlace nuevo." };
+  }
+
+  return { ok: true, message: "Tu contraseña fue actualizada correctamente." };
 }
 
 export async function logoutAction() {

@@ -3,25 +3,29 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   loginAction,
+  requestPasswordResetAction,
   registerAction,
   resendRegistrationCodeAction,
   verifyRegistrationAction,
   type RegistrationState,
+  type PasswordRecoveryState,
 } from "@/app/actions";
 
 const initialState = { ok: false, message: "" };
 const initialRegistrationState: RegistrationState = { ok: false, message: "", step: "register" };
+const initialPasswordRecoveryState: PasswordRecoveryState = { ok: false, message: "" };
 
-export function AuthForms({ next }: { next: string }) {
-  const [mode, setMode] = useState<"login" | "register" | "verify">("login");
+export function AuthForms({ next, initialMessage = "" }: { next: string; initialMessage?: string }) {
+  const [mode, setMode] = useState<"login" | "register" | "verify" | "forgot">("login");
   const [verificationEmail, setVerificationEmail] = useState("");
-  const [transitionMessage, setTransitionMessage] = useState("");
+  const [transitionMessage, setTransitionMessage] = useState(initialMessage);
   const [digits, setDigits] = useState(["", "", "", ""]);
   const digitRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [loginState, login, loginPending] = useActionState(loginAction, initialState);
   const [registerState, register, registerPending] = useActionState(registerAction, initialRegistrationState);
   const [verifyState, verify, verifyPending] = useActionState(verifyRegistrationAction, initialRegistrationState);
   const [resendState, resend, resendPending] = useActionState(resendRegistrationCodeAction, initialRegistrationState);
+  const [recoveryState, requestRecovery, recoveryPending] = useActionState(requestPasswordResetAction, initialPasswordRecoveryState);
 
   useEffect(() => {
     if (registerState.message) setTransitionMessage(registerState.message);
@@ -49,7 +53,11 @@ export function AuthForms({ next }: { next: string }) {
     if (loginState.message) setTransitionMessage(loginState.message);
   }, [loginState]);
 
-  const state = mode === "login" ? loginState : registerState;
+  useEffect(() => {
+    if (recoveryState.message) setTransitionMessage(recoveryState.message);
+  }, [recoveryState]);
+
+  const state = mode === "login" ? loginState : mode === "forgot" ? recoveryState : registerState;
 
   function updateDigit(index: number, value: string) {
     const nextDigit = value.replace(/\D/g, "").slice(-1);
@@ -91,6 +99,13 @@ export function AuthForms({ next }: { next: string }) {
           </label>
           <button className="button violet-button" type="submit" disabled={loginPending}>
             {loginPending ? "Entrando..." : "Entrar"}
+          </button>
+          <button
+            className="auth-forgot-link"
+            onClick={() => { setMode("forgot"); setTransitionMessage(""); }}
+            type="button"
+          >
+            ¿Olvidaste tu contraseña?
           </button>
         </form>
       ) : null}
@@ -155,6 +170,36 @@ export function AuthForms({ next }: { next: string }) {
               {resendPending ? "Reenviando..." : "Reenviar código"}
             </button>
           </form>
+        </div>
+      ) : null}
+
+      {mode === "forgot" ? (
+        <div className="verification-panel">
+          <div>
+            <p className="eyebrow">Recuperar acceso</p>
+            <h2>Volver a entrar.</h2>
+            <p>Si los datos coinciden con tu cuenta, te enviaremos un enlace válido durante 30 minutos.</p>
+          </div>
+          <form action={requestRecovery} className="editor-form">
+            <label className="field">
+              Nombre
+              <input name="name" autoComplete="name" required />
+            </label>
+            <label className="field">
+              Correo
+              <input name="email" type="email" autoComplete="email" required />
+            </label>
+            <button className="button violet-button" disabled={recoveryPending} type="submit">
+              {recoveryPending ? "Enviando..." : "Enviar enlace"}
+            </button>
+          </form>
+          <button
+            className="verification-resend"
+            onClick={() => { setMode("login"); setTransitionMessage(""); }}
+            type="button"
+          >
+            Volver a iniciar sesión
+          </button>
         </div>
       ) : null}
 

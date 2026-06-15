@@ -96,3 +96,40 @@ export async function sendRegistrationCode(email: string, name: string, code: st
     throw new Error("No pudimos enviar el código de verificación. Intenta de nuevo.");
   }
 }
+
+export async function sendPasswordResetEmail(email: string, name: string, resetUrl: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.FROM_EMAIL;
+
+  if (!apiKey || !from) {
+    throw new Error("La recuperación de contraseña no está configurada.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: email,
+      subject: "Restablece tu contraseña de OFF",
+      html: `
+        <div style="background:#050407;color:#f8f7fb;font-family:Arial,sans-serif;padding:32px">
+          <div style="max-width:560px;margin:0 auto;border:1px solid rgba(123,61,255,.3);border-radius:24px;padding:36px;background:#0b0910">
+            <p style="letter-spacing:.2em;text-transform:uppercase;color:#bda8ff;font-size:11px">OFF / Recuperación</p>
+            <h1 style="font-family:Georgia,serif;font-size:34px;font-weight:400;line-height:1.05;margin:18px 0">Hola, ${escapeEmailHtml(name)}.</h1>
+            <p style="font-size:15px;line-height:1.7;color:#d7d1df">Recibimos una solicitud para cambiar tu contraseña. Este enlace expira en 30 minutos y solo puede utilizarse una vez.</p>
+            <a href="${escapeEmailHtml(resetUrl)}" style="display:inline-block;margin-top:22px;background:#7b3dff;color:#fff;padding:14px 20px;border-radius:999px;text-decoration:none;font-weight:700">Crear nueva contraseña</a>
+            <p style="margin-top:28px;font-size:12px;line-height:1.6;color:#8f8998">Si no solicitaste este cambio, puedes ignorar este correo.</p>
+          </div>
+        </div>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("No pudimos enviar el correo de recuperación.");
+  }
+}

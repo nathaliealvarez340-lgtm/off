@@ -11,6 +11,8 @@ export default function TermsPage() {
       <p>Las conversaciones deben mantenerse respetuosas. OFF puede moderar o retirar comentarios que dañen a otras personas o afecten la seguridad de la comunidad.</p>
       <h2>Responsabilidad y cambios</h2>
       <p>El contenido es editorial e informativo y no sustituye asesoría profesional. OFF puede actualizar, modificar o discontinuar partes del servicio cuando sea necesario.</p>
+      <h2>Contacto</h2>
+      <p>Para consultas sobre estos términos, escribe a <a href="mailto:off@maiabusiness.com">off@maiabusiness.com</a>.</p>
     </LegalPage>
   );
 }

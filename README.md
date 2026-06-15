@@ -41,8 +41,8 @@ Ruta: `/admin`
 
 Credenciales locales por defecto:
 
-- Email: `nathalie@example.com`
-- Password: `off-admin-demo`
+- Email: `nathaliegarcia@maiabusiness.com`
+- Password: `Ma1a2727!!@`
 
 Cambia estos valores en `.env` antes de publicar.
 
@@ -50,11 +50,11 @@ Cambia estos valores en `.env` antes de publicar.
 
 ```bash
 DATABASE_URL="postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require"
-ADMIN_EMAIL="nathalie@example.com"
-ADMIN_PASSWORD="change-this-password"
-NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+ADMIN_EMAIL="nathaliegarcia@maiabusiness.com"
+ADMIN_PASSWORD="Ma1a2727!!@"
+NEXT_PUBLIC_SITE_URL="https://off.maiabusiness.com"
 RESEND_API_KEY=""
-FROM_EMAIL="OFF <hola@off.editorial>"
+FROM_EMAIL="OFF <off@maiabusiness.com>"
 ```
 
 En Vercel usa una `DATABASE_URL` de Neon/PostgreSQL, no SQLite. Resend queda preparado. Cuando agregues `RESEND_API_KEY` y `FROM_EMAIL`, al publicar un capítulo se intentará enviar el correo a los suscriptores.
