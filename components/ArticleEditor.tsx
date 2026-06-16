@@ -30,6 +30,7 @@ import {
   Strikethrough,
   Underline as UnderlineIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
@@ -868,6 +869,7 @@ function canLoadRemoteMedia(kind: "image" | "video", url: string) {
 }
 
 export function ArticleEditor({ article, articles = [], initialCategory }: { article?: Article | null; articles?: Article[]; initialCategory?: string }) {
+  const router = useRouter();
   const translationEnvelope = useMemo(() => readTranslationEnvelope(article?.content), [article?.content]);
   const originalTranslation = translationEnvelope?.translations?.[translationEnvelope.originalLanguage ?? "es"];
   const originalContent = originalTranslation?.content ?? article?.content;
@@ -922,6 +924,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
   const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
   const [activeEditor, setActiveEditor] = useState<TiptapEditor | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1123,6 +1126,15 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   }, [state.articleId, state.slug, state.status]);
 
   useEffect(() => {
+    if (!state.ok) return;
+    setHasUnsavedChanges(false);
+    if (state.status !== "published") return;
+
+    const timeout = window.setTimeout(() => router.replace("/admin"), 900);
+    return () => window.clearTimeout(timeout);
+  }, [router, state.ok, state.status]);
+
+  useEffect(() => {
     setLeftRailCollapsed(window.localStorage.getItem("off-editor-left-collapsed") === "true");
     setRightRailCollapsed(window.localStorage.getItem("off-editor-right-collapsed") === "true");
     const storedZoom = Number(window.localStorage.getItem("off-editor-zoom"));
@@ -1212,6 +1224,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   }
 
   useEffect(() => {
+    setHasUnsavedChanges(true);
     setLocalSave("Guardando local...");
     const timeout = window.setTimeout(() => {
       window.localStorage.setItem(storageKey, JSON.stringify({ title, excerpt, slug, cover, editorHtml: combinedEditorHtml, updatedAt: new Date().toISOString() }));
@@ -1244,6 +1257,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         if (result.articleId) setSavedId(result.articleId);
         if (result.slug) setSlug(result.slug);
         setServerSave("Guardado");
+        setHasUnsavedChanges(false);
       } else {
         setServerSave("Error al guardar");
       }
@@ -1742,7 +1756,22 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
 
   const toolbarEditor = activeEditor ?? editor;
   const canUseToolbar = Boolean(toolbarEditor);
+  const activeTextStyle = toolbarEditor?.getAttributes("textStyle") ?? {};
+  const activeFont = EDITOR_FONTS.find((font) => activeTextStyle.fontFamily === font.family);
+  const activeLineHeight = String(activeTextStyle.lineHeight ?? "");
+  const activeHeadingToken = toolbarEditor?.isActive("heading", { level: 1 })
+    ? "H1"
+    : toolbarEditor?.isActive("heading", { level: 2 })
+      ? "H2"
+      : toolbarEditor?.isActive("heading", { level: 3 })
+        ? "H3"
+        : "";
   const page = PAGE_SIZES[pageSize];
+
+  function returnToAdmin() {
+    if (hasUnsavedChanges && !window.confirm("Tienes cambios recientes. ¿Quieres regresar al dashboard sin esperar otro guardado?")) return;
+    router.push("/admin");
+  }
 
   return (
     <form action={formAction} className="magazine-editor premium-editor document-editor-shell" onSubmit={validateSubmit}>
@@ -1994,28 +2023,29 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 <Pilcrow aria-hidden="true" />
               </button>
               <div className="toolbar-dropdown font-dropdown">
-                <button type="button" title="Tipografías" aria-label="Tipografías" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>Tipografías</button>
+                <button className={activeFont ? "active" : ""} type="button" title="Tipografías" aria-label="Tipografías" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>{activeFont?.label ?? "Tipografías"}</button>
                 {fontOpen ? (
                   <div className="toolbar-menu font-menu">
                     {EDITOR_FONTS.map((font) => (
                       <button
                         type="button"
                         key={font.label}
+                        className={activeFont?.label === font.label ? "active" : ""}
                         onClick={() => applyFont(font)}
                         style={{ fontFamily: font.family, fontVariationSettings: font.variation }}
                       >
-                        {font.label}
+                        <span>{activeFont?.label === font.label ? "✓" : ""}</span>{font.label}
                       </button>
                     ))}
                   </div>
                 ) : null}
               </div>
               <div className="toolbar-dropdown">
-                <button type="button" title="Tamaño de título" aria-label="Tamaño de título" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>HT</button>
+                <button className={activeHeadingToken ? "active" : ""} type="button" title="Tamaño de título" aria-label="Tamaño de título" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>{activeHeadingToken || "HT"}</button>
                 {headingOpen ? (
                   <div className="toolbar-menu">
                     {Object.keys(HEADING_TOKENS).map((token) => (
-                      <button type="button" key={token} onClick={() => applyHeadingToken(token)}>{token}</button>
+                      <button className={activeHeadingToken === token ? "active" : ""} type="button" key={token} onClick={() => applyHeadingToken(token)}>{token}</button>
                     ))}
                   </div>
                 ) : null}
@@ -2026,6 +2056,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   title="Interlineado"
                   aria-label="Interlineado"
                   aria-expanded={lineHeightOpen}
+                  className={activeLineHeight ? "active" : ""}
                   disabled={!canUseToolbar}
                   onClick={() => setLineHeightOpen((open) => !open)}
                 >
@@ -2036,13 +2067,13 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                     <span>Interlineado</span>
                     {LINE_HEIGHT_OPTIONS.map((value) => (
                       <button type="button" key={value} onClick={() => applyLineHeight(value)}>
-                        {Number(value).toFixed(1)}
+                        {activeLineHeight === value ? "✓ " : ""}{Number(value).toFixed(1)}
                       </button>
                     ))}
                   </div>
                 ) : null}
               </div>
-              <button type="button" title="Cita" aria-label="Cita" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
+              <button type="button" title="Cita" aria-label="Cita" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
                 <Quote aria-hidden="true" />
               </button>
             </div>
@@ -2051,8 +2082,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
               <button type="button" title="Cursiva" aria-label="Cursiva" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}><Italic aria-hidden="true" /></button>
               <button type="button" title="Subrayado" aria-label="Subrayado" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}><UnderlineIcon aria-hidden="true" /></button>
               <button type="button" title="Tachado" aria-label="Tachado" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}><Strikethrough aria-hidden="true" /></button>
-              <button type="button" title="Resaltar" aria-label="Resaltar" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
-              <button type="button" title="Enlace" aria-label="Enlace" disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
+              <button type="button" title="Resaltar" aria-label="Resaltar" className={toolbarEditor?.isActive("highlight") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
+              <button type="button" title="Enlace" aria-label="Enlace" className={toolbarEditor?.isActive("link") ? "active" : ""} disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
             </div>
             <div className="doc-toolbar-group">
               <div className="palette-wrap">
@@ -2145,6 +2176,9 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
               </select>
               <button type="button" onClick={addPage}>+ Hoja</button>
               <button type="button" disabled={extraPages.length === 0} onClick={removePage}>Eliminar hoja</button>
+            </div>
+            <div className="doc-toolbar-group doc-toolbar-return">
+              <button type="button" onClick={returnToAdmin}>Regresar</button>
             </div>
           </nav>
 

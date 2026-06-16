@@ -2,6 +2,7 @@
 
 import { Globe2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { normalizeUiLanguage, uiCopy, type UiLanguage } from "@/lib/ui-i18n";
 
 const languages = [
   { code: "es", label: "ES" },
@@ -11,18 +12,28 @@ const languages = [
 ] as const;
 
 export function LanguageSwitcher({ compact = false, label }: { compact?: boolean; label?: string }) {
-  const [language, setLanguage] = useState("es");
+  const [language, setLanguage] = useState<UiLanguage>("es");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("off-language") || "es";
+    const saved = normalizeUiLanguage(window.localStorage.getItem("off-language"));
     setLanguage(saved);
     document.documentElement.lang = saved;
+    translateStaticLabels(saved);
   }, []);
 
-  function choose(nextLanguage: string) {
+  function translateStaticLabels(nextLanguage: UiLanguage) {
+    document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((element) => {
+      const key = element.dataset.i18n as keyof typeof uiCopy.es | undefined;
+      if (key && uiCopy[nextLanguage][key]) element.textContent = uiCopy[nextLanguage][key];
+    });
+  }
+
+  function choose(value: string) {
+    const nextLanguage = normalizeUiLanguage(value);
     window.localStorage.setItem("off-language", nextLanguage);
     document.documentElement.lang = nextLanguage;
+    translateStaticLabels(nextLanguage);
     window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));
     setLanguage(nextLanguage);
     setOpen(false);

@@ -16,16 +16,22 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="auth-page">
-      <Link href="/" className="brand logo-brand">
-        <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
-      </Link>
-      <div className="auth-language"><LanguageSwitcher /></div>
+      <nav className="auth-navbar" aria-label="Acceso OFF">
+        <Link href="/" className="brand logo-brand">
+          <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
+        </Link>
+        <div>
+          <Link href="/" data-i18n="back">Regresar</Link>
+          <Link href="/#conoce-mas" data-i18n="contact">Contacto</Link>
+          <LanguageSwitcher compact />
+        </div>
+      </nav>
       <AuthOrbit />
       <div className="auth-editorial-layout">
         <section className="auth-form-column">
-          <p className="eyebrow">OFF / Acceso</p>
-          <h1>Entrar a OFF</h1>
-          <p>Una cuenta para leer, guardar dirección y participar en conversaciones que no se sienten vacías.</p>
+          <p className="eyebrow" data-i18n="loginEyebrow">OFF / Acceso</p>
+          <h1 data-i18n="loginTitle">Entrar a OFF</h1>
+          <p data-i18n="loginIntro">Una cuenta para leer, guardar dirección y participar en conversaciones que no se sienten vacías.</p>
           <AuthForms
             next={safeNext}
             initialMessage={passwordReset === "1" ? "Tu contraseña fue actualizada correctamente." : ""}

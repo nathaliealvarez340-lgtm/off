@@ -490,7 +490,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
         ))}
       </motion.section>
 
-      <motion.section className="linkedin-cinema" aria-label={t.moreTitle.join(" ")} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.12 }} transition={{ duration: 0.65 }}>
+      <motion.section className="linkedin-cinema" id="conoce-mas" aria-label={t.moreTitle.join(" ")} initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.12 }} transition={{ duration: 0.65 }}>
         <div>
           <h2>
             {t.moreTitle[0]} <em>{t.moreTitle[1]}</em>

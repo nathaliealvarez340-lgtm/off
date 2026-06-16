@@ -11,6 +11,7 @@ import {
   type PasswordRecoveryState,
 } from "@/app/actions";
 import { PasswordField } from "@/components/PasswordField";
+import { useOffLanguage } from "@/components/useOffLanguage";
 
 const initialState = { ok: false, message: "" };
 const initialRegistrationState: RegistrationState = { ok: false, message: "", step: "register" };
@@ -27,6 +28,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
   const [verifyState, verify, verifyPending] = useActionState(verifyRegistrationAction, initialRegistrationState);
   const [resendState, resend, resendPending] = useActionState(resendRegistrationCodeAction, initialRegistrationState);
   const [recoveryState, requestRecovery, recoveryPending] = useActionState(requestPasswordResetAction, initialPasswordRecoveryState);
+  const { t } = useOffLanguage();
 
   useEffect(() => {
     if (registerState.message) setTransitionMessage(registerState.message);
@@ -79,10 +81,10 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       {mode !== "verify" ? (
         <div className="auth-tabs">
           <button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setTransitionMessage(""); }} type="button">
-            Iniciar sesión
+            {t("loginTab")}
           </button>
           <button className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setTransitionMessage(""); }} type="button">
-            Registrarme
+            {t("registerTab")}
           </button>
         </div>
       ) : null}
@@ -91,10 +93,10 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
         <form action={login} className="editor-form">
           <input name="next" type="hidden" value={next} />
           <label className="field">
-            Correo
+            {t("email")}
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <PasswordField label="Contraseña" name="password" autoComplete="current-password" required />
+          <PasswordField label={t("password")} name="password" autoComplete="current-password" required />
           <button className="button violet-button" type="submit" disabled={loginPending}>
             {loginPending ? "Entrando..." : "Entrar"}
           </button>
@@ -103,7 +105,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             onClick={() => { setMode("forgot"); setTransitionMessage(""); }}
             type="button"
           >
-            ¿Olvidaste tu contraseña?
+            {t("forgotPassword")}
           </button>
         </form>
       ) : null}
@@ -115,10 +117,10 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             <input name="name" autoComplete="name" minLength={2} required />
           </label>
           <label className="field">
-            Correo
+            {t("email")}
             <input name="email" type="email" autoComplete="email" required />
           </label>
-          <PasswordField label="Contraseña" name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
+          <PasswordField label={t("password")} name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
           <PasswordField label="Repetir contraseña" name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
           <button className="button violet-button" type="submit" disabled={registerPending}>
             {registerPending ? "Enviando código..." : "Continuar"}

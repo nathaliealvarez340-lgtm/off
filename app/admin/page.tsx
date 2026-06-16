@@ -4,9 +4,9 @@ import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
 import { AdminGreeting } from "@/components/AdminGreeting";
+import { AdminEditorialTable } from "@/components/AdminEditorialTable";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { AdminSidebarToggle } from "@/components/AdminSidebarToggle";
-import { DeleteArticleButton } from "@/components/DeleteArticleButton";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatDate, getAllArticles, getPlainTextPreview, isInternalContentCategory } from "@/lib/articles";
 import { isAdminSession } from "@/lib/auth";
@@ -153,15 +153,15 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </Link>
 
         <nav className="admin-side-nav" aria-label="Navegacion admin">
-          <a className="active" href="#dashboard">Dashboard</a>
-          <a href="#articulos">Articulos</a>
-          <a href="#biblioteca">Biblioteca visual</a>
-          <a href="#suscriptores">Suscriptores</a>
-          <a href="#insights">Insights</a>
-          <a href="#comentarios">Comentarios</a>
-          <a href="#temas">Próximos temas</a>
-          <a href="#actividad">Actividades OFF</a>
-          <a href="#configuracion">Configuracion</a>
+          <a className="active" href="#dashboard" data-i18n="adminDashboard">Dashboard</a>
+          <a href="#articulos" data-i18n="adminArticles">Artículos</a>
+          <a href="#biblioteca" data-i18n="visualLibrary">Biblioteca visual</a>
+          <a href="#suscriptores" data-i18n="subscribers">Suscriptores</a>
+          <a href="#insights" data-i18n="insights">Insights</a>
+          <a href="#comentarios" data-i18n="comments">Comentarios</a>
+          <a href="#temas" data-i18n="nextTopics">Próximos temas</a>
+          <a href="#actividad" data-i18n="offActivities">Actividades OFF</a>
+          <a href="#configuracion" data-i18n="settings">Configuración</a>
         </nav>
 
         <div className="admin-studio-card">
@@ -276,8 +276,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <section className="dashboard-card articles-dashboard-card" id="articulos">
           <div className="card-heading">
             <div>
-              <p className="eyebrow">Archivo editorial</p>
-              <h2>Ultimos articulos</h2>
+              <p className="eyebrow" data-i18n="editorialArchive">Archivo editorial</p>
+              <h2 data-i18n="latestArticles">Últimos artículos</h2>
             </div>
             <div className="article-status-pills">
               <span>{publishedArticles.length} publicados</span>
@@ -285,42 +285,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
 
-          <div className="admin-article-list">
-            {editorialArticles.length > 0 ? (
-              editorialArticles.slice(0, 8).map((article) => (
-                <article className="admin-article-item" key={article.id}>
-                  <img src={article.coverImage} alt="" />
-                  <div>
-                    <div className="article-mini-meta">
-                      <span>{article.category}</span>
-                      <span>{formatDate(article.publishedAt)}</span>
-                      <span>{article.readTime}</span>
-                      {article.featured ? <span className="featured-pill">Destacado</span> : null}
-                    </div>
-                    <h3>{getPlainTextPreview(article.title, 150)}</h3>
-                    <p>{getPlainTextPreview(article.excerpt)}</p>
-                    <div className="article-analytics">
-                      <span>Lecturas: sin tracking</span>
-                      <span>Guardados: sin tracking</span>
-                    </div>
-                  </div>
-                  <div className="article-actions">
-                    {article.status === "published" ? (
-                      <Link className="ghost-button" href={`/off/${article.slug}`} target="_blank">
-                        Ver
-                      </Link>
-                    ) : null}
-                    <Link className="button" href={`/admin/${article.id}`}>
-                      Editar
-                    </Link>
-                    <DeleteArticleButton articleId={article.id} compact />
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="empty-dashboard-state">Todavia no hay articulos. Crea el primer capitulo desde Nuevo articulo.</div>
-            )}
-          </div>
+          <AdminEditorialTable articles={editorialArticles} />
         </section>
 
         <section className="dashboard-card articles-dashboard-card" id="contenido-lounge">

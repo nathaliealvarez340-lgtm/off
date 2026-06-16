@@ -24,10 +24,16 @@ export default async function ResetPasswordPage({
 
   return (
     <main className="auth-page">
-      <Link href="/" className="brand logo-brand">
-        <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
-      </Link>
-      <div className="auth-language"><LanguageSwitcher /></div>
+      <nav className="auth-navbar" aria-label="Acceso OFF">
+        <Link href="/" className="brand logo-brand">
+          <img src="/logo/logo-off.png" alt="OFF Logo" width={104} height={42} />
+        </Link>
+        <div>
+          <Link href="/" data-i18n="back">Regresar</Link>
+          <Link href="/#conoce-mas" data-i18n="contact">Contacto</Link>
+          <LanguageSwitcher compact />
+        </div>
+      </nav>
       <AuthOrbit />
       <div className="auth-editorial-layout">
         <section className="auth-form-column">

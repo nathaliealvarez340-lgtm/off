@@ -613,7 +613,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "No pudimos guardar el artÃ­culo. Intenta de nuevo.",
+      message: error instanceof Error ? error.message : "No se pudo publicar exitosamente. Intenta de nuevo.",
     };
   }
 }

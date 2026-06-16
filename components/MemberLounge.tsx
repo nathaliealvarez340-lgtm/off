@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { GlobalFooter } from "@/components/GlobalFooter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LibraryCardDeck } from "@/components/LibraryCardDeck";
 import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 
 type LoungeArticle = { id: string; title: string; slug: string; excerpt: string; coverImage: string; readTime: string };
 type DraftEdition = { id: string; title: string; excerpt: string; date: string };
@@ -73,7 +75,7 @@ export function MemberLounge({
   const manualEarlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
   useEffect(() => {
-    const sections = ["collections", "early-access", "member-profile", "conoce-mas"]
+    const sections = ["collections", "mi-yo", "early-access", "member-profile", "conoce-mas"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
     const observer = new IntersectionObserver(
@@ -113,6 +115,7 @@ export function MemberLounge({
           <Link href="/lounge" aria-label="OFF Member Lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
           <div>
             <a className={activeSection === "collections" ? "active" : ""} href="#collections">Colecciones</a>
+            <a className={activeSection === "mi-yo" ? "active" : ""} href="#mi-yo">Mi yo</a>
             <a className={activeSection === "early-access" ? "active" : ""} href="#early-access">Early Access</a>
             <a className={activeSection === "member-profile" ? "active" : ""} href="#member-profile">Perfil</a>
             <a className={activeSection === "conoce-mas" ? "active" : ""} href="#conoce-mas">Conoce más</a>
@@ -151,24 +154,34 @@ export function MemberLounge({
             ) : <p className="lounge-empty">El portafolio se abrirá con la próxima edición.</p>}
           </Reveal>
 
-          <Reveal className="lounge-section lounge-collection-arc" id="collections">
-            <div className="lounge-heading"><span>Biblioteca</span><h2>Colecciones editoriales</h2></div>
-            <div className="collection-arc">
-              {collectionNames.map((collectionName, index) => {
-                const item = libraries.find((library) => cleanText(library.title).toLowerCase() === collectionName.toLowerCase());
-                const firstLink = links(item)[0];
-                const card = (
-                  <>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <h3>{collectionName}</h3>
-                    <p>{item?.description ? cleanText(item.description) : "Próximamente en la Biblioteca OFF."}</p>
-                    <strong>{firstLink ? "Abrir volumen" : "En construcción"}</strong>
-                  </>
-                );
-                return firstLink
-                  ? <a className="collection-arc-card" href={firstLink.url} key={collectionName}>{card}</a>
-                  : <article className="collection-arc-card" key={collectionName}>{card}</article>;
-              })}
+          <Reveal className="lounge-section lounge-library-deck-section" id="collections">
+            <div className="library-copy-block">
+              <span data-i18n="library">Biblioteca</span>
+              <h2><span data-i18n="collections">Colecciones</span><em data-i18n="editorial">editoriales</em></h2>
+              <p>Volúmenes para volver a ideas que merecen más de una lectura. Una biblioteca emocional, curada para cuando necesitas dirección.</p>
+            </div>
+            <LibraryCardDeck
+              items={(libraries.length ? libraries : collectionNames.map((title, index) => ({
+                id: title,
+                title,
+                number: String(index + 1).padStart(2, "0"),
+                description: "Próximamente en la Biblioteca OFF.",
+                links: [],
+              }))).map((item, index) => ({
+                title: cleanText(item.title),
+                number: item.number ?? String(index + 1).padStart(2, "0"),
+                description: item.description ? cleanText(item.description) : "Próximamente en la Biblioteca OFF.",
+                url: links(item as LoungeContent)[0]?.url,
+              }))}
+            />
+          </Reveal>
+
+          <Reveal className="lounge-section lounge-self-section" id="mi-yo">
+            <PersonalityTestPreview />
+            <div className="self-copy-block">
+              <span data-i18n="mySelf">Mi yo</span>
+              <h2 data-i18n="knowMyself">Me conozco, me reconozco</h2>
+              <p>Una base para convertir la introspección en lectura personal. Las preguntas definitivas se conectarán cuando el test esté listo.</p>
             </div>
           </Reveal>
 
