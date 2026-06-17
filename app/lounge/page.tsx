@@ -18,7 +18,7 @@ export default async function LoungePage() {
 
   const db = getDb();
   const [articles, drafts, memberNumber, loungeContent, activity, completedCount] = await Promise.all([
-    db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ featured: "desc" }, { publishedAt: "desc" }] }),
+    db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     getOrCreateMemberNumber(user.id),
     db.loungeContent.findMany({ where: { status: "published" }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
@@ -40,6 +40,8 @@ export default async function LoungePage() {
         slug: article.slug,
         excerpt: getPlainTextPreview(article.excerpt),
         coverImage: article.coverImage,
+        category: article.category,
+        publishedAt: article.publishedAt?.toISOString() ?? article.updatedAt.toISOString(),
         readTime: article.readTime,
       }))}
       loungeContent={loungeContent.map((item) => ({

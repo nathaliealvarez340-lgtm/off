@@ -30,6 +30,7 @@ const visualMap: Record<string, string> = {
   "no-estas-cansado-estas-desconectado": "/images/cap2-off.webp",
   "la-razon-por-la-que-sigues-avanzando": "/images/cap3-off.webp",
 };
+const fallbackArticleImages = ["/images/cap1-off.webp", "/images/cap2-off.webp", "/images/cap3-off.webp"];
 
 const localeMap: Record<Lang, string> = {
   es: "es-MX",
@@ -224,8 +225,19 @@ const copy = {
   },
 };
 
-function editorialImage(article: PublicArticle) {
-  return visualMap[article.slug] ?? article.coverImage;
+function normalizeImageUrl(value?: string | null) {
+  const clean = value?.trim();
+  if (!clean) return null;
+  if (clean.startsWith("public/")) return `/${clean.replace(/^public\//, "")}`;
+  if (clean.startsWith("./public/")) return `/${clean.replace(/^\.\/public\//, "")}`;
+  if (clean.startsWith("/")) return clean;
+  if (/^https?:\/\//i.test(clean)) return clean;
+  if (clean.startsWith("images/") || clean.startsWith("logo/") || clean.startsWith("uploads/")) return `/${clean}`;
+  return null;
+}
+
+function editorialImage(article: PublicArticle, index = 0) {
+  return normalizeImageUrl(article.coverImage) ?? visualMap[article.slug] ?? fallbackArticleImages[index % fallbackArticleImages.length];
 }
 
 function plainText(value: string) {
@@ -439,10 +451,10 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           </div>
         ) : (
           <div className="article-grid">
-            {articles.map((article) => (
+            {articles.map((article, index) => (
               <article className="article-card cinematic-card" key={article.id}>
                 <Link className="cover-frame" href={`/off/${article.slug}`}>
-                  <Image src={editorialImage(article)} alt={plainText(article.title)} fill sizes="(max-width: 820px) 100vw, 31vw" />
+                  <Image src={editorialImage(article, index)} alt={plainText(article.title)} fill sizes="(max-width: 820px) 100vw, 31vw" />
                 </Link>
                 <div className="article-copy">
                   <span className="pill">{article.category}</span>
