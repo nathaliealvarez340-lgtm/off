@@ -27,6 +27,18 @@ export function LanguageSwitcher({ compact = false, label }: { compact?: boolean
       const key = element.dataset.i18n as keyof typeof uiCopy.es | undefined;
       if (key && uiCopy[nextLanguage][key]) element.textContent = uiCopy[nextLanguage][key];
     });
+    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[data-i18n-placeholder]").forEach((element) => {
+      const key = element.dataset.i18nPlaceholder as keyof typeof uiCopy.es | undefined;
+      if (key && uiCopy[nextLanguage][key]) element.placeholder = uiCopy[nextLanguage][key];
+    });
+    document.querySelectorAll<HTMLElement>("[data-i18n-title]").forEach((element) => {
+      const key = element.dataset.i18nTitle as keyof typeof uiCopy.es | undefined;
+      if (key && uiCopy[nextLanguage][key]) element.title = uiCopy[nextLanguage][key];
+    });
+    document.querySelectorAll<HTMLElement>("[data-i18n-aria-label]").forEach((element) => {
+      const key = element.dataset.i18nAriaLabel as keyof typeof uiCopy.es | undefined;
+      if (key && uiCopy[nextLanguage][key]) element.setAttribute("aria-label", uiCopy[nextLanguage][key]);
+    });
   }
 
   function choose(value: string) {

@@ -9,7 +9,7 @@ type Props = {
 
 export function AdminEditorialTable({ articles }: Props) {
   if (!articles.length) {
-    return <div className="empty-dashboard-state">Todavía no hay artículos. Crea el primer capítulo desde Nuevo artículo.</div>;
+    return <div className="empty-dashboard-state" data-i18n="noArticlesYet">Todavia no hay articulos. Crea el primer capitulo desde Nuevo articulo.</div>;
   }
 
   return (
@@ -17,17 +17,17 @@ export function AdminEditorialTable({ articles }: Props) {
       <table className="editorial-table">
         <thead>
           <tr>
-            <th data-i18n="chapterArticle">Capítulo / Artículo</th>
-            <th data-i18n="publishDate">Fecha de publicación</th>
+            <th data-i18n="chapterArticle">Capitulo / Articulo</th>
+            <th data-i18n="publishDate">Fecha de publicacion</th>
             <th data-i18n="readTime">Tiempo de lectura</th>
             <th data-i18n="status">Estado</th>
-            <th aria-label="Acciones" />
+            <th aria-label="Acciones" data-i18n-aria-label="actions" />
           </tr>
         </thead>
         <tbody>
           {articles.slice(0, 10).map((article) => (
             <tr key={article.id}>
-              <td data-label="Capítulo / Artículo">
+              <td data-label="Capitulo / Articulo">
                 <div className="editorial-table-title">
                   <img src={article.coverImage || "/images/cap1-off.webp"} alt="" />
                   <div>
@@ -36,14 +36,14 @@ export function AdminEditorialTable({ articles }: Props) {
                   </div>
                 </div>
               </td>
-              <td data-label="Fecha de publicación">{formatDate(article.publishedAt)}</td>
+              <td data-label="Fecha de publicacion">{formatDate(article.publishedAt)}</td>
               <td data-label="Tiempo de lectura">{article.readTime}</td>
               <td data-label="Estado">
                 <div className="editorial-status-stack">
-                  <span className={article.status === "published" ? "status-pill published" : "status-pill draft"}>
+                  <span className={article.status === "published" ? "status-pill published" : "status-pill draft"} data-i18n={article.status === "published" ? "published" : "draft"}>
                     {article.status === "published" ? "Publicado" : "Draft"}
                   </span>
-                  {article.featured ? <span className="status-pill featured">Destacado</span> : null}
+                  {article.featured ? <span className="status-pill featured" data-i18n="featured">Destacado</span> : null}
                 </div>
               </td>
               <td data-label="Acciones">

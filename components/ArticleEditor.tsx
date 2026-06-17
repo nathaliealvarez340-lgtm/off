@@ -932,6 +932,10 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const captionInputRef = useRef<HTMLInputElement | null>(null);
   const captionPanelInputRef = useRef<HTMLInputElement | null>(null);
   const insertMenuRef = useRef<HTMLDivElement | null>(null);
+  const paletteMenuRef = useRef<HTMLDivElement | null>(null);
+  const fontMenuRef = useRef<HTMLDivElement | null>(null);
+  const headingMenuRef = useRef<HTMLDivElement | null>(null);
+  const lineHeightMenuRef = useRef<HTMLDivElement | null>(null);
   const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
@@ -1160,6 +1164,38 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       document.removeEventListener("keydown", closeInsertMenu);
     };
   }, [insertOpen]);
+
+  useEffect(() => {
+    if (!paletteOpen && !fontOpen && !headingOpen && !lineHeightOpen) return;
+
+    function closeToolbarMenus(event: MouseEvent | KeyboardEvent) {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      const target = event.target as Node;
+      if (
+        event instanceof MouseEvent &&
+        (
+          paletteMenuRef.current?.contains(target) ||
+          fontMenuRef.current?.contains(target) ||
+          headingMenuRef.current?.contains(target) ||
+          lineHeightMenuRef.current?.contains(target)
+        )
+      ) {
+        return;
+      }
+
+      setPaletteOpen(false);
+      setFontOpen(false);
+      setHeadingOpen(false);
+      setLineHeightOpen(false);
+    }
+
+    document.addEventListener("mousedown", closeToolbarMenus);
+    document.addEventListener("keydown", closeToolbarMenus);
+    return () => {
+      document.removeEventListener("mousedown", closeToolbarMenus);
+      document.removeEventListener("keydown", closeToolbarMenus);
+    };
+  }, [fontOpen, headingOpen, lineHeightOpen, paletteOpen]);
 
   useEffect(() => {
     if (!mediaContext.open || mediaContext.pos === null || !editor) return;
@@ -1428,17 +1464,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     const { from, to } = targetEditor.state.selection;
     const selectedTitle = targetEditor.state.doc.textBetween(from, to, " ").trim();
     setLinkModal({ open: true, title: selectedTitle, url: currentHref ?? "", newTab: true });
-  }
-
-  function openGeneralLinkFromInsert() {
-    if (!editor) return;
-    const range = bodySelectionRef.current ?? { from: editor.state.selection.from, to: editor.state.selection.to };
-    const selectedTitle = editor.state.doc.textBetween(range.from, range.to, " ").trim();
-    editor.chain().focus().setTextSelection(range).run();
-    setActiveEditor(editor);
-    setInsertOpen(false);
-    setInsertView("main");
-    setLinkModal({ open: true, title: selectedTitle, url: "", newTab: true });
   }
 
   function confirmLink() {
@@ -2019,11 +2044,11 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         <section className="document-workspace">
           <nav className="editor-command-bar doc-toolbar tiptap-toolbar" aria-label="Toolbar editorial">
             <div className="doc-toolbar-group">
-              <button type="button" title="Párrafo" aria-label="Párrafo" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>
+              <button type="button" title="Parrafo" aria-label="Parrafo" data-i18n-title="paragraph" data-i18n-aria-label="paragraph" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setParagraph().run()}>
                 <Pilcrow aria-hidden="true" />
               </button>
-              <div className="toolbar-dropdown font-dropdown">
-                <button className={activeFont ? "active" : ""} type="button" title="Tipografías" aria-label="Tipografías" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>{activeFont?.label ?? "Tipografías"}</button>
+              <div className="toolbar-dropdown font-dropdown" ref={fontMenuRef}>
+                <button className={activeFont ? "active" : ""} type="button" title="Tipografias" aria-label="Tipografias" data-i18n-title="typography" data-i18n-aria-label="typography" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>{activeFont?.label ?? "Tipografias"}</button>
                 {fontOpen ? (
                   <div className="toolbar-menu font-menu">
                     {EDITOR_FONTS.map((font) => (
@@ -2040,8 +2065,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   </div>
                 ) : null}
               </div>
-              <div className="toolbar-dropdown">
-                <button className={activeHeadingToken ? "active" : ""} type="button" title="Tamaño de título" aria-label="Tamaño de título" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>{activeHeadingToken || "HT"}</button>
+              <div className="toolbar-dropdown" ref={headingMenuRef}>
+                <button className={activeHeadingToken ? "active" : ""} type="button" title="Tamano de titulo" aria-label="Tamano de titulo" data-i18n-title="headingSize" data-i18n-aria-label="headingSize" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>{activeHeadingToken || "HT"}</button>
                 {headingOpen ? (
                   <div className="toolbar-menu">
                     {Object.keys(HEADING_TOKENS).map((token) => (
@@ -2050,11 +2075,13 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   </div>
                 ) : null}
               </div>
-              <div className="toolbar-dropdown line-height-dropdown">
+              <div className="toolbar-dropdown line-height-dropdown" ref={lineHeightMenuRef}>
                 <button
                   type="button"
                   title="Interlineado"
                   aria-label="Interlineado"
+                  data-i18n-title="lineHeight"
+                  data-i18n-aria-label="lineHeight"
                   aria-expanded={lineHeightOpen}
                   className={activeLineHeight ? "active" : ""}
                   disabled={!canUseToolbar}
@@ -2064,7 +2091,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 </button>
                 {lineHeightOpen ? (
                   <div className="toolbar-menu line-height-menu" aria-label="Interlineado">
-                    <span>Interlineado</span>
+                    <span data-i18n="lineHeight">Interlineado</span>
                     {LINE_HEIGHT_OPTIONS.map((value) => (
                       <button type="button" key={value} onClick={() => applyLineHeight(value)}>
                         {activeLineHeight === value ? "✓ " : ""}{Number(value).toFixed(1)}
@@ -2073,44 +2100,44 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   </div>
                 ) : null}
               </div>
-              <button type="button" title="Cita" aria-label="Cita" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
+              <button type="button" title="Cita" aria-label="Cita" data-i18n-title="quote" data-i18n-aria-label="quote" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
                 <Quote aria-hidden="true" />
               </button>
             </div>
             <div className="doc-toolbar-group">
-              <button type="button" title="Negrita" aria-label="Negrita" className={toolbarEditor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBold().run()}><Bold aria-hidden="true" /></button>
-              <button type="button" title="Cursiva" aria-label="Cursiva" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}><Italic aria-hidden="true" /></button>
-              <button type="button" title="Subrayado" aria-label="Subrayado" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}><UnderlineIcon aria-hidden="true" /></button>
-              <button type="button" title="Tachado" aria-label="Tachado" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}><Strikethrough aria-hidden="true" /></button>
-              <button type="button" title="Resaltar" aria-label="Resaltar" className={toolbarEditor?.isActive("highlight") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
-              <button type="button" title="Enlace" aria-label="Enlace" className={toolbarEditor?.isActive("link") ? "active" : ""} disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
+              <button type="button" title="Negrita" aria-label="Negrita" data-i18n-title="bold" data-i18n-aria-label="bold" className={toolbarEditor?.isActive("bold") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBold().run()}><Bold aria-hidden="true" /></button>
+              <button type="button" title="Cursiva" aria-label="Cursiva" data-i18n-title="italic" data-i18n-aria-label="italic" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}><Italic aria-hidden="true" /></button>
+              <button type="button" title="Subrayado" aria-label="Subrayado" data-i18n-title="underline" data-i18n-aria-label="underline" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}><UnderlineIcon aria-hidden="true" /></button>
+              <button type="button" title="Tachado" aria-label="Tachado" data-i18n-title="strike" data-i18n-aria-label="strike" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}><Strikethrough aria-hidden="true" /></button>
+              <button type="button" title="Resaltar" aria-label="Resaltar" data-i18n-title="highlight" data-i18n-aria-label="highlight" className={toolbarEditor?.isActive("highlight") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
+              <button type="button" title="Enlace" aria-label="Enlace" data-i18n-title="link" data-i18n-aria-label="link" className={toolbarEditor?.isActive("link") ? "active" : ""} disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
             </div>
             <div className="doc-toolbar-group">
-              <div className="palette-wrap">
-                <button type="button" title="Paleta" aria-label="Paleta" disabled={!canUseToolbar} onClick={() => setPaletteOpen((open) => !open)}><Palette aria-hidden="true" /></button>
+              <div className="palette-wrap" ref={paletteMenuRef}>
+                <button type="button" title="Paleta" aria-label="Paleta" data-i18n-title="palette" data-i18n-aria-label="palette" disabled={!canUseToolbar} onClick={() => setPaletteOpen((open) => !open)}><Palette aria-hidden="true" /></button>
                 {paletteOpen ? (
                   <div className="palette-popover">
-                    <span>Colores OFF</span>
+                    <span data-i18n="offColors">Colores OFF</span>
                     <div className="palette-swatches">
                       {PALETTE_COLORS.map((color) => (
-                        <button className="color-dot" style={{ background: color }} type="button" onClick={() => applyColor(color)} key={color} aria-label={`Color ${color}`} />
+                        <button className="color-swatch" style={{ background: color }} type="button" onClick={() => applyColor(color)} key={color} aria-label={`Color ${color}`} />
                       ))}
                     </div>
                     <label>
-                      Selector
+                      <span data-i18n="selector">Selector</span>
                       <input type="color" value={HEX_PATTERN.test(hexColor) ? hexColor : "#7B3DFF"} onChange={(event) => applyColor(event.target.value)} />
                     </label>
                     <label>
-                      HEX exacto
+                      <span data-i18n="exactHex">HEX exacto</span>
                       <input value={hexColor} onChange={(event) => setHexColor(event.target.value)} placeholder="#7B3DFF" />
                     </label>
-                    <button type="button" onClick={() => applyColor(hexColor, true)}>Aplicar HEX</button>
+                    <button type="button" onClick={() => applyColor(hexColor, true)} data-i18n="applyHex">Aplicar HEX</button>
                   </div>
                 ) : null}
               </div>
-              <button type="button" title="Lista con viñetas" aria-label="Lista con viñetas" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}><List aria-hidden="true" /></button>
-              <button type="button" title="Lista numerada" aria-label="Lista numerada" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}><ListOrdered aria-hidden="true" /></button>
-              <button type="button" title="Separador" aria-label="Separador" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}><Minus aria-hidden="true" /></button>
+              <button type="button" title="Lista con vinetas" aria-label="Lista con vinetas" data-i18n-title="bulletList" data-i18n-aria-label="bulletList" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBulletList().run()}><List aria-hidden="true" /></button>
+              <button type="button" title="Lista numerada" aria-label="Lista numerada" data-i18n-title="numberedList" data-i18n-aria-label="numberedList" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleOrderedList().run()}><ListOrdered aria-hidden="true" /></button>
+              <button type="button" title="Separador" aria-label="Separador" data-i18n-title="divider" data-i18n-aria-label="divider" disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().setHorizontalRule().run()}><Minus aria-hidden="true" /></button>
               <div className="toolbar-dropdown insert-dropdown" ref={insertMenuRef}>
                 <button
                   type="button"
@@ -2124,19 +2151,20 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   }}
                 >
                   <Plus aria-hidden="true" />
-                  <span>Insertar</span>
+                  <span data-i18n="insert">Insertar</span>
                 </button>
                 {insertOpen ? (
                   <div className="insert-menu" role="menu" aria-label="Insertar">
                     <div className="insert-menu-heading">
-                      {insertView === "main" ? "Insertar" : insertView === "image" ? "Imagen" : "Video"}
+                      <span data-i18n={insertView === "main" ? "insert" : insertView === "image" ? "image" : "video"}>
+                        {insertView === "main" ? "Insertar" : insertView === "image" ? "Imagen" : "Video"}
+                      </span>
                     </div>
                     {insertView === "main" ? (
                       <div className="insert-menu-panel">
-                        <button type="button" role="menuitem" onClick={() => setInsertView("image")}>Imagen</button>
-                        <button type="button" role="menuitem" onClick={() => setInsertView("video")}>Video</button>
-                        <button type="button" role="menuitem" onClick={openSpotifyCreate}>Spotify</button>
-                        <button type="button" role="menuitem" onClick={openGeneralLinkFromInsert}>Enlace</button>
+                        <button type="button" role="menuitem" onClick={() => setInsertView("image")} data-i18n="image">Imagen</button>
+                        <button type="button" role="menuitem" onClick={() => setInsertView("video")} data-i18n="video">Video</button>
+                        <button type="button" role="menuitem" onClick={openSpotifyCreate} data-i18n="spotify">Spotify</button>
                       </div>
                     ) : (
                       <div className="insert-menu-panel">
@@ -2150,10 +2178,10 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                             else openVideoPicker();
                           }}
                         >
-                          Local
+                          <span data-i18n="local">Local</span>
                         </button>
                         <button type="button" role="menuitem" onClick={() => openMediaUrlModal(insertView === "image" ? "image" : "video")}>
-                          Enlace
+                          <span data-i18n="urlLink">Enlace</span>
                         </button>
                         <button type="button" role="menuitem" className="insert-back-button" onClick={() => setInsertView("main")}>
                           Volver
@@ -2178,7 +2206,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
               <button type="button" disabled={extraPages.length === 0} onClick={removePage}>Eliminar hoja</button>
             </div>
             <div className="doc-toolbar-group doc-toolbar-return">
-              <button type="button" onClick={returnToAdmin}>Regresar</button>
+              <button type="button" onClick={returnToAdmin} data-i18n="return">Regresar</button>
             </div>
           </nav>
 

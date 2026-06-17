@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { useOffLanguage } from "@/components/useOffLanguage";
 
 type PasswordFieldProps = {
   label: string;
@@ -23,6 +24,8 @@ export function PasswordField({
   required = false,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const { t } = useOffLanguage();
+  const toggleLabel = visible ? t("hidePassword") : t("showPassword");
 
   return (
     <label className="field">
@@ -38,11 +41,13 @@ export function PasswordField({
           required={required}
         />
         <button
-          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+          aria-label={toggleLabel}
           aria-pressed={visible}
           className="password-visibility-toggle"
+          data-i18n-aria-label={visible ? "hidePassword" : "showPassword"}
+          data-i18n-title={visible ? "hidePassword" : "showPassword"}
           onClick={() => setVisible((current) => !current)}
-          title={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+          title={toggleLabel}
           type="button"
         >
           {visible ? <EyeOff aria-hidden="true" size={17} /> : <Eye aria-hidden="true" size={17} />}

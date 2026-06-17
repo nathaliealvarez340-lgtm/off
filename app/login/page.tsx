@@ -31,10 +31,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <section className="auth-form-column">
           <p className="eyebrow" data-i18n="loginEyebrow">OFF / Acceso</p>
           <h1 data-i18n="loginTitle">Entrar a OFF</h1>
-          <p data-i18n="loginIntro">Una cuenta para leer, guardar dirección y participar en conversaciones que no se sienten vacías.</p>
+          <p data-i18n="loginIntro">Una cuenta para leer, guardar direccion y participar en conversaciones que no se sienten vacias.</p>
           <AuthForms
             next={safeNext}
-            initialMessage={passwordReset === "1" ? "Tu contraseña fue actualizada correctamente." : ""}
+            initialMessage={passwordReset === "1" ? "Tu contrasena fue actualizada correctamente." : ""}
           />
         </section>
       </div>

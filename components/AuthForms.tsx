@@ -3,12 +3,12 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   loginAction,
-  requestPasswordResetAction,
   registerAction,
+  requestPasswordResetAction,
   resendRegistrationCodeAction,
   verifyRegistrationAction,
-  type RegistrationState,
   type PasswordRecoveryState,
+  type RegistrationState,
 } from "@/app/actions";
 import { PasswordField } from "@/components/PasswordField";
 import { useOffLanguage } from "@/components/useOffLanguage";
@@ -60,8 +60,6 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
     if (recoveryState.message) setTransitionMessage(recoveryState.message);
   }, [recoveryState]);
 
-  const state = mode === "login" ? loginState : mode === "forgot" ? recoveryState : registerState;
-
   function updateDigit(index: number, value: string) {
     const nextDigit = value.replace(/\D/g, "").slice(-1);
     setDigits((current) => current.map((digit, digitIndex) => (digitIndex === index ? nextDigit : digit)));
@@ -75,6 +73,8 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       digitRefs.current[3]?.focus();
     }
   }
+
+  const state = mode === "login" ? loginState : mode === "forgot" ? recoveryState : registerState;
 
   return (
     <div className="auth-card auth-access-card">
@@ -94,11 +94,11 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
           <input name="next" type="hidden" value={next} />
           <label className="field">
             {t("email")}
-            <input name="email" type="email" autoComplete="email" required />
+            <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
           </label>
           <PasswordField label={t("password")} name="password" autoComplete="current-password" required />
           <button className="button violet-button" type="submit" disabled={loginPending}>
-            {loginPending ? "Entrando..." : "Entrar"}
+            {loginPending ? t("entering") : t("enter")}
           </button>
           <button
             className="auth-forgot-link"
@@ -113,17 +113,19 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       {mode === "register" ? (
         <form action={register} className="editor-form">
           <label className="field">
-            Nombre
-            <input name="name" autoComplete="name" minLength={2} required />
+            {t("name")}
+            <input name="name" autoComplete="name" data-i18n-placeholder="namePlaceholder" minLength={2} placeholder={t("namePlaceholder")} required />
           </label>
           <label className="field">
             {t("email")}
-            <input name="email" type="email" autoComplete="email" required />
+            <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
           </label>
-          <PasswordField label={t("password")} name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
-          <PasswordField label="Repetir contraseña" name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
+          <div className="auth-password-row">
+            <PasswordField label={t("password")} name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
+            <PasswordField label={t("repeatPassword")} name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
+          </div>
           <button className="button violet-button" type="submit" disabled={registerPending}>
-            {registerPending ? "Enviando código..." : "Continuar"}
+            {registerPending ? t("sendingCode") : t("continue")}
           </button>
         </form>
       ) : null}
@@ -131,9 +133,9 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       {mode === "verify" ? (
         <div className="verification-panel">
           <div>
-            <p className="eyebrow">Confirma tu correo</p>
-            <h2>Cuatro dígitos para entrar.</h2>
-            <p>Enviamos el código a <strong>{verificationEmail}</strong>. Expira en 10 minutos.</p>
+            <p className="eyebrow">{t("confirmEmail")}</p>
+            <h2>{t("fourDigits")}</h2>
+            <p>{t("codeExpires")} <strong>{verificationEmail}</strong></p>
           </div>
           <form action={verify} className="verification-form">
             <input name="email" type="hidden" value={verificationEmail} />
@@ -141,7 +143,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             <div className="verification-code" onPaste={(event) => pasteCode(event.clipboardData.getData("text"))}>
               {digits.map((digit, index) => (
                 <input
-                  aria-label={`Dígito ${index + 1}`}
+                  aria-label={`Digit ${index + 1}`}
                   inputMode="numeric"
                   key={index}
                   maxLength={1}
@@ -155,13 +157,13 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
               ))}
             </div>
             <button className="button violet-button" disabled={verifyPending || digits.join("").length !== 4} type="submit">
-              {verifyPending ? "Verificando..." : "Finalizar"}
+              {verifyPending ? t("verifying") : t("finish")}
             </button>
           </form>
           <form action={resend}>
             <input name="email" type="hidden" value={verificationEmail} />
             <button className="verification-resend" disabled={resendPending} type="submit">
-              {resendPending ? "Reenviando..." : "Reenviar código"}
+              {resendPending ? t("resending") : t("resendCode")}
             </button>
           </form>
         </div>
@@ -170,21 +172,21 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       {mode === "forgot" ? (
         <div className="verification-panel">
           <div>
-            <p className="eyebrow">Recuperar acceso</p>
-            <h2>Volver a entrar.</h2>
-            <p>Si los datos coinciden con tu cuenta, te enviaremos un enlace válido durante 30 minutos.</p>
+            <p className="eyebrow">{t("recoverAccess")}</p>
+            <h2>{t("returnAccess")}</h2>
+            <p>{t("recoveryCopy")}</p>
           </div>
           <form action={requestRecovery} className="editor-form">
             <label className="field">
-              Nombre
-              <input name="name" autoComplete="name" required />
+              {t("name")}
+              <input name="name" autoComplete="name" data-i18n-placeholder="namePlaceholder" placeholder={t("namePlaceholder")} required />
             </label>
             <label className="field">
-              Correo
-              <input name="email" type="email" autoComplete="email" required />
+              {t("email")}
+              <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
             </label>
             <button className="button violet-button" disabled={recoveryPending} type="submit">
-              {recoveryPending ? "Enviando..." : "Enviar enlace"}
+              {recoveryPending ? t("sending") : t("sendLink")}
             </button>
           </form>
           <button
@@ -192,7 +194,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             onClick={() => { setMode("login"); setTransitionMessage(""); }}
             type="button"
           >
-            Volver a iniciar sesión
+            {t("backToLogin")}
           </button>
         </div>
       ) : null}
