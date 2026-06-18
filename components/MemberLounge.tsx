@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { BookOpen, Brain, CalendarClock, Languages, LogOut, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { logoutAction } from "@/app/actions";
@@ -36,7 +37,13 @@ type LoungeContent = {
   statusLabel: string | null;
 };
 
-const collectionNames = ["Reconstruirte", "Suenos Ajenos", "Direccion", "Identidad", "Ambicion", "Relaciones"];
+const loungeNavItems = [
+  { id: "collections", label: "Colecciones", href: "#collections", icon: BookOpen },
+  { id: "mi-yo", label: "Mi yo", href: "#mi-yo", icon: Brain },
+  { id: "early-access", label: "Early Access", href: "#early-access", icon: CalendarClock },
+  { id: "member-profile", label: "Perfil", href: "#member-profile", icon: UserRound },
+  { id: "conoce-mas", label: "Conoce mas", href: "#conoce-mas", icon: Sparkles },
+];
 
 function cleanText(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -103,7 +110,7 @@ export function MemberLounge({
       id: item.id,
       title: cleanText(item.title),
       number: item.number ?? String(articles.length + index + 1).padStart(2, "0"),
-      description: item.description ? cleanText(item.description) : item.content ? cleanText(item.content) : "Proximamente en la Biblioteca OFF.",
+      description: item.description ? cleanText(item.description) : item.content ? cleanText(item.content) : null,
       url: links(item)[0]?.url,
       image: null,
       category: "Biblioteca",
@@ -148,14 +155,27 @@ export function MemberLounge({
       <div className="lounge-after-hero">
         <nav className="lounge-nav" aria-label="Member Lounge">
           <Link href="/lounge" aria-label="OFF Member Lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
-          <div>
-            <a className={activeSection === "collections" ? "active" : ""} href="#collections">Colecciones</a>
-            <a className={activeSection === "mi-yo" ? "active" : ""} href="#mi-yo">Mi yo</a>
-            <a className={activeSection === "early-access" ? "active" : ""} href="#early-access">Early Access</a>
-            <a className={activeSection === "member-profile" ? "active" : ""} href="#member-profile">Perfil</a>
-            <a className={activeSection === "conoce-mas" ? "active" : ""} href="#conoce-mas">Conoce mas</a>
-            <LanguageSwitcher compact label="Idioma" />
-            <form action={logoutAction}><button type="submit">Cerrar sesion</button></form>
+          <div className="lounge-nav-inner">
+            <div className="lounge-nav-menu">
+              {loungeNavItems.map(({ id, label, href, icon: Icon }) => (
+                <a className={activeSection === id ? "active" : ""} href={href} key={id}>
+                  <span className="lounge-nav-icon"><Icon aria-hidden="true" /></span>
+                  <span>{label}</span>
+                </a>
+              ))}
+            </div>
+            <div className="lounge-nav-actions">
+              <div className="lounge-language-row">
+                <span className="lounge-nav-icon"><Languages aria-hidden="true" /></span>
+                <LanguageSwitcher compact label="Idioma" />
+              </div>
+              <form action={logoutAction}>
+                <button type="submit">
+                  <span className="lounge-nav-icon"><LogOut aria-hidden="true" /></span>
+                  <span>Cerrar sesion</span>
+                </button>
+              </form>
+            </div>
           </div>
         </nav>
 
@@ -195,20 +215,7 @@ export function MemberLounge({
               <h2><span data-i18n="collections">Colecciones</span><em data-i18n="editorial">editoriales</em></h2>
               <p>Volumenes para volver a ideas que merecen mas de una lectura. Una biblioteca emocional, curada para cuando necesitas direccion.</p>
             </div>
-            <LibraryCardDeck
-              items={libraryItems.length ? libraryItems : collectionNames.map((title, index) => ({
-                id: title,
-                title,
-                number: String(index + 1).padStart(2, "0"),
-                description: "Proximamente en la Biblioteca OFF.",
-                url: undefined,
-                image: null,
-                category: "Biblioteca",
-                date: null,
-                readTime: null,
-                cta: "Abrir volumen",
-              }))}
-            />
+            <LibraryCardDeck items={libraryItems} />
           </Reveal>
 
           <Reveal className="lounge-section lounge-self-section" id="mi-yo">

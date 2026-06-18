@@ -39,9 +39,10 @@ export function LibraryCardDeck({ items }: { items: LibraryItem[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const safeItems = useMemo(() => items.filter((item) => item.title), [items]);
   const active = safeItems[activeIndex] ?? safeItems[0];
+  const hasMultipleItems = safeItems.length > 1;
 
   function move(direction: -1 | 1) {
-    if (!safeItems.length) return;
+    if (!hasMultipleItems) return;
     setActiveIndex((current) => (current + direction + safeItems.length) % safeItems.length);
   }
 
@@ -66,7 +67,7 @@ export function LibraryCardDeck({ items }: { items: LibraryItem[] }) {
           {active.readTime ? <span>{active.readTime}</span> : null}
         </div>
         <h3>{active.title}</h3>
-        <p>{active.description ?? "Proximamente en la Biblioteca OFF."}</p>
+        {active.description ? <p>{active.description}</p> : null}
         <strong>{active.cta ?? "Abrir volumen"}</strong>
       </div>
     </>
@@ -75,11 +76,11 @@ export function LibraryCardDeck({ items }: { items: LibraryItem[] }) {
   return (
     <div className="library-carousel" aria-label="Biblioteca OFF">
       <div className="library-carousel-controls">
-        <button type="button" onClick={() => move(-1)} aria-label="Anterior">
+        <button type="button" onClick={() => move(-1)} aria-label="Anterior" disabled={!hasMultipleItems}>
           <ChevronLeft aria-hidden="true" />
         </button>
         <span>{activeIndex + 1} / {safeItems.length}</span>
-        <button type="button" onClick={() => move(1)} aria-label="Siguiente">
+        <button type="button" onClick={() => move(1)} aria-label="Siguiente" disabled={!hasMultipleItems}>
           <ChevronRight aria-hidden="true" />
         </button>
       </div>

@@ -93,8 +93,8 @@ export async function deriveLoungeContentFromArticle(db: PrismaClient, article: 
         links: [{ label: stripHtml(article.title), url: articlePath }],
         relatedArticle: article.id,
         statusLabel: safeCollection ? "Asignación automática" : "Revisar asignación automática",
-        status: safeCollection ? "published" : "draft",
-        publishedAt: safeCollection ? new Date() : null,
+        status: "draft",
+        publishedAt: null,
       },
     });
   }

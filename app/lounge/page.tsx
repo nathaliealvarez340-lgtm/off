@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+function isAutomaticLoungeContent(statusLabel?: string | null) {
+  return /autom|generado/i.test(statusLabel ?? "");
+}
+
 export default async function LoungePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/lounge");
@@ -25,6 +29,7 @@ export default async function LoungePage() {
     db.memberActivity.findUnique({ where: { userId: user.id } }),
     db.articleCompletion.count({ where: { userId: user.id } }),
   ]);
+  const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
 
   return (
     <MemberLounge
@@ -44,7 +49,7 @@ export default async function LoungePage() {
         publishedAt: article.publishedAt?.toISOString() ?? article.updatedAt.toISOString(),
         readTime: article.readTime,
       }))}
-      loungeContent={loungeContent.map((item) => ({
+      loungeContent={visibleLoungeContent.map((item) => ({
         id: item.id,
         type: item.type,
         title: getPlainTextPreview(item.title, 140),
