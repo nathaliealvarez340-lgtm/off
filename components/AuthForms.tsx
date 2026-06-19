@@ -10,6 +10,7 @@ import {
   type PasswordRecoveryState,
   type RegistrationState,
 } from "@/app/actions";
+import { EmailSplitField } from "@/components/EmailSplitField";
 import { PasswordField } from "@/components/PasswordField";
 import { useOffLanguage } from "@/components/useOffLanguage";
 
@@ -22,6 +23,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
   const [verificationEmail, setVerificationEmail] = useState("");
   const [transitionMessage, setTransitionMessage] = useState(initialMessage);
   const [digits, setDigits] = useState(["", "", "", ""]);
+  const [accessCodeMode, setAccessCodeMode] = useState<"auto" | "custom">("auto");
   const digitRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [loginState, login, loginPending] = useActionState(loginAction, initialState);
   const [registerState, register, registerPending] = useActionState(registerAction, initialRegistrationState);
@@ -92,11 +94,8 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
       {mode === "login" ? (
         <form action={login} className="editor-form">
           <input name="next" type="hidden" value={next} />
-          <label className="field">
-            {t("email")}
-            <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
-          </label>
-          <PasswordField label={t("password")} name="password" autoComplete="current-password" required />
+          <EmailSplitField label={t("email")} placeholder="usuario" />
+          <PasswordField label="Contraseña o código" name="password" autoComplete="current-password" required />
           <button className="button violet-button" type="submit" disabled={loginPending}>
             {loginPending ? t("entering") : t("enter")}
           </button>
@@ -116,13 +115,31 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             {t("name")}
             <input name="name" autoComplete="name" data-i18n-placeholder="namePlaceholder" minLength={2} placeholder={t("namePlaceholder")} required />
           </label>
-          <label className="field">
-            {t("email")}
-            <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
-          </label>
+          <EmailSplitField label={t("email")} placeholder="usuario" />
           <div className="auth-password-row">
             <PasswordField label={t("password")} name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
             <PasswordField label={t("repeatPassword")} name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
+          </div>
+          <div className="access-code-panel">
+            <input name="accessCodeMode" type="hidden" value={accessCodeMode} />
+            <div>
+              <strong>Código único de usuario</strong>
+              <p>Puedes recibir uno aleatorio o crear un código personalizado de 4 dígitos.</p>
+            </div>
+            <div className="access-code-options">
+              <button className={accessCodeMode === "auto" ? "active" : ""} onClick={() => setAccessCodeMode("auto")} type="button">
+                Generar mi código
+              </button>
+              <button className={accessCodeMode === "custom" ? "active" : ""} onClick={() => setAccessCodeMode("custom")} type="button">
+                Código personalizado
+              </button>
+            </div>
+            {accessCodeMode === "custom" ? (
+              <label className="field access-code-custom">
+                Código de 4 dígitos
+                <input inputMode="numeric" maxLength={4} minLength={4} name="customAccessCode" pattern="\d{4}" placeholder="2727" required />
+              </label>
+            ) : null}
           </div>
           <button className="button violet-button" type="submit" disabled={registerPending}>
             {registerPending ? t("sendingCode") : t("continue")}
@@ -181,12 +198,9 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
               {t("name")}
               <input name="name" autoComplete="name" data-i18n-placeholder="namePlaceholder" placeholder={t("namePlaceholder")} required />
             </label>
-            <label className="field">
-              {t("email")}
-              <input name="email" type="email" autoComplete="email" data-i18n-placeholder="emailPlaceholder" placeholder={t("emailPlaceholder")} required />
-            </label>
+            <EmailSplitField label={t("email")} placeholder="usuario" />
             <button className="button violet-button" disabled={recoveryPending} type="submit">
-              {recoveryPending ? t("sending") : t("sendLink")}
+              {recoveryPending ? t("sending") : "Solicitar acceso"}
             </button>
           </form>
           <button

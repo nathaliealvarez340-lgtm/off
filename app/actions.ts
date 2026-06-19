@@ -1,7 +1,7 @@
 ﻿"use server";
 
 import { mkdir, writeFile } from "fs/promises";
-import { randomBytes, randomInt } from "crypto";
+import { createHash, randomBytes, randomInt } from "crypto";
 import path from "path";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
@@ -22,27 +22,54 @@ function stringValue(formData: FormData, key: string) {
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nathaliegarcia@maiabusiness.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Ma1a2727!!@";
 
+function accessCodeLookup(code: string) {
+  const secret = process.env.USER_CODE_SECRET || process.env.AUTH_SECRET || process.env.ADMIN_PASSWORD || "off-local-access-code-secret";
+  return createHash("sha256").update(`off-access-code:${secret}:${code}`).digest("hex");
+}
+
+async function isAccessCodeAvailable(db: ReturnType<typeof getDb>, code: string) {
+  const lookup = accessCodeLookup(code);
+  const [user, verification] = await Promise.all([
+    db.user.findUnique({ where: { accessCodeLookup: lookup }, select: { id: true } }),
+    db.registrationVerification.findUnique({ where: { accessCodeLookup: lookup }, select: { id: true } }),
+  ]);
+  return !user && !verification;
+}
+
+async function generateUniqueAccessCode(db: ReturnType<typeof getDb>) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const code = String(randomInt(0, 10000)).padStart(4, "0");
+    if (await isAccessCodeAvailable(db, code)) return code;
+  }
+  throw new Error("No pudimos generar un código único. Intenta de nuevo.");
+}
+
 export async function loginAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email");
-  const password = stringValue(formData, "password");
+  const credential = stringValue(formData, "password");
   const next = stringValue(formData, "next") || "/";
 
   const db = getDb();
   let user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
 
-  if (!user && email === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+  if (!user && email === ADMIN_EMAIL.toLowerCase() && credential === ADMIN_PASSWORD) {
     user = await db.user.create({
       data: {
         name: "Nathalie Garcia",
         email: email.toLowerCase(),
-        passwordHash: await bcrypt.hash(password, 12),
+        passwordHash: await bcrypt.hash(credential, 12),
         role: "ADMIN",
       },
     });
   }
 
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return { ok: false, message: "Correo o contraseña incorrectos." };
+  const passwordMatches = user ? await bcrypt.compare(credential, user.passwordHash) : false;
+  const codeMatches = user?.accessCodeHash && /^\d{4}$/.test(credential)
+    ? await bcrypt.compare(credential, user.accessCodeHash)
+    : false;
+
+  if (!user || (!passwordMatches && !codeMatches)) {
+    return { ok: false, message: "Correo, contraseña o código incorrectos." };
   }
 
   await createSession(user.id);
@@ -64,30 +91,42 @@ export type RegistrationState = {
 
 function validateRegistration(formData: FormData):
   | { ok: false; error: string }
-  | { ok: true; name: string; email: string; password: string } {
+  | { ok: true; name: string; email: string; password: string; customAccessCode: string | null } {
   const name = stringValue(formData, "name");
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
   const repeatPassword = stringValue(formData, "repeatPassword");
+  const accessCodeMode = stringValue(formData, "accessCodeMode");
+  const customAccessCode = stringValue(formData, "customAccessCode");
 
   if (name.length < 2) return { ok: false, error: "Escribe tu nombre." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Escribe un correo válido." };
   if (password.length < 6 || password.length > 8) return { ok: false, error: "La contraseña debe tener entre 6 y 8 caracteres." };
   if (password !== repeatPassword) return { ok: false, error: "Las contraseñas no coinciden." };
+  if ((accessCodeMode === "custom" || customAccessCode) && !/^\d{4}$/.test(customAccessCode)) {
+    return { ok: false, error: "Tu código personalizado debe tener exactamente 4 dígitos." };
+  }
 
-  return { ok: true, name, email, password };
+  return { ok: true, name, email, password, customAccessCode: customAccessCode || null };
 }
 
 export async function registerAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const values = validateRegistration(formData);
   if (!values.ok) return { ok: false, message: values.error };
 
-  const { name, email, password } = values;
+  const { name, email, password, customAccessCode } = values;
   const db = getDb();
   const existingUser = await db.user.findUnique({ where: { email } });
   if (existingUser) return { ok: false, message: "Ese correo ya está registrado." };
 
   const code = String(randomInt(1000, 10000));
+  const accessCode = customAccessCode ?? await generateUniqueAccessCode(db);
+  if (customAccessCode && !(await isAccessCodeAvailable(db, customAccessCode))) {
+    return { ok: false, message: "Ese código ya está en uso. Elige otro de 4 dígitos." };
+  }
+  const accessCodeHash = await bcrypt.hash(accessCode, 10);
+  const accessCodeLookupHash = accessCodeLookup(accessCode);
+
   try {
     await db.registrationVerification.upsert({
       where: { email },
@@ -95,6 +134,8 @@ export async function registerAction(_: RegistrationState, formData: FormData): 
         name,
         passwordHash: await bcrypt.hash(password, 12),
         codeHash: await bcrypt.hash(code, 10),
+        accessCodeHash,
+        accessCodeLookup: accessCodeLookupHash,
         attempts: 0,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
@@ -103,10 +144,12 @@ export async function registerAction(_: RegistrationState, formData: FormData): 
         email,
         passwordHash: await bcrypt.hash(password, 12),
         codeHash: await bcrypt.hash(code, 10),
+        accessCodeHash,
+        accessCodeLookup: accessCodeLookupHash,
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
-    await sendRegistrationCode(email, name, code);
+    await sendRegistrationCode(email, name, code, accessCode);
   } catch (error) {
     await db.registrationVerification.deleteMany({ where: { email } });
     return { ok: false, message: error instanceof Error ? error.message : "No pudimos iniciar el registro." };
@@ -144,6 +187,8 @@ export async function verifyRegistrationAction(_: RegistrationState, formData: F
           name: verification.name,
           email: verification.email,
           passwordHash: verification.passwordHash,
+          accessCodeHash: verification.accessCodeHash,
+          accessCodeLookup: verification.accessCodeLookup,
           role: "USER",
         },
       }),
@@ -214,7 +259,7 @@ export async function requestPasswordResetAction(
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, message: "Escribe un correo válido." };
   }
-  if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
+  if (!process.env.RESEND_API_KEY || !(process.env.OFF_FROM_EMAIL || process.env.FROM_EMAIL)) {
     return { ok: false, message: "La recuperación de contraseña no está disponible temporalmente." };
   }
 

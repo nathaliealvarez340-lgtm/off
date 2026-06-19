@@ -25,7 +25,7 @@ La app corre en `http://localhost:3000` por defecto.
 postgresql://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require
 ```
 
-5. Agrega también `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY` y `FROM_EMAIL`.
+5. Agrega también `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `NEXT_PUBLIC_SITE_URL`, `RESEND_API_KEY`, `OFF_FROM_EMAIL` y `USER_CODE_SECRET`.
 6. Vercel ejecutará `npm run build`, que corre:
 
 ```bash
@@ -54,10 +54,12 @@ ADMIN_EMAIL="nathaliegarcia@maiabusiness.com"
 ADMIN_PASSWORD="Ma1a2727!!@"
 NEXT_PUBLIC_SITE_URL="https://off.maiabusiness.com"
 RESEND_API_KEY=""
+OFF_FROM_EMAIL="OFF <off@maiabusiness.com>"
 FROM_EMAIL="OFF <off@maiabusiness.com>"
+USER_CODE_SECRET=""
 ```
 
-En Vercel usa una `DATABASE_URL` de Neon/PostgreSQL, no SQLite. Resend queda preparado. Cuando agregues `RESEND_API_KEY` y `FROM_EMAIL`, al publicar un capítulo se intentará enviar el correo a los suscriptores.
+En Vercel usa una `DATABASE_URL` de Neon/PostgreSQL, no SQLite. Resend queda preparado. Cuando agregues `RESEND_API_KEY` y `OFF_FROM_EMAIL`, al publicar un capítulo se intentará enviar el correo a los suscriptores. `USER_CODE_SECRET` protege la huella del código único de 4 dígitos de cada usuario.
 
 ## Contenido editorial
 

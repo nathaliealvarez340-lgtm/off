@@ -79,6 +79,8 @@ model User {
   name         String
   email        String    @unique
   passwordHash String
+  accessCodeHash String?
+  accessCodeLookup String? @unique
   role         Role      @default(USER)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -124,6 +126,8 @@ model RegistrationVerification {
   email        String   @unique
   passwordHash String
   codeHash     String
+  accessCodeHash String
+  accessCodeLookup String @unique
   attempts     Int      @default(0)
   expiresAt    DateTime
   createdAt    DateTime @default(now())

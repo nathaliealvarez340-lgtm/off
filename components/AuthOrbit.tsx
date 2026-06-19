@@ -8,7 +8,7 @@ export function AuthOrbit() {
         </defs>
         <text>
           <textPath href="#auth-orbit-path" startOffset="0%">
-            SENTIR · ENTENDER · ELEGIR · VOLVER · CONSTRUIR ·
+            construir · volver · entender · elegir · construir · volver · entender · elegir ·
           </textPath>
         </text>
       </svg>
