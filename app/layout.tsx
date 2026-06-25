@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     "crisis existencial", "reconstruirte", "desconexión emocional",
   ],
   applicationName: "OFF",
+  manifest: "/manifest.webmanifest",
   authors: [{ name: "Nathalie Garcia" }],
   creator: "Nathalie Garcia",
   publisher: "OFF",
@@ -65,6 +66,13 @@ export const metadata: Metadata = {
     shortcut: "/logo/favicon-off.png",
     apple: "/logo/favicon-off.png",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#050407",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

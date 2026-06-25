@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { MemberLounge } from "@/components/MemberLounge";
 import { getPlainTextPreview, INTERNAL_CONTENT_CATEGORIES } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { earnedBadges, formatActiveTime, getOrCreateMemberNumber } from "@/lib/member-progress";
+import { ResponsiveMemberLounge } from "@/mobile/ResponsiveMemberLounge";
 
 export const metadata: Metadata = {
   title: "The Member Lounge | OFF",
@@ -32,7 +32,7 @@ export default async function LoungePage() {
   const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
 
   return (
-    <MemberLounge
+    <ResponsiveMemberLounge
       name={user.name}
       memberSince={user.createdAt.toISOString()}
       memberNumber={String(memberNumber)}
