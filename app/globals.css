@@ -9935,6 +9935,7 @@ body:has(.auth-page) {
 }
 
 .mobile-hero > img,
+.mobile-hero-image,
 .mobile-auth-bg,
 .mobile-lounge-hero > img,
 .mobile-about-card > img {
@@ -9945,7 +9946,8 @@ body:has(.auth-page) {
   object-fit: cover;
 }
 
-.mobile-hero > img {
+.mobile-hero > img,
+.mobile-hero-image {
   object-position: 50% 50%;
   animation: mobileHeroImageIn 900ms var(--m-ease-out) both;
 }

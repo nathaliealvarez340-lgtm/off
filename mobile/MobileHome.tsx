@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { SubscribeForm } from "@/components/SubscribeForm";
@@ -8,6 +9,7 @@ import type { PublicArticle } from "@/components/LocalizedHome";
 import { MobileCountUp } from "@/mobile/MobileCountUp";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
+import portadaMobile from "@/mobile/images/portada_mobile.png";
 
 function clean(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -33,7 +35,15 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
       </nav>
 
       <motion.header className="mobile-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.42, ease: mobileEase }}>
-        <img src="/images/hero-off.webp" alt="" />
+        <Image
+          className="mobile-hero-image"
+          src={portadaMobile}
+          alt=""
+          fill
+          priority
+          placeholder="blur"
+          sizes="100vw"
+        />
         <motion.div variants={mobileMotion.list} initial="hidden" animate="visible">
           <motion.p className="mobile-kicker" variants={mobileMotion.item}>{copy.homeEyebrow}</motion.p>
           <motion.h1 variants={mobileMotion.item}>{copy.heroTitle} <em>{copy.heroEmphasis}</em></motion.h1>
