@@ -1,16 +1,22 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
 import { BookOpen, Brain, CalendarClock, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import type { UiLanguage } from "@/lib/ui-i18n";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
+import heroMobile from "@/mobile/images/hero_mobile.png";
+import instagramLogo from "@/mobile/images/social/instagram-logo.png";
+import linkedinLogo from "@/mobile/images/social/linkedin-logo.png";
+import xLogo from "@/mobile/images/social/x-logo.jpg";
 
 type LoungeArticle = {
   id: string;
@@ -50,6 +56,13 @@ export type MobileMemberLoungeProps = {
   draftEditions: DraftEdition[];
 };
 
+const languageOptions: Array<[UiLanguage, string]> = [
+  ["es", "Español"],
+  ["en", "English"],
+  ["it", "Italiano"],
+  ["pt", "Português"],
+];
+
 function clean(value?: string | null) {
   return (value ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
@@ -65,20 +78,19 @@ export function MobileMemberLounge({
   loungeContent,
   draftEditions,
 }: MobileMemberLoungeProps) {
-  const { copy } = useMobileCopy();
+  const { copy, language } = useMobileCopy();
+  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
   const current = articles[0];
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
-  const nav = [
-    ["#biblioteca", copy.library, BookOpen],
-    ["#mi-yo", copy.mySelfKicker, Brain],
-    ["#early", "Early", CalendarClock],
-    ["#perfil", copy.profileKicker, UserRound],
-    ["#chat", copy.chatKicker, MessageCircle],
-    ["#idioma", copy.language, Globe2],
-    ["#conoce-mas", "Más", Sparkles],
-  ] as const;
+  function selectLanguage(nextLanguage: UiLanguage) {
+    window.localStorage.setItem("off-language", nextLanguage);
+    document.cookie = `off-language=${nextLanguage}; path=/; max-age=31536000; SameSite=Lax`;
+    document.documentElement.lang = nextLanguage;
+    window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));
+    setLanguageSheetOpen(false);
+  }
 
   return (
     <main className="off-mobile mobile-lounge">
@@ -88,15 +100,16 @@ export function MobileMemberLounge({
       </nav>
 
       <motion.header className="mobile-lounge-hero" initial="hidden" animate="visible">
-        <motion.img
-          src="/images/cap2-off.webp"
-          alt=""
+        <motion.div
+          className="mobile-lounge-hero-media"
           variants={{
             hidden: { opacity: 0, transform: "scale(1.03)" },
             visible: { opacity: 1, transform: "scale(1)" },
           }}
           transition={{ duration: 0.9, ease: mobileEase }}
-        />
+        >
+          <Image src={heroMobile} alt="" fill priority placeholder="blur" sizes="100vw" />
+        </motion.div>
         <motion.div variants={mobileMotion.list} transition={{ staggerChildren: 0.12, delayChildren: 0.45 }}>
           <motion.span variants={mobileMotion.item}>{copy.lounge}</motion.span>
           <motion.h1 variants={mobileMotion.item}><MemberGreeting name={name} /></motion.h1>
@@ -177,45 +190,53 @@ export function MobileMemberLounge({
         </div>
       </MobileReveal>
 
-      <MobileReveal className="mobile-section" id="chat">
-        <div className="mobile-section-head stacked">
-          <h2>{copy.chatTitle}</h2>
-          <span>{copy.chatKicker}</span>
-        </div>
-        <div className="mobile-empty-card">
-          <span>OFF</span>
-          <p>Comparte una tensión, una pregunta o una idea desde los capítulos publicados.</p>
-        </div>
-      </MobileReveal>
-
-      <MobileReveal className="mobile-section" id="idioma">
-        <div className="mobile-section-head stacked">
-          <h2>{copy.language}</h2>
-          <span>OFF</span>
-        </div>
-        <div className="mobile-language-card">
-          <Globe2 aria-hidden="true" />
-          <LanguageSwitcher compact label={copy.language} />
-        </div>
-      </MobileReveal>
-
       <MobileReveal className="mobile-section" id="conoce-mas">
         <div className="mobile-section-head stacked">
           <h2>{copy.moreTitle}</h2>
           <span>{copy.moreKicker}</span>
         </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src="/logo/linkedin-logo.svg" alt="" /></strong><span>Nathalie Garcia A.</span></a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src="/logo/instagram-logo.svg" alt="" /></strong><span>@nathalie.garciaa</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src="/logo/logo-off.png" alt="" /></strong><span>@off_journal</span></a>
+          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span></a>
+          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>X / OFF</span></a>
         </div>
       </MobileReveal>
 
       <nav className="mobile-bottom-nav" aria-label="Navegación mobile lounge">
-        {nav.map(([href, label, Icon]) => (
-          <a href={href} key={href}><Icon aria-hidden="true" /><span>{label}</span></a>
-        ))}
+        <a href="#biblioteca"><BookOpen aria-hidden="true" /><span>{copy.library}</span></a>
+        <a href="#mi-yo"><Brain aria-hidden="true" /><span>{copy.mySelfKicker}</span></a>
+        <a href="#early"><CalendarClock aria-hidden="true" /><span>Early</span></a>
+        <a href="#perfil"><UserRound aria-hidden="true" /><span>{copy.profileKicker}</span></a>
+        <Link href="/mobile/chat"><MessageCircle aria-hidden="true" /><span>{copy.chatKicker}</span></Link>
+        <button type="button" onClick={() => setLanguageSheetOpen(true)} aria-haspopup="dialog" aria-expanded={languageSheetOpen}>
+          <Globe2 aria-hidden="true" /><span>{copy.language}</span>
+        </button>
+        <a href="#conoce-mas"><Sparkles aria-hidden="true" /><span>Más</span></a>
         <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button></form>
       </nav>
+
+      {languageSheetOpen ? (
+        <div className="mobile-language-sheet-backdrop" role="presentation" onClick={() => setLanguageSheetOpen(false)}>
+          <motion.div
+            className="mobile-language-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={copy.language}
+            initial={{ opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, ease: mobileEase }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span>{copy.language}</span>
+            {languageOptions.map(([value, label]) => (
+              <button type="button" className={language === value ? "is-active" : ""} onClick={() => selectLanguage(value)} key={value}>
+                {label}
+              </button>
+            ))}
+          </motion.div>
+        </div>
+      ) : null}
     </main>
   );
 }

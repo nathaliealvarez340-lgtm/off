@@ -6,10 +6,12 @@ import { motion } from "framer-motion";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { PublicArticle } from "@/components/LocalizedHome";
-import { MobileCountUp } from "@/mobile/MobileCountUp";
+import { MobileImpactCarousel } from "@/mobile/MobileImpactCarousel";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
-import portadaMobile from "@/mobile/images/portada_mobile.png";
+import instagramLogo from "@/mobile/images/social/instagram-logo.png";
+import linkedinLogo from "@/mobile/images/social/linkedin-logo.png";
+import xLogo from "@/mobile/images/social/x-logo.jpg";
 
 function clean(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -37,11 +39,10 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
       <motion.header className="mobile-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.42, ease: mobileEase }}>
         <Image
           className="mobile-hero-image"
-          src={portadaMobile}
+          src="/images/hero-off.webp"
           alt=""
           fill
           priority
-          placeholder="blur"
           sizes="100vw"
         />
         <motion.div variants={mobileMotion.list} initial="hidden" animate="visible">
@@ -94,24 +95,32 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
         <div className="mobile-section-head">
           <h2>{copy.impact}</h2>
         </div>
-        <div className="mobile-metric-grid">
-          <article><strong><MobileCountUp value={2.3} decimals={1} suffix="K+" /></strong><span>{copy.readers}</span></article>
-          <article><strong><MobileCountUp value={1.8} decimals={1} suffix="K+" /></strong><span>{copy.choseSelf}</span></article>
-          <article><strong><MobileCountUp value={700} suffix="+" /></strong><span>{copy.stories}</span></article>
-          <article><strong><MobileCountUp value={2} suffix="K+" /></strong><span>{copy.rebuilding}</span></article>
-        </div>
+        <MobileImpactCarousel
+          metrics={[
+            { value: 2.3, decimals: 1, suffix: "K+", label: copy.readers },
+            { value: 1.8, decimals: 1, suffix: "K+", label: copy.choseSelf },
+            { value: 700, suffix: "+", label: copy.stories },
+            { value: 2, suffix: "K+", label: copy.rebuilding },
+          ]}
+        />
       </MobileReveal>
 
       <MobileReveal className="mobile-section" id="conoce-mas">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.moreTitle}</h2>
+        </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
-            <strong><img src="/logo/linkedin-logo.svg" alt="" /></strong><span>Nathalie Garcia A.</span>
-          </a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
-            <strong><img src="/logo/instagram-logo.svg" alt="" /></strong><span>@nathalie.garciaa</span>
-          </a>
           <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer">
             <strong><img src="/logo/logo-off.png" alt="" /></strong><span>@off_journal</span>
+          </a>
+          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
+            <strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span>
+          </a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
+            <strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span>
+          </a>
+          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer">
+            <strong><img src={xLogo.src} alt="" /></strong><span>X / OFF</span>
           </a>
         </div>
       </MobileReveal>
