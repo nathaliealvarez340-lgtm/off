@@ -5,6 +5,9 @@ import { motion } from "framer-motion";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { PublicArticle } from "@/components/LocalizedHome";
+import { MobileCountUp } from "@/mobile/MobileCountUp";
+import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
+import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
 
 function clean(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -17,6 +20,7 @@ function imageFor(article: PublicArticle, index: number) {
 
 export function MobileHome({ articles }: { articles: PublicArticle[] }) {
   const featured = articles[0];
+  const { copy } = useMobileCopy();
 
   return (
     <main className="off-mobile mobile-home">
@@ -24,90 +28,89 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
         <Link href="/" aria-label="OFF inicio"><img src="/logo/logo-off.png" alt="OFF" /></Link>
         <div>
           <LanguageSwitcher compact />
-          <Link href="/login">Login</Link>
+          <Link href="/login">{copy.login}</Link>
         </div>
       </nav>
 
-      <motion.header className="mobile-hero" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }}>
+      <motion.header className="mobile-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.42, ease: mobileEase }}>
         <img src="/images/hero-off.webp" alt="" />
-        <div>
-          <p className="mobile-kicker">EDITORIAL OFF by MAIA</p>
-          <h1>Todo parece avanzar. <em>Pero algo dentro sigue apagado.</em></h1>
-          <p>OFF nace para una generación que está construyendo éxito mientras intenta no perderse a sí misma.</p>
-          <Link className="mobile-primary" href={featured ? `/off/${featured.slug}` : "/login"}>Entrar a OFF</Link>
-        </div>
+        <motion.div variants={mobileMotion.list} initial="hidden" animate="visible">
+          <motion.p className="mobile-kicker" variants={mobileMotion.item}>{copy.homeEyebrow}</motion.p>
+          <motion.h1 variants={mobileMotion.item}>{copy.heroTitle} <em>{copy.heroEmphasis}</em></motion.h1>
+          <motion.p variants={mobileMotion.item}>{copy.heroSubtitle}</motion.p>
+          <motion.div variants={mobileMotion.item}>
+            <Link className="mobile-primary" href={featured ? `/off/${featured.slug}` : "/login"}>{copy.enterOff}</Link>
+          </motion.div>
+        </motion.div>
       </motion.header>
 
-      <section className="mobile-section">
-        <div className="mobile-section-head">
-          <span>Capítulos</span>
-          <h2>Lecturas recientes</h2>
+      <MobileReveal className="mobile-section mobile-readings-section">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.recent}</h2>
+          <span>{copy.chapters}</span>
         </div>
         {articles.length ? (
-          <div className="mobile-snap-row" aria-label="Artículos recientes">
+          <motion.div className="mobile-snap-row mobile-linear-row" aria-label="Artículos recientes" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
             {articles.map((article, index) => (
-              <Link className="mobile-article-card" href={`/off/${article.slug}`} key={article.id}>
-                <img src={imageFor(article, index)} alt="" />
-                <span>{article.category}</span>
-                <h3>{clean(article.title)}</h3>
-                <p>{clean(article.excerpt)}</p>
-                <small>{article.readTime}</small>
-              </Link>
+              <motion.div variants={mobileMotion.item} key={article.id}>
+                <Link className="mobile-article-card" href={`/off/${article.slug}`}>
+                  <img src={imageFor(article, index)} alt="" loading="lazy" />
+                  <span>{article.category}</span>
+                  <h3>{clean(article.title)}</h3>
+                  <p>{clean(article.excerpt)}</p>
+                  <small>{article.readTime}</small>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="mobile-empty-card">
-            <span>Archivo en construcción</span>
-            <p>Cuando publiques capítulos, aparecerán aquí con datos reales.</p>
+            <span>OFF</span>
+            <p>{copy.noArticles}</p>
           </div>
         )}
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-about-card">
-        <img src="/images/off-quees.webp" alt="" />
+      <MobileReveal className="mobile-about-card">
+        <img src="/images/off-quees.webp" alt="" loading="lazy" />
         <div>
-          <span>Qué es OFF</span>
-          <h2>No es motivación. Es claridad.</h2>
-          <p>Una editorial psicológica para volver a pensar, sentir y construir con dirección.</p>
+          <span>OFF</span>
+          <h2>{copy.aboutTitle}</h2>
+          <p>{copy.aboutCopy}</p>
         </div>
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-section">
+      <MobileReveal className="mobile-section mobile-impact-section">
         <div className="mobile-section-head">
-          <span>Impacto</span>
-          <h2>Números que no hacen ruido</h2>
+          <h2>{copy.impact}</h2>
         </div>
         <div className="mobile-metric-grid">
-          <article><strong>2.3K+</strong><span>Lectores alcanzados</span></article>
-          <article><strong>1.8K+</strong><span>Personas que decidieron elegirse</span></article>
-          <article><strong>700+</strong><span>Historias compartidas</span></article>
-          <article><strong>2K+</strong><span>Jóvenes reconstruyendo dirección</span></article>
+          <article><strong><MobileCountUp value={2.3} decimals={1} suffix="K+" /></strong><span>{copy.readers}</span></article>
+          <article><strong><MobileCountUp value={1.8} decimals={1} suffix="K+" /></strong><span>{copy.choseSelf}</span></article>
+          <article><strong><MobileCountUp value={700} suffix="+" /></strong><span>{copy.stories}</span></article>
+          <article><strong><MobileCountUp value={2} suffix="K+" /></strong><span>{copy.rebuilding}</span></article>
         </div>
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-section" id="conoce-mas">
-        <div className="mobile-section-head">
-          <span>Conoce más</span>
-          <h2>Detrás de OFF</h2>
-        </div>
+      <MobileReveal className="mobile-section" id="conoce-mas">
         <div className="mobile-snap-row compact">
           <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
-            <strong>in</strong><span>Nathalie Garcia A.</span>
+            <strong><img src="/logo/linkedin-logo.svg" alt="" /></strong><span>Nathalie Garcia A.</span>
           </a>
           <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
-            <strong>IG</strong><span>@nathalie.garciaa</span>
+            <strong><img src="/logo/instagram-logo.svg" alt="" /></strong><span>@nathalie.garciaa</span>
           </a>
           <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer">
-            <strong>OFF</strong><span>@off_journal</span>
+            <strong><img src="/logo/logo-off.png" alt="" /></strong><span>@off_journal</span>
           </a>
         </div>
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-subscribe" id="suscripcion">
-        <span>Recibe OFF</span>
-        <h2>Sin ruido. Solo ideas que te regresan dirección.</h2>
+      <MobileReveal className="mobile-subscribe" id="suscripcion">
+        <span>{copy.receive}</span>
+        <h2>{copy.subscribeTitle}</h2>
         <SubscribeForm />
-      </section>
+      </MobileReveal>
 
       <footer className="mobile-footer">
         <img src="/logo/logo-off.png" alt="OFF" />

@@ -153,6 +153,7 @@ function getProfile(scores: Record<Category, number>): Profile {
 }
 
 export function PersonalityTestPreview() {
+  const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [showResult, setShowResult] = useState(false);
@@ -240,6 +241,7 @@ export function PersonalityTestPreview() {
     setCurrentIndex(0);
     setError("");
     setShowResult(false);
+    setStarted(false);
   }
 
   return (
@@ -258,7 +260,23 @@ export function PersonalityTestPreview() {
           <small>No es diagnóstico. Es un espejo incómodo, que aparentemente hacía falta.</small>
         </div>
 
-        {!showResult ? (
+        {!started ? (
+          <motion.div
+            className="off-index-intro"
+            initial={{ opacity: 0, transform: "translateY(16px)" }}
+            animate={{ opacity: 1, transform: "translateY(0)" }}
+            transition={{ duration: 0.46, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <p>Antes de seguir construyendo tu futuro, vale la pena entender desde dónde estás tomando tus decisiones.</p>
+            <p>Este test privado fue diseñado para ayudarte a reconocer patrones, fortalezas y comportamientos que normalmente pasan desapercibidos mientras intentas crecer.</p>
+            <p>No existen respuestas correctas.</p>
+            <p>Existe una versión más consciente de ti.</p>
+            <strong>Bienvenido a tu Modo ON.</strong>
+            <button type="button" className="off-index-primary-button" onClick={() => setStarted(true)}>
+              Iniciar
+            </button>
+          </motion.div>
+        ) : !showResult ? (
           <>
             <div className="off-index-progress" aria-label={`Progreso ${progress}%`}>
               <div className="off-index-progress-copy">

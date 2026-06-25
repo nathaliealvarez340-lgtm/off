@@ -1,6 +1,7 @@
 "use client";
 
-import { BookOpen, Brain, CalendarClock, Languages, LogOut, Sparkles, UserRound } from "lucide-react";
+import { BookOpen, Brain, CalendarClock, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -8,6 +9,8 @@ import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
+import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
 
 type LoungeArticle = {
   id: string;
@@ -51,14 +54,6 @@ function clean(value?: string | null) {
   return (value ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
-const nav = [
-  ["#biblioteca", "Biblioteca", BookOpen],
-  ["#mi-yo", "Mi yo", Brain],
-  ["#early", "Early", CalendarClock],
-  ["#perfil", "Perfil", UserRound],
-  ["#conoce-mas", "Más", Sparkles],
-] as const;
-
 export function MobileMemberLounge({
   name,
   memberSince,
@@ -70,66 +65,96 @@ export function MobileMemberLounge({
   loungeContent,
   draftEditions,
 }: MobileMemberLoungeProps) {
+  const { copy } = useMobileCopy();
   const current = articles[0];
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
+  const nav = [
+    ["#biblioteca", copy.library, BookOpen],
+    ["#mi-yo", copy.mySelfKicker, Brain],
+    ["#early", "Early", CalendarClock],
+    ["#perfil", copy.profileKicker, UserRound],
+    ["#chat", copy.chatKicker, MessageCircle],
+    ["#idioma", copy.language, Globe2],
+    ["#conoce-mas", "Más", Sparkles],
+  ] as const;
+
   return (
     <main className="off-mobile mobile-lounge">
       <MemberActivityTracker />
-      <nav className="mobile-topbar">
+      <nav className="mobile-topbar mobile-lounge-topbar">
         <Link href="/lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
-        <div>
-          <LanguageSwitcher compact />
-          <form action={logoutAction}><button type="submit">Salir</button></form>
-        </div>
       </nav>
 
-      <header className="mobile-lounge-hero">
-        <img src="/images/cap2-off.webp" alt="" />
-        <div>
-          <span>The Member Lounge</span>
-          <h1><MemberGreeting name={name} /></h1>
-          <p>Una sala privada para leer sin prisa, encontrar dirección y volver a ideas que merecen quedarse contigo.</p>
-          {current ? <Link className="mobile-primary" href={`/off/${current.slug}`}>Continuar leyendo</Link> : null}
-        </div>
-      </header>
+      <motion.header className="mobile-lounge-hero" initial="hidden" animate="visible">
+        <motion.img
+          src="/images/cap2-off.webp"
+          alt=""
+          variants={{
+            hidden: { opacity: 0, transform: "scale(1.03)" },
+            visible: { opacity: 1, transform: "scale(1)" },
+          }}
+          transition={{ duration: 0.9, ease: mobileEase }}
+        />
+        <motion.div variants={mobileMotion.list} transition={{ staggerChildren: 0.12, delayChildren: 0.45 }}>
+          <motion.span variants={mobileMotion.item}>{copy.lounge}</motion.span>
+          <motion.h1 variants={mobileMotion.item}><MemberGreeting name={name} /></motion.h1>
+          <motion.p variants={mobileMotion.item}>{copy.loungeCopy}</motion.p>
+          {current ? (
+            <motion.div variants={mobileMotion.item}>
+              <Link className="mobile-primary" href={`/off/${current.slug}`}>{copy.continueReading}</Link>
+            </motion.div>
+          ) : null}
+        </motion.div>
+      </motion.header>
 
-      <section className="mobile-member-strip">
-        <article><span>Miembro desde</span><strong><LocalDate value={memberSince} /></strong></article>
+      <MobileReveal className="mobile-member-strip" aria-label="Datos de miembro">
+        <article><span>{copy.memberSince}</span><strong><LocalDate value={memberSince} /></strong></article>
         <article><span>OFF ID</span><strong>#{memberNumber}</strong></article>
-        <article><span>Tiempo</span><strong>{activeTime}</strong></article>
-      </section>
+        <article><span>{copy.timeInvested}</span><strong>{activeTime}</strong></article>
+      </MobileReveal>
 
-      <section className="mobile-section" id="biblioteca">
-        <div className="mobile-section-head"><span>Biblioteca</span><h2>Colecciones editoriales</h2></div>
-        <div className="mobile-snap-row">
+      <MobileReveal className="mobile-section" id="biblioteca">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.editorialCollections}</h2>
+          <span>{copy.library}</span>
+        </div>
+        <motion.div className="mobile-snap-row mobile-library-row" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
           {articles.map((article) => (
-            <Link className="mobile-article-card lounge-card" href={`/off/${article.slug}`} key={article.id}>
-              <img src={article.coverImage || "/images/cap1-off.webp"} alt="" />
-              <span>{article.category}</span>
-              <h3>{clean(article.title)}</h3>
-              <p>{clean(article.excerpt)}</p>
-              <small>{article.readTime}</small>
-            </Link>
+            <motion.div variants={mobileMotion.item} key={article.id}>
+              <Link className="mobile-article-card lounge-card" href={`/off/${article.slug}`}>
+                <img src={article.coverImage || "/images/cap1-off.webp"} alt="" loading="lazy" />
+                <span>{article.category}</span>
+                <h3>{clean(article.title)}</h3>
+                <p>{clean(article.excerpt)}</p>
+                <small>{article.readTime}</small>
+              </Link>
+            </motion.div>
           ))}
           {libraries.map((item) => (
-            <article className="mobile-article-card lounge-card" key={item.id}>
+            <motion.article className="mobile-article-card lounge-card" variants={mobileMotion.item} key={item.id}>
               <span>Volumen {item.number ?? ""}</span>
               <h3>{clean(item.title)}</h3>
               <p>{clean(item.description ?? item.content)}</p>
-            </article>
+            </motion.article>
           ))}
+        </motion.div>
+      </MobileReveal>
+
+      <MobileReveal className="mobile-section mobile-self-section" id="mi-yo">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.mySelfTitle}</h2>
+          <span>{copy.mySelfKicker}</span>
         </div>
-      </section>
-
-      <section className="mobile-section" id="mi-yo">
-        <div className="mobile-section-head"><span>Mi yo</span><h2>Me conozco, me reconozco</h2></div>
         <PersonalityTestPreview />
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-section" id="early">
-        <div className="mobile-section-head"><span>Early Access</span><h2>Próximamente en OFF</h2></div>
+      <MobileReveal className="mobile-section" id="early">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.earlyTitle}</h2>
+          <span>{copy.earlyKicker}</span>
+        </div>
         <div className="mobile-snap-row compact">
           {[...earlyAccess, ...draftEditions].map((item) => (
             <article className="mobile-mini-card" key={item.id}>
@@ -139,31 +164,57 @@ export function MobileMemberLounge({
             </article>
           ))}
         </div>
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-section" id="perfil">
-        <div className="mobile-section-head"><span>Perfil</span><h2>Tu recorrido OFF</h2></div>
+      <MobileReveal className="mobile-section" id="perfil">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.profileTitle}</h2>
+          <span>{copy.profileKicker}</span>
+        </div>
         <div className="mobile-metric-grid">
-          <article><strong>{completedCount || "0"}</strong><span>Artículos completados</span></article>
-          <article><strong>{badges.length || "0"}</strong><span>Insignias</span></article>
+          <article><strong>{completedCount || "0"}</strong><span>{copy.articlesCompleted}</span></article>
+          <article><strong>{badges.length || "0"}</strong><span>{copy.badges}</span></article>
         </div>
-      </section>
+      </MobileReveal>
 
-      <section className="mobile-section" id="conoce-mas">
-        <div className="mobile-section-head"><span>Conoce más</span><h2>Detrás de OFF</h2></div>
+      <MobileReveal className="mobile-section" id="chat">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.chatTitle}</h2>
+          <span>{copy.chatKicker}</span>
+        </div>
+        <div className="mobile-empty-card">
+          <span>OFF</span>
+          <p>Comparte una tensión, una pregunta o una idea desde los capítulos publicados.</p>
+        </div>
+      </MobileReveal>
+
+      <MobileReveal className="mobile-section" id="idioma">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.language}</h2>
+          <span>OFF</span>
+        </div>
+        <div className="mobile-language-card">
+          <Globe2 aria-hidden="true" />
+          <LanguageSwitcher compact label={copy.language} />
+        </div>
+      </MobileReveal>
+
+      <MobileReveal className="mobile-section" id="conoce-mas">
+        <div className="mobile-section-head stacked">
+          <h2>{copy.moreTitle}</h2>
+          <span>{copy.moreKicker}</span>
+        </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong>in</strong><span>Nathalie Garcia A.</span></a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong>IG</strong><span>@nathalie.garciaa</span></a>
+          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src="/logo/linkedin-logo.svg" alt="" /></strong><span>Nathalie Garcia A.</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src="/logo/instagram-logo.svg" alt="" /></strong><span>@nathalie.garciaa</span></a>
         </div>
-      </section>
-
-      <div className="mobile-language-dock"><Languages aria-hidden="true" /><LanguageSwitcher compact label="Idioma" /></div>
+      </MobileReveal>
 
       <nav className="mobile-bottom-nav" aria-label="Navegación mobile lounge">
         {nav.map(([href, label, Icon]) => (
           <a href={href} key={href}><Icon aria-hidden="true" /><span>{label}</span></a>
         ))}
-        <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>Salir</span></button></form>
+        <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button></form>
       </nav>
     </main>
   );

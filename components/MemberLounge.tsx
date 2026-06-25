@@ -222,7 +222,7 @@ export function MemberLounge({
             <PersonalityTestPreview />
             <div className="self-copy-block">
               <span data-i18n="mySelf">Mi yo</span>
-              <h2 data-i18n="knowMyself">Me conozco, me reconozco</h2>
+              <h2 data-i18n="knowMyself">Conociendo mi modo ON</h2>
               <p>Una base para convertir la introspeccion en lectura personal. Las preguntas definitivas se conectaran cuando el test este listo.</p>
             </div>
           </Reveal>
