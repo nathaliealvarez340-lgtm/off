@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { PublicArticle } from "@/components/LocalizedHome";
+import { getLocalizedArticle } from "@/lib/article-localization";
 import { MobileImpactCarousel } from "@/mobile/MobileImpactCarousel";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
@@ -23,8 +24,9 @@ function imageFor(article: PublicArticle, index: number) {
 }
 
 export function MobileHome({ articles }: { articles: PublicArticle[] }) {
-  const featured = articles[0];
-  const { copy } = useMobileCopy();
+  const { copy, language } = useMobileCopy();
+  const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
+  const featured = localizedArticles[0];
 
   return (
     <main className="off-mobile mobile-home">
@@ -60,9 +62,9 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
           <h2>{copy.recent}</h2>
           <span>{copy.chapters}</span>
         </div>
-        {articles.length ? (
+        {localizedArticles.length ? (
           <motion.div className="mobile-snap-row mobile-linear-row" aria-label="Artículos recientes" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
-            {articles.map((article, index) => (
+            {localizedArticles.map((article, index) => (
               <motion.div variants={mobileMotion.item} key={article.id}>
                 <Link className="mobile-article-card" href={`/off/${article.slug}`}>
                   <img src={imageFor(article, index)} alt="" loading="lazy" />
@@ -111,16 +113,16 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
         </div>
         <div className="mobile-snap-row compact">
           <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer">
-            <strong><img src="/logo/logo-off.png" alt="" /></strong><span>@off_journal</span>
+            <strong><img src={instagramLogo.src} alt="" /></strong><span>OFF OFFICIAL</span>
           </a>
           <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
-            <strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span>
+            <strong><img src={linkedinLogo.src} alt="" /></strong><span>LINKEDIN</span>
           </a>
           <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
-            <strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span>
+            <strong><img src={instagramLogo.src} alt="" /></strong><span>INSTAGRAM</span>
           </a>
           <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer">
-            <strong><img src={xLogo.src} alt="" /></strong><span>X / OFF</span>
+            <strong><img src={xLogo.src} alt="" /></strong><span>X OFFICIAL</span>
           </a>
         </div>
       </MobileReveal>
@@ -138,3 +140,4 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
     </main>
   );
 }
+

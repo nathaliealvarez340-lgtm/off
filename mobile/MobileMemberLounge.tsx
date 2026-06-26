@@ -10,6 +10,7 @@ import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
@@ -27,9 +28,10 @@ type LoungeArticle = {
   category: string;
   publishedAt: string;
   readTime: string;
+  translations?: ArticleTranslationMap;
 };
 
-type DraftEdition = { id: string; title: string; excerpt: string; date: string };
+type DraftEdition = { id: string; title: string; excerpt: string; date: string; translations?: ArticleTranslationMap };
 
 type LoungeContent = {
   id: string;
@@ -80,7 +82,9 @@ export function MobileMemberLounge({
 }: MobileMemberLoungeProps) {
   const { copy, language } = useMobileCopy();
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
-  const current = articles[0];
+  const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
+  const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
+  const current = localizedArticles[0];
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
@@ -134,7 +138,7 @@ export function MobileMemberLounge({
           <span>{copy.library}</span>
         </div>
         <motion.div className="mobile-snap-row mobile-library-row" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
-          {articles.map((article) => (
+          {localizedArticles.map((article) => (
             <motion.div variants={mobileMotion.item} key={article.id}>
               <Link className="mobile-article-card lounge-card" href={`/off/${article.slug}`}>
                 <img src={article.coverImage || "/images/cap1-off.webp"} alt="" loading="lazy" />
@@ -169,7 +173,7 @@ export function MobileMemberLounge({
           <span>{copy.earlyKicker}</span>
         </div>
         <div className="mobile-snap-row compact">
-          {[...earlyAccess, ...draftEditions].map((item) => (
+          {[...earlyAccess, ...localizedDrafts].map((item) => (
             <article className="mobile-mini-card" key={item.id}>
               <span>{"releaseDate" in item && item.releaseDate ? <LocalDate value={item.releaseDate} /> : "date" in item ? <LocalDate value={item.date} /> : "OFF"}</span>
               <h3>{clean(item.title)}</h3>
@@ -196,10 +200,10 @@ export function MobileMemberLounge({
           <span>{copy.moreKicker}</span>
         </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src="/logo/logo-off.png" alt="" /></strong><span>@off_journal</span></a>
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span></a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span></a>
-          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>X / OFF</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>OFF OFFICIAL</span></a>
+          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>LINKEDIN</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>INSTAGRAM</span></a>
+          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>X OFFICIAL</span></a>
         </div>
       </MobileReveal>
 
