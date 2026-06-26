@@ -23,6 +23,10 @@ function imageFor(article: PublicArticle, index: number) {
   return ["/images/cap1-off.webp", "/images/cap2-off.webp", "/images/cap3-off.webp"][index % 3];
 }
 
+function articleHref(slug: string, language: string) {
+  return `/off/${slug}?lang=${language}`;
+}
+
 export function MobileHome({ articles }: { articles: PublicArticle[] }) {
   const { copy, language } = useMobileCopy();
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
@@ -52,7 +56,7 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
           <motion.h1 variants={mobileMotion.item}>{copy.heroTitle} <em>{copy.heroEmphasis}</em></motion.h1>
           <motion.p variants={mobileMotion.item}>{copy.heroSubtitle}</motion.p>
           <motion.div variants={mobileMotion.item}>
-            <Link className="mobile-primary" href={featured ? `/off/${featured.slug}` : "/login"}>{copy.enterOff}</Link>
+            <Link className="mobile-primary" href={featured ? articleHref(featured.slug, language) : "/login"}>{copy.enterOff}</Link>
           </motion.div>
         </motion.div>
       </motion.header>
@@ -66,7 +70,7 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
           <motion.div className="mobile-snap-row mobile-linear-row" aria-label="Artículos recientes" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
             {localizedArticles.map((article, index) => (
               <motion.div variants={mobileMotion.item} key={article.id}>
-                <Link className="mobile-article-card" href={`/off/${article.slug}`}>
+                <Link className="mobile-article-card" href={articleHref(article.slug, language)}>
                   <img src={imageFor(article, index)} alt="" loading="lazy" />
                   <span>{article.category}</span>
                   <h3>{clean(article.title)}</h3>
@@ -113,16 +117,16 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
         </div>
         <div className="mobile-snap-row compact">
           <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer">
-            <strong><img src={instagramLogo.src} alt="" /></strong><span>OFF OFFICIAL</span>
+            <strong><img src={instagramLogo.src} alt="" /></strong><span>@off_journal</span>
           </a>
           <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
-            <strong><img src={linkedinLogo.src} alt="" /></strong><span>LINKEDIN</span>
+            <strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span>
           </a>
           <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
-            <strong><img src={instagramLogo.src} alt="" /></strong><span>INSTAGRAM</span>
+            <strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span>
           </a>
           <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer">
-            <strong><img src={xLogo.src} alt="" /></strong><span>X OFFICIAL</span>
+            <strong><img src={xLogo.src} alt="" /></strong><span>@off_journal</span>
           </a>
         </div>
       </MobileReveal>

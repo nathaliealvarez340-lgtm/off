@@ -255,6 +255,10 @@ function formatDate(date: string | null, lang: Lang) {
   }).format(new Date(date));
 }
 
+function articleHref(slug?: string, lang?: Lang) {
+  return slug ? `/off/${slug}?lang=${lang ?? "es"}` : "#capitulos";
+}
+
 export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; user: PublicUser | null }) {
   const [lang, setLang] = useState<Lang>("es");
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -291,6 +295,9 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
   function chooseLanguage(nextLang: Lang) {
     setLang(nextLang);
     window.localStorage.setItem("off-language", nextLang);
+    document.cookie = `off-language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+    document.documentElement.lang = nextLang;
+    window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLang }));
     setLanguageOpen(false);
   }
 
@@ -376,7 +383,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           </h1>
           <p>{t.subtitle}</p>
           <div className="actions">
-            <Link className="button violet-button" href={featured ? `/off/${featured.slug}` : "#capitulos"}>
+            <Link className="button violet-button" href={featured ? articleHref(featured.slug, lang) : "#capitulos"}>
               {t.cta} <span>→</span>
             </Link>
           </div>
@@ -443,7 +450,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
             </h2>
           </div>
           {localizedArticles.length > 0 ? (
-            <Link className="purple-link text-link" href={featured ? `/off/${featured.slug}` : "#capitulos"}>
+            <Link className="purple-link text-link" href={featured ? articleHref(featured.slug, lang) : "#capitulos"}>
               {t.viewAll} <span>→</span>
             </Link>
           ) : null}
@@ -459,7 +466,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           <div className="article-grid">
             {localizedArticles.map((article, index) => (
               <article className="article-card cinematic-card" key={article.id}>
-                <Link className="cover-frame" href={`/off/${article.slug}`}>
+                <Link className="cover-frame" href={articleHref(article.slug, lang)}>
                   <Image src={editorialImage(article, index)} alt={plainText(article.title)} fill sizes="(max-width: 820px) 100vw, 31vw" />
                 </Link>
                 <div className="article-copy">
@@ -470,7 +477,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
                     <span>{formatDate(article.publishedAt, lang)}</span>
                     <span>{article.readTime}</span>
                   </div>
-                  <Link className="purple-link text-link" href={`/off/${article.slug}`}>
+                  <Link className="purple-link text-link" href={articleHref(article.slug, lang)}>
                     {t.readMore} <span>→</span>
                   </Link>
                 </div>
@@ -525,7 +532,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>LINKEDIN</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">LINKEDIN</span>
+              <span className="social-user">NATHALIE GARCIA A.</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
@@ -542,7 +549,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>INSTAGRAM</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">INSTAGRAM</span>
+              <span className="social-user">@NATHALIE.GARCIAA</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
@@ -559,7 +566,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>OFF OFFICIAL</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">OFF OFFICIAL</span>
+              <span className="social-user">@OFF_JOURNAL</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
@@ -570,7 +577,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>X OFFICIAL</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">X OFFICIAL</span>
+              <span className="social-user">@OFF_JOURNAL</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>

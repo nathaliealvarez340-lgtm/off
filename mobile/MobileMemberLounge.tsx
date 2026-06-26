@@ -69,6 +69,10 @@ function clean(value?: string | null) {
   return (value ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
+function articleHref(slug: string, language: string) {
+  return `/off/${slug}?lang=${language}`;
+}
+
 export function MobileMemberLounge({
   name,
   memberSince,
@@ -120,7 +124,7 @@ export function MobileMemberLounge({
           <motion.p variants={mobileMotion.item}>{copy.loungeCopy}</motion.p>
           {current ? (
             <motion.div variants={mobileMotion.item}>
-              <Link className="mobile-primary" href={`/off/${current.slug}`}>{copy.continueReading}</Link>
+              <Link className="mobile-primary" href={articleHref(current.slug, language)}>{copy.continueReading}</Link>
             </motion.div>
           ) : null}
         </motion.div>
@@ -140,7 +144,7 @@ export function MobileMemberLounge({
         <motion.div className="mobile-snap-row mobile-library-row" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
           {localizedArticles.map((article) => (
             <motion.div variants={mobileMotion.item} key={article.id}>
-              <Link className="mobile-article-card lounge-card" href={`/off/${article.slug}`}>
+              <Link className="mobile-article-card lounge-card" href={articleHref(article.slug, language)}>
                 <img src={article.coverImage || "/images/cap1-off.webp"} alt="" loading="lazy" />
                 <span>{article.category}</span>
                 <h3>{clean(article.title)}</h3>
@@ -200,10 +204,10 @@ export function MobileMemberLounge({
           <span>{copy.moreKicker}</span>
         </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>OFF OFFICIAL</span></a>
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>LINKEDIN</span></a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>INSTAGRAM</span></a>
-          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>X OFFICIAL</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@off_journal</span></a>
+          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span></a>
+          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span></a>
+          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>@off_journal</span></a>
         </div>
       </MobileReveal>
 

@@ -52,6 +52,10 @@ function cleanText(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
+function articleHref(slug: string, language: string) {
+  return `/off/${slug}?lang=${language}`;
+}
+
 function links(item?: LoungeContent) {
   return (item?.links ?? []).filter((link): link is { label: string; url: string } => Boolean(link && typeof link === "object" && "label" in link && "url" in link));
 }
@@ -105,7 +109,7 @@ export function MemberLounge({
       title: cleanText(article.title),
       number: String(index + 1).padStart(2, "0"),
       description: cleanText(article.excerpt),
-      url: `/off/${article.slug}`,
+      url: articleHref(article.slug, language),
       image: article.coverImage,
       category: article.category,
       date: article.publishedAt,
@@ -154,7 +158,7 @@ export function MemberLounge({
             <span>Actualmente estas explorando</span>
             <strong>{current ? cleanText(current.title) : "El portafolio OFF"}</strong>
           </div>
-          {current ? <Link href={`/off/${current.slug}`}>Continuar leyendo</Link> : null}
+          {current ? <Link href={articleHref(current.slug, language)}>Continuar leyendo</Link> : null}
         </div>
       </motion.header>
 
@@ -208,7 +212,7 @@ export function MemberLounge({
           <Reveal className="lounge-section continue-reading">
             <div className="lounge-heading"><span>En tu mesa</span><h2>Continuar leyendo</h2></div>
             {current ? (
-              <Link className="continue-editorial" href={`/off/${current.slug}`}>
+              <Link className="continue-editorial" href={articleHref(current.slug, language)}>
                 <img src={current.coverImage || "/images/cap1-off.webp"} alt="" />
                 <div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div>
               </Link>
@@ -258,10 +262,10 @@ export function MemberLounge({
               <p>Detras de OFF hay alguien que tambien esta en construccion.</p>
             </div>
             <div className="lounge-social-cards">
-              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LINKEDIN</strong></a>
-              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>IG</span><strong>INSTAGRAM</strong></a>
-              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>IG</span><strong>OFF OFFICIAL</strong></a>
-              <a href="https://x.com/off_journal" target="_blank" rel="noreferrer"><span>X</span><strong>X OFFICIAL</strong></a>
+              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LINKEDIN</strong><small>Nathalie Garcia A.</small></a>
+              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>IG</span><strong>INSTAGRAM</strong><small>@nathalie.garciaa</small></a>
+              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>IG</span><strong>OFF OFFICIAL</strong><small>@off_journal</small></a>
+              <a href="https://x.com/off_journal" target="_blank" rel="noreferrer"><span>X</span><strong>X OFFICIAL</strong><small>@off_journal</small></a>
             </div>
           </Reveal>
 
