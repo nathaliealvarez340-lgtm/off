@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getPlainTextPreview, INTERNAL_CONTENT_CATEGORIES } from "@/lib/articles";
+import { extractArticleTranslations } from "@/lib/article-localization";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { earnedBadges, formatActiveTime, getOrCreateMemberNumber } from "@/lib/member-progress";
@@ -48,6 +49,7 @@ export default async function LoungePage() {
         category: article.category,
         publishedAt: article.publishedAt?.toISOString() ?? article.updatedAt.toISOString(),
         readTime: article.readTime,
+        translations: extractArticleTranslations(article.content).translations,
       }))}
       loungeContent={visibleLoungeContent.map((item) => ({
         id: item.id,
@@ -66,6 +68,7 @@ export default async function LoungePage() {
         title: getPlainTextPreview(article.title, 140),
         excerpt: getPlainTextPreview(article.excerpt),
         date: article.updatedAt.toISOString(),
+        translations: extractArticleTranslations(article.content).translations,
       }))}
     />
   );

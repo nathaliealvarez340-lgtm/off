@@ -2,6 +2,7 @@ import Script from "next/script";
 import { redirect } from "next/navigation";
 import { LocalizedHome, type PublicArticle } from "@/components/LocalizedHome";
 import { getPlainTextPreview, getPublishedArticles } from "@/lib/articles";
+import { extractArticleTranslations } from "@/lib/article-localization";
 import { getCurrentUser } from "@/lib/auth";
 import { MobileHome } from "@/mobile/MobileHome";
 
@@ -18,6 +19,7 @@ export default async function Home() {
     readTime: article.readTime,
     publishedAt: article.publishedAt?.toISOString() ?? null,
     featured: article.featured,
+    translations: extractArticleTranslations(article.content).translations,
   }));
 
   return (

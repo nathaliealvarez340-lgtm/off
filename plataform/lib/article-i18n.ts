@@ -6,6 +6,7 @@ export type ArticleTranslation = {
   title: string;
   excerpt: string;
   content: string;
+  category?: string;
 };
 
 type ArticleTranslationEnvelope = {
@@ -108,6 +109,7 @@ export function resolveArticleTranslation(
     title: original?.title || article.title,
     excerpt: original?.excerpt || article.excerpt,
     content: original?.content || article.content,
+    category: original?.category,
   };
 
   if (!requested || !requested.title || !requested.excerpt || !requested.content) {
@@ -123,6 +125,7 @@ export function resolveArticleTranslation(
     title: requested.title,
     excerpt: requested.excerpt,
     content: requested.content,
+    category: requested.category || base.category,
     language: requestedLanguage,
     requestedLanguage,
     hasTranslation: true,

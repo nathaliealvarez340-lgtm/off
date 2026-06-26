@@ -5731,7 +5731,7 @@ textarea:focus {
 
 .social-badges {
   display: grid;
-  grid-template-columns: repeat(3, minmax(190px, 1fr));
+  grid-template-columns: repeat(4, minmax(210px, 1fr));
   gap: 18px;
   align-items: stretch;
 }
@@ -5739,7 +5739,7 @@ textarea:focus {
 .profile-social-card {
   display: grid;
   grid-template-rows: auto 1fr;
-  min-height: 218px;
+  min-height: 188px;
   color: #fff;
   transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
@@ -5770,15 +5770,18 @@ textarea:focus {
 .platform-mark {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
   font-weight: 900;
 }
 
 .linkedin-mark {
-  background: #0a66c2;
+  color: #4f8dff;
+  font-family: Arial, sans-serif;
+}
+
+.x-mark {
   color: #fff;
   font-family: Arial, sans-serif;
 }
@@ -8001,13 +8004,13 @@ textarea:focus {
 
 .lounge-social-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
 .lounge-social-cards a {
   display: grid;
-  min-height: 190px;
+  min-height: 142px;
   align-content: space-between;
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 8px;
@@ -8029,17 +8032,15 @@ textarea:focus {
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 50%;
-  background: rgba(123, 61, 255, 0.18);
   color: #c6aaff;
   font-weight: 800;
 }
 
 .lounge-social-cards strong {
   margin-top: auto;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 21px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
 }
 
 .lounge-social-cards small {
@@ -8535,7 +8536,7 @@ textarea:focus {
   overflow: hidden;
   border: 1px solid rgba(123, 61, 255, 0.24);
   border-radius: 30px;
-  padding: clamp(22px, 4vw, 34px);
+  padding: clamp(18px, 3.2vw, 28px);
   background:
     radial-gradient(circle at 14% 0%, rgba(123, 61, 255, 0.22), transparent 34%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(13, 13, 18, 0.88));
@@ -8580,18 +8581,18 @@ textarea:focus {
   margin: 10px 0 0;
   color: #fff;
   font-family: var(--font-editorial, Georgia, serif);
-  font-size: clamp(2.4rem, 5vw, 4.6rem);
+  font-size: clamp(2rem, 4.4vw, 3.8rem);
   font-weight: 500;
   letter-spacing: -0.04em;
   line-height: 0.94;
 }
 
 .off-index-header p {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   max-width: 540px;
   color: rgba(255, 255, 255, 0.82);
-  font-size: clamp(1.02rem, 2vw, 1.22rem);
-  line-height: 1.45;
+  font-size: clamp(0.95rem, 1.7vw, 1.08rem);
+  line-height: 1.42;
 }
 
 .off-index-header small {
@@ -8632,18 +8633,18 @@ textarea:focus {
 }
 
 .off-index-question-card {
-  margin-top: 24px;
+  margin-top: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  padding: clamp(20px, 4vw, 30px);
+  padding: clamp(16px, 3vw, 24px);
   background: rgba(0, 0, 0, 0.2);
 }
 
 .off-index-question-card p {
-  margin: 14px 0 24px;
+  margin: 12px 0 18px;
   color: #fff;
   font-family: var(--font-editorial, Georgia, serif);
-  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  font-size: clamp(1.24rem, 2.4vw, 1.9rem);
   letter-spacing: -0.025em;
   line-height: 1.08;
 }
@@ -8699,7 +8700,7 @@ textarea:focus {
 .off-index-actions {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   margin-top: 22px;
 }
 
@@ -8788,32 +8789,31 @@ textarea:focus {
 
 @media (max-width: 640px) {
   .off-index-shell {
-    border-radius: 24px;
-    padding: 20px;
+    border-radius: 22px;
+    padding: 16px;
   }
 
   .off-index-progress-copy,
   .off-index-actions {
     align-items: stretch;
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .off-index-scale {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .off-index-scale button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 14px;
-    text-align: left;
+    display: grid;
+    gap: 4px;
+    padding: 9px 4px;
+    text-align: center;
   }
 
   .off-index-scale span {
     margin-top: 0;
-    text-align: right;
+    text-align: center;
+    font-size: 0.52rem;
   }
 
   .off-index-breakdown {
@@ -10046,7 +10046,12 @@ body:has(.auth-page) {
 
 .mobile-section-head h2,
 .mobile-subscribe h2 {
-  font-size: clamp(2rem, 9vw, 3.4rem);
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(1.62rem, 7vw, 2.34rem);
+  letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-snap-row {
@@ -10066,7 +10071,7 @@ body:has(.auth-page) {
 }
 
 .mobile-snap-row.compact {
-  grid-auto-columns: minmax(190px, 62%);
+  grid-auto-columns: minmax(230px, 72%);
 }
 
 .mobile-snap-row::-webkit-scrollbar {
@@ -10289,8 +10294,12 @@ body:has(.auth-page) {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  min-height: 64px;
+  padding: 14px 16px;
   color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
   transition: transform 180ms var(--m-ease-out), border-color 180ms ease, background 180ms ease;
 }
 
@@ -10436,12 +10445,36 @@ body:has(.auth-page) {
 }
 
 .mobile-member-strip {
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(150px, 1fr);
-  overflow-x: auto;
-  margin: var(--m-space-3) calc(var(--mobile-pad) * -1) 0;
-  padding: 0 var(--mobile-pad) 6px;
-  scroll-snap-type: x mandatory;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  overflow: visible;
+  margin: var(--m-space-3) 0 0;
+  padding: 0;
+}
+
+.mobile-member-strip article {
+  min-width: 0;
+  min-height: 82px;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 10px;
+}
+
+.mobile-member-strip strong {
+  overflow: hidden;
+  font-size: clamp(0.86rem, 3.4vw, 1.08rem);
+  line-height: 1.12;
+  text-overflow: ellipsis;
+}
+
+.mobile-member-strip span {
+  overflow: hidden;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .mobile-bottom-nav {
@@ -10656,19 +10689,19 @@ body:has(.auth-page) {
 }
 
 .mobile-self-section .off-index-shell {
-  padding: 18px;
+  padding: 14px;
 }
 
 .mobile-self-section .off-index-header h2 {
-  font-size: clamp(2.1rem, 10vw, 3.2rem);
+  font-size: clamp(1.82rem, 8vw, 2.5rem);
 }
 
 .mobile-self-section .off-index-question-card {
-  padding: 18px;
+  padding: 14px;
 }
 
 .mobile-self-section .off-index-question-card p {
-  font-size: clamp(1.18rem, 6vw, 1.6rem);
+  font-size: clamp(1.02rem, 5vw, 1.34rem);
   line-height: 1.16;
 }
 
@@ -10690,11 +10723,11 @@ body:has(.auth-page) {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 12px;
-  margin-top: 24px;
+  gap: 8px;
+  margin-top: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  padding: clamp(18px, 4vw, 26px);
+  padding: clamp(14px, 3vw, 20px);
   background:
     radial-gradient(circle at 100% 0%, rgba(123, 61, 255, 0.16), transparent 34%),
     rgba(0, 0, 0, 0.22);

@@ -12,6 +12,8 @@ import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
+import { useOffLanguage } from "@/components/useOffLanguage";
 
 type LoungeArticle = {
   id: string;
@@ -22,8 +24,9 @@ type LoungeArticle = {
   category: string;
   publishedAt: string;
   readTime: string;
+  translations?: ArticleTranslationMap;
 };
-type DraftEdition = { id: string; title: string; excerpt: string; date: string };
+type DraftEdition = { id: string; title: string; excerpt: string; date: string; translations?: ArticleTranslationMap };
 type LoungeContent = {
   id: string;
   type: "LIBRARY" | "SIGNAL" | "RESOURCE" | "NATHALIE_NOTE" | "EARLY_ACCESS";
@@ -90,11 +93,14 @@ export function MemberLounge({
   draftEditions: DraftEdition[];
 }) {
   const [activeSection, setActiveSection] = useState("collections");
-  const current = articles[0];
+  const { language } = useOffLanguage();
+  const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
+  const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
+  const current = localizedArticles[0];
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const manualEarlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
   const libraryItems = [
-    ...articles.map((article, index) => ({
+    ...localizedArticles.map((article, index) => ({
       id: article.id,
       title: cleanText(article.title),
       number: String(index + 1).padStart(2, "0"),
@@ -109,7 +115,7 @@ export function MemberLounge({
     ...libraries.map((item, index) => ({
       id: item.id,
       title: cleanText(item.title),
-      number: item.number ?? String(articles.length + index + 1).padStart(2, "0"),
+      number: item.number ?? String(localizedArticles.length + index + 1).padStart(2, "0"),
       description: item.description ? cleanText(item.description) : item.content ? cleanText(item.content) : null,
       url: links(item)[0]?.url,
       image: null,
@@ -231,8 +237,8 @@ export function MemberLounge({
             <div className="lounge-heading"><span>Early Access</span><h2>Proximamente en OFF</h2></div>
             <div className="early-editions">
               {manualEarlyAccess.map((edition) => <article key={edition.id}><time>{edition.releaseDate ? <LocalDate value={edition.releaseDate} /> : edition.statusLabel}</time><span>{edition.statusLabel}</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.description ?? edition.content ?? "")}</p></article>)}
-              {draftEditions.map((edition) => <article key={edition.id}><time><LocalDate value={edition.date} /></time><span>Borrador editorial</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.excerpt)}</p></article>)}
-              {!manualEarlyAccess.length && !draftEditions.length ? <p className="lounge-empty">La proxima edicion todavia esta tomando forma.</p> : null}
+              {localizedDrafts.map((edition) => <article key={edition.id}><time><LocalDate value={edition.date} /></time><span>Borrador editorial</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.excerpt)}</p></article>)}
+              {!manualEarlyAccess.length && !localizedDrafts.length ? <p className="lounge-empty">La proxima edicion todavia esta tomando forma.</p> : null}
             </div>
           </Reveal>
 
@@ -252,9 +258,10 @@ export function MemberLounge({
               <p>Detras de OFF hay alguien que tambien esta en construccion.</p>
             </div>
             <div className="lounge-social-cards">
-              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LinkedIn</strong><small>NATHALIE GARCIA A.</small></a>
-              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>IG</span><strong>Instagram</strong><small>@nathalie.garciaa</small></a>
-              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>IG</span><strong>OFF Journal</strong><small>@off_journal</small></a>
+              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LINKEDIN</strong></a>
+              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>IG</span><strong>INSTAGRAM</strong></a>
+              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>IG</span><strong>OFF OFFICIAL</strong></a>
+              <a href="https://x.com/off_journal" target="_blank" rel="noreferrer"><span>X</span><strong>X OFFICIAL</strong></a>
             </div>
           </Reveal>
 

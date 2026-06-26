@@ -2,6 +2,7 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
 import { ArticleActions } from "@/components/ArticleActions";
@@ -157,7 +158,8 @@ export default async function ArticlePage({
   }
   if (isInternalContentCategory(article.category) && !user) notFound();
 
-  const language = normalizeArticleLanguage(lang);
+  const cookieLanguage = (await cookies()).get("off-language")?.value;
+  const language = normalizeArticleLanguage(lang ?? cookieLanguage);
   const translatedArticle = resolveArticleTranslation(article, language);
   const blocks = renderRichContent(translatedArticle.content);
   const isFirstChapter = stripHtml(translatedArticle.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
@@ -200,7 +202,7 @@ export default async function ArticlePage({
       </nav>
 
       <header className="article-hero">
-        <p className="eyebrow">{article.category}</p>
+        <p className="eyebrow">{translatedArticle.category || article.category}</p>
         <h1>{renderInline(translatedArticle.title)}</h1>
         <p>{stripHtml(translatedArticle.excerpt)}</p>
         {!translatedArticle.hasTranslation ? <p className="article-translation-notice">{t.unavailable}</p> : null}

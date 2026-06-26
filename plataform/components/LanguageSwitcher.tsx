@@ -44,6 +44,7 @@ export function LanguageSwitcher({ compact = false, label }: { compact?: boolean
   function choose(value: string) {
     const nextLanguage = normalizeUiLanguage(value);
     window.localStorage.setItem("off-language", nextLanguage);
+    document.cookie = `off-language=${nextLanguage}; path=/; max-age=31536000; SameSite=Lax`;
     document.documentElement.lang = nextLanguage;
     translateStaticLabels(nextLanguage);
     window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));

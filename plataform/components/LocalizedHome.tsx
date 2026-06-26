@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { SubscribeForm } from "@/components/SubscribeForm";
+import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 
 export type PublicArticle = {
   id: string;
@@ -17,6 +18,7 @@ export type PublicArticle = {
   readTime: string;
   publishedAt: string | null;
   featured: boolean;
+  translations?: ArticleTranslationMap;
 };
 
 export type PublicUser = {
@@ -259,7 +261,11 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
   const [sessionMessage, setSessionMessage] = useState("");
   const [subscriberGreeting, setSubscriberGreeting] = useState("");
   const t = copy[lang];
-  const featured = useMemo(() => articles.find((article) => article.featured) ?? articles[0], [articles]);
+  const localizedArticles = useMemo(
+    () => articles.map((article) => ({ ...article, ...getLocalizedArticle(article, lang) })),
+    [articles, lang],
+  );
+  const featured = useMemo(() => localizedArticles.find((article) => article.featured) ?? localizedArticles[0], [localizedArticles]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("off-language") as Lang | null;
@@ -436,14 +442,14 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <em>{t.articles[1]}</em>
             </h2>
           </div>
-          {articles.length > 0 ? (
+          {localizedArticles.length > 0 ? (
             <Link className="purple-link text-link" href={featured ? `/off/${featured.slug}` : "#capitulos"}>
               {t.viewAll} <span>→</span>
             </Link>
           ) : null}
         </div>
 
-        {articles.length === 0 ? (
+        {localizedArticles.length === 0 ? (
           <div className="empty-editorial">
             <p className="eyebrow">{t.emptyKicker}</p>
             <h3>{t.emptyTitle}</h3>
@@ -451,7 +457,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           </div>
         ) : (
           <div className="article-grid">
-            {articles.map((article, index) => (
+            {localizedArticles.map((article, index) => (
               <article className="article-card cinematic-card" key={article.id}>
                 <Link className="cover-frame" href={`/off/${article.slug}`}>
                   <Image src={editorialImage(article, index)} alt={plainText(article.title)} fill sizes="(max-width: 820px) 100vw, 31vw" />
@@ -519,7 +525,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>LINKEDIN</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">NATHALIE GARCIA A.</span>
+              <span className="social-user">LINKEDIN</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
@@ -536,7 +542,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
               <strong>INSTAGRAM</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">@nathalie.garciaa</span>
+              <span className="social-user">INSTAGRAM</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
@@ -550,10 +556,21 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
                   <circle cx="17" cy="7" r="1" />
                 </svg>
               </span>
-              <strong>INSTAGRAM</strong>
+              <strong>OFF OFFICIAL</strong>
             </div>
             <div className="profile-social-body">
-              <span className="social-user">@off_journal</span>
+              <span className="social-user">OFF OFFICIAL</span>
+              <span className="social-profile-button">Ver perfil</span>
+            </div>
+          </a>
+
+          <a className="profile-social-card" href="https://x.com/off_journal" target="_blank">
+            <div className="profile-social-head">
+              <span className="platform-mark x-mark">X</span>
+              <strong>X OFFICIAL</strong>
+            </div>
+            <div className="profile-social-body">
+              <span className="social-user">X OFFICIAL</span>
               <span className="social-profile-button">Ver perfil</span>
             </div>
           </a>
