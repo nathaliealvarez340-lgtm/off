@@ -1,20 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 type Props = {
   value: number;
   suffix?: string;
   decimals?: number;
+  active?: boolean;
 };
 
-export function MobileCountUp({ value, suffix = "", decimals = 0 }: Props) {
+export function MobileCountUp({ value, suffix = "", decimals = 0, active = true }: Props) {
   const ref = useRef<HTMLSpanElement | null>(null);
   const [display, setDisplay] = useState(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+
+    if (!active) {
+      setDisplay(0);
+      return;
+    }
+
+    if (reduceMotion) {
+      setDisplay(value);
+      return;
+    }
 
     let frame = 0;
     let start = 0;
@@ -46,7 +59,7 @@ export function MobileCountUp({ value, suffix = "", decimals = 0 }: Props) {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [value]);
+  }, [active, reduceMotion, value]);
 
   return (
     <span ref={ref}>

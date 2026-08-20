@@ -213,7 +213,7 @@ export function MobileMemberLounge({
         <a href="#perfil"><UserRound aria-hidden="true" /><span>{copy.profileKicker}</span></a>
         <Link href="/mobile/chat"><MessageCircle aria-hidden="true" /><span>{copy.chatKicker}</span></Link>
         <button type="button" onClick={() => setLanguageSheetOpen(true)} aria-haspopup="dialog" aria-expanded={languageSheetOpen}>
-          <Globe2 aria-hidden="true" /><span>{copy.language}</span>
+          <span className="mobile-nav-icon"><Globe2 aria-hidden="true" /></span><span>{copy.language}</span>
         </button>
         <a href="#conoce-mas"><Sparkles aria-hidden="true" /><span>Más</span></a>
         <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button></form>
