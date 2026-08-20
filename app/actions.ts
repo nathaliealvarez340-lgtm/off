@@ -20,6 +20,7 @@ import { isInternalContentCategory } from "@/lib/articles";
 import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
 import { getSiteUrl } from "@/lib/site-url";
+import { isUiLanguage, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-i18n";
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -128,7 +129,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   }
 
   await db.authThrottle.deleteMany({ where: { key: throttleKey } });
-  await createSession(user.id);
+  await createSession(user.id, user.preferredLanguage);
 
   if (user.role === "ADMIN") {
     redirect("/admin");
@@ -144,7 +145,7 @@ export type RegistrationState = {
   step?: "register" | "success" | "login";
   email?: string;
   emailSent?: boolean;
-  errorCode?: "REGISTER_FAILED" | "ACCESS_CODE_UNAVAILABLE" | "EMAIL_SEND_FAILED";
+  errorCode?: "REGISTER_FAILED" | "ACCESS_CODE_UNAVAILABLE" | "EMAIL_SEND_FAILED" | "INVALID_LANGUAGE";
 };
 
 export type AccessCodeState = {
@@ -181,20 +182,20 @@ export async function checkAccessCodeAvailabilityAction(code: string): Promise<A
 
 function validateRegistration(formData: FormData):
   | { ok: false; error: string }
-  | { ok: true; name: string; email: string; password: string; accessCode: string; preferredLanguage: "es" | "en" | "it" | "pt" } {
+  | { ok: true; name: string; email: string; password: string; accessCode: string; preferredLanguage: UiLanguage } {
   const name = stringValue(formData, "name");
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
   const repeatPassword = stringValue(formData, "repeatPassword");
   const accessCode = stringValue(formData, "accessCode");
-  const language = stringValue(formData, "preferredLanguage");
-  const preferredLanguage = language === "en" || language === "it" || language === "pt" ? language : "es";
+  const preferredLanguage = stringValue(formData, "preferredLanguage");
 
   if (name.length < 2) return { ok: false, error: "Escribe tu nombre." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Escribe un correo válido." };
   if (password.length < 6 || password.length > 8) return { ok: false, error: "La contraseña debe tener entre 6 y 8 caracteres." };
   if (password !== repeatPassword) return { ok: false, error: "Las contraseñas no coinciden." };
   if (!/^\d{4}$/.test(accessCode)) return { ok: false, error: "Elige un código OFF válido de 4 dígitos." };
+  if (!isUiLanguage(preferredLanguage)) return { ok: false, error: "Selecciona un idioma disponible." };
 
   return { ok: true, name, email, password, accessCode, preferredLanguage };
 }
@@ -205,7 +206,11 @@ export async function registerAction(_: RegistrationState, formData: FormData): 
     return {
       ok: false,
       message: values.error,
-      errorCode: values.error.includes("código OFF") ? "ACCESS_CODE_UNAVAILABLE" : "REGISTER_FAILED",
+      errorCode: values.error.includes("idioma")
+        ? "INVALID_LANGUAGE"
+        : values.error.includes("código OFF")
+          ? "ACCESS_CODE_UNAVAILABLE"
+          : "REGISTER_FAILED",
     };
   }
 
@@ -274,7 +279,7 @@ export async function registerAction(_: RegistrationState, formData: FormData): 
       to: registeredUser.email,
       name: registeredUser.name,
       accessCode,
-      language: preferredLanguage,
+      language: normalizeUiLanguage(registeredUser.preferredLanguage),
     });
     return {
       ok: true,
@@ -468,6 +473,8 @@ export async function subscribeAction(_: unknown, formData: FormData) {
   const email = stringValue(formData, "email").toLowerCase();
   const interest = stringValue(formData, "interest");
   const consent = formData.get("consent") === "on";
+  const requestedLanguage = stringValue(formData, "preferredLanguage");
+  const preferredLanguage = isUiLanguage(requestedLanguage) ? requestedLanguage : "es";
 
   if (!name || !email || !interest) {
     return { ok: false, message: "Completa nombre, correo e interes principal." };
@@ -502,11 +509,12 @@ export async function subscribeAction(_: unknown, formData: FormData) {
         name,
         email,
         passwordHash: await bcrypt.hash(`off-subscriber-${email}-${Date.now()}`, 12),
+        preferredLanguage,
         role: "USER",
       },
     });
 
-    await createSession(user.id);
+    await createSession(user.id, user.preferredLanguage);
 
     if (!existingSubscriber) {
       onboardingInput = {

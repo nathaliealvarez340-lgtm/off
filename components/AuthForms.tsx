@@ -16,13 +16,14 @@ import {
 import { EmailSplitField } from "@/components/EmailSplitField";
 import { PasswordField } from "@/components/PasswordField";
 import { useOffLanguage } from "@/components/useOffLanguage";
+import { LANGUAGE_OPTIONS, type UiLanguage } from "@/lib/ui-i18n";
 
 const initialState = { ok: false, message: "" };
 const initialRegistrationState: RegistrationState = { ok: false, message: "", step: "register" };
 const initialPasswordRecoveryState: PasswordRecoveryState = { ok: false, message: "" };
 const initialAccessCodeState: AccessCodeState = { ok: false, status: "idle", message: "" };
 
-export function AuthForms({ next, initialMessage = "" }: { next: string; initialMessage?: string }) {
+export function AuthForms({ next, initialMessage = "", initialLanguage }: { next: string; initialMessage?: string; initialLanguage?: string | null }) {
   const customCodeStatusId = useId();
   const [mode, setMode] = useState<"login" | "register" | "success" | "forgot">("login");
   const [verificationEmail, setVerificationEmail] = useState("");
@@ -36,7 +37,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
   const [registerState, register, registerPending] = useActionState(registerAction, initialRegistrationState);
   const [resendAccessState, resendAccessCode, resendAccessPending] = useActionState(resendAccessCodeEmailAction, initialRegistrationState);
   const [recoveryState, requestRecovery, recoveryPending] = useActionState(requestPasswordResetAction, initialPasswordRecoveryState);
-  const { language, t } = useOffLanguage();
+  const { language: preferredLanguage, setLanguage: setPreferredLanguage, t } = useOffLanguage(initialLanguage);
 
   useEffect(() => {
     if (registerState.message) setTransitionMessage(registerState.message);
@@ -101,11 +102,14 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
 
   const codeReady = accessCodeState.status === "available" && /^\d{4}$/.test(accessCode);
   const state = mode === "login" ? loginState : mode === "forgot" ? recoveryState : registerState;
-  const registerButtonCopy = language === "en"
+  const visibleMessage = mode === "register" && registerState.errorCode === "INVALID_LANGUAGE"
+    ? t("invalidPreferredLanguage")
+    : transitionMessage || state.message;
+  const registerButtonCopy = preferredLanguage === "en"
     ? (registerPending ? "Creating account..." : "Register")
-    : language === "it"
+    : preferredLanguage === "it"
       ? (registerPending ? "Creazione account..." : "Registrarmi")
-      : language === "pt"
+      : preferredLanguage === "pt"
         ? (registerPending ? "Criando conta..." : "Registrar")
         : (registerPending ? "Creando cuenta..." : "Registrarme");
 
@@ -142,7 +146,6 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
 
       {mode === "register" ? (
         <form action={register} className="editor-form">
-          <input name="preferredLanguage" type="hidden" value={language} />
           <input name="accessCode" type="hidden" value={accessCode} />
           <label className="field">
             {t("name")}
@@ -153,6 +156,20 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             <PasswordField label={t("password")} name="password" autoComplete="new-password" minLength={6} maxLength={8} required />
             <PasswordField label={t("repeatPassword")} name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
           </div>
+          <label className="field preferred-language-field">
+            <span>{t("preferredLanguage")}</span>
+            <select
+              aria-describedby="preferred-language-hint"
+              name="preferredLanguage"
+              onChange={(event) => setPreferredLanguage(event.target.value as UiLanguage)}
+              value={preferredLanguage}
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>{option.label}</option>
+              ))}
+            </select>
+            <small id="preferred-language-hint">{t("preferredLanguageHint")}</small>
+          </label>
           <div className="access-code-panel">
             <div>
               <strong>Código único de usuario</strong>
@@ -263,7 +280,7 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
         </div>
       ) : null}
 
-      <div className="status-message" role="status">{transitionMessage || state.message}</div>
+      <div className="status-message" role="status">{visibleMessage}</div>
     </div>
   );
 }

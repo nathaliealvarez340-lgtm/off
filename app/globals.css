@@ -9778,7 +9778,8 @@ body:has(.auth-page) {
 .auth-access-card .email-split-control input,
 .auth-access-card .email-split-control select,
 .auth-access-card .email-custom-domain,
-.auth-access-card .access-code-custom input {
+.auth-access-card .access-code-custom input,
+.auth-access-card .preferred-language-field select {
   min-height: 50px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -9789,6 +9790,27 @@ body:has(.auth-page) {
 .auth-access-card .email-split-control select {
   padding: 0 12px;
   color: rgba(255, 255, 255, 0.82);
+}
+
+.auth-access-card .preferred-language-field {
+  gap: 6px;
+}
+
+.auth-access-card .preferred-language-field select {
+  min-height: 46px;
+  padding: 0 40px 0 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-access-card .preferred-language-field option {
+  background: #09070d;
+  color: #fff;
+}
+
+.auth-access-card .preferred-language-field small {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.7rem;
+  line-height: 1.4;
 }
 
 .email-custom-domain {

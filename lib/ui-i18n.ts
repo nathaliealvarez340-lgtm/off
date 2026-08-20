@@ -11,6 +11,9 @@ export const uiCopy = {
     namePlaceholder: "Tu nombre",
     password: "Contrasena",
     repeatPassword: "Repetir contrasena",
+    preferredLanguage: "Idioma preferido",
+    preferredLanguageHint: "Elige el idioma que OFF recordara para tu cuenta.",
+    invalidPreferredLanguage: "Selecciona un idioma disponible.",
     forgotPassword: "Olvidaste tu contrasena?",
     back: "Regresar",
     contact: "Contacto",
@@ -151,6 +154,9 @@ export const uiCopy = {
     namePlaceholder: "Your name",
     password: "Password",
     repeatPassword: "Repeat password",
+    preferredLanguage: "Preferred language",
+    preferredLanguageHint: "Choose the language OFF will remember for your account.",
+    invalidPreferredLanguage: "Select an available language.",
     forgotPassword: "Forgot your password?",
     back: "Back",
     contact: "Contact",
@@ -291,6 +297,9 @@ export const uiCopy = {
     namePlaceholder: "Il tuo nome",
     password: "Password",
     repeatPassword: "Ripeti password",
+    preferredLanguage: "Lingua preferita",
+    preferredLanguageHint: "Scegli la lingua che OFF ricordera per il tuo account.",
+    invalidPreferredLanguage: "Seleziona una lingua disponibile.",
     forgotPassword: "Hai dimenticato la password?",
     back: "Torna",
     contact: "Contatto",
@@ -431,6 +440,9 @@ export const uiCopy = {
     namePlaceholder: "Seu nome",
     password: "Senha",
     repeatPassword: "Repetir senha",
+    preferredLanguage: "Idioma preferido",
+    preferredLanguageHint: "Escolha o idioma que o OFF lembrara para sua conta.",
+    invalidPreferredLanguage: "Selecione um idioma disponivel.",
     forgotPassword: "Esqueceu sua senha?",
     back: "Voltar",
     contact: "Contato",
@@ -564,6 +576,19 @@ export const uiCopy = {
 export type UiLanguage = keyof typeof uiCopy;
 export type UiCopyKey = keyof typeof uiCopy.es;
 
+export const SUPPORTED_LANGUAGES = ["es", "en", "it", "pt"] as const;
+
+export const LANGUAGE_OPTIONS: ReadonlyArray<{ code: UiLanguage; label: string }> = [
+  { code: "es", label: "Español" },
+  { code: "en", label: "English" },
+  { code: "it", label: "Italiano" },
+  { code: "pt", label: "Português" },
+];
+
+export function isUiLanguage(value: unknown): value is UiLanguage {
+  return typeof value === "string" && SUPPORTED_LANGUAGES.includes(value as UiLanguage);
+}
+
 export function normalizeUiLanguage(value: string | null): UiLanguage {
-  return value === "en" || value === "it" || value === "pt" ? value : "es";
+  return isUiLanguage(value) ? value : "es";
 }

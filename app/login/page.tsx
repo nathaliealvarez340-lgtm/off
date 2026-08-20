@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthForms } from "@/components/AuthForms";
 import { AuthOrbit } from "@/components/AuthOrbit";
@@ -6,10 +7,13 @@ import { GlobalFooter } from "@/components/GlobalFooter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getCurrentUser } from "@/lib/auth";
 import { MobileLogin } from "@/mobile/MobileLogin";
+import { isUiLanguage } from "@/lib/ui-i18n";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; passwordReset?: string }> }) {
   const user = await getCurrentUser();
   const { next, passwordReset } = await searchParams;
+  const storedLanguage = (await cookies()).get("off-language")?.value;
+  const initialLanguage = isUiLanguage(storedLanguage) ? storedLanguage : null;
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
 
   if (user?.role === "ADMIN") redirect("/admin");
@@ -26,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <div>
               <Link href="/" data-i18n="back">Regresar</Link>
               <Link href="/#conoce-mas" data-i18n="contact">Contacto</Link>
-              <LanguageSwitcher compact />
+              <LanguageSwitcher compact initialLanguage={initialLanguage} />
             </div>
           </nav>
           <AuthOrbit />
@@ -37,6 +41,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <p data-i18n="loginIntro">Una cuenta para leer, guardar direccion y participar en conversaciones que no se sienten vacias.</p>
               <AuthForms
                 next={safeNext}
+                initialLanguage={initialLanguage}
                 initialMessage={passwordReset === "1" ? "Tu contrasena fue actualizada correctamente." : ""}
               />
             </section>
@@ -47,6 +52,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="mobile-experience">
         <MobileLogin
           next={safeNext}
+          initialLanguage={initialLanguage}
           initialMessage={passwordReset === "1" ? "Tu contrasena fue actualizada correctamente." : ""}
         />
       </div>

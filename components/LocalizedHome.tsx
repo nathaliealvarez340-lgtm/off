@@ -8,6 +8,7 @@ import { logoutAction } from "@/app/actions";
 import { SocialCard, socialProfiles } from "@/components/SocialLinks";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
+import { persistClientLanguage, resolveClientLanguage } from "@/lib/language-preference";
 
 export type PublicArticle = {
   id: string;
@@ -273,8 +274,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
   const featured = useMemo(() => localizedArticles.find((article) => article.featured) ?? localizedArticles[0], [localizedArticles]);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("off-language") as Lang | null;
-    if (saved && saved in copy) setLang(saved);
+    setLang(resolveClientLanguage());
     const params = new URLSearchParams(window.location.search);
     if (params.get("welcome") === "1") {
       setSessionMessage("Bienvenido a OFF. Un espacio para cuestionar, reconstruir y volver a conectar con lo que realmente quieres construir. La siguiente historia te espera.");
@@ -295,10 +295,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
 
   function chooseLanguage(nextLang: Lang) {
     setLang(nextLang);
-    window.localStorage.setItem("off-language", nextLang);
-    document.cookie = `off-language=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
-    document.documentElement.lang = nextLang;
-    window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLang }));
+    persistClientLanguage(nextLang);
     setLanguageOpen(false);
   }
 

@@ -159,7 +159,7 @@ export default async function ArticlePage({
   if (isInternalContentCategory(article.category) && !user) notFound();
 
   const cookieLanguage = (await cookies()).get("off-language")?.value;
-  const language = normalizeArticleLanguage(lang ?? cookieLanguage ?? user?.preferredLanguage);
+  const language = normalizeArticleLanguage(user?.preferredLanguage ?? lang ?? cookieLanguage);
   const translatedArticle = resolveArticleTranslation(article, language);
   const blocks = renderRichContent(translatedArticle.content);
   const isFirstChapter = stripHtml(translatedArticle.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
@@ -187,7 +187,7 @@ export default async function ArticlePage({
           <img src="/logo/logo-off.png" alt="OFF" className="article-nav-logo" />
         </Link>
         <div className="nav-links">
-          <LanguageSwitcher compact />
+          <LanguageSwitcher compact initialLanguage={language} />
           <Link href="/#capitulos">{t.chapters}</Link>
           <Link href="/#suscripcion">{t.subscription}</Link>
           {user ? (

@@ -226,7 +226,7 @@ export function MemberLounge({
             <div className="lounge-nav-actions">
               <div className="lounge-language-row">
                 <span className="lounge-nav-icon"><Languages aria-hidden="true" /></span>
-                <LanguageSwitcher compact label="Idioma" />
+                <LanguageSwitcher compact label="Idioma" initialLanguage={preferredLanguage} />
               </div>
               <form action={logoutAction}>
                 <button type="submit">

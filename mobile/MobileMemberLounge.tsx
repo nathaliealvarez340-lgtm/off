@@ -12,6 +12,7 @@ import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
+import { persistClientLanguage } from "@/lib/language-preference";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
@@ -101,15 +102,7 @@ export function MobileMemberLounge({
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
   function selectLanguage(nextLanguage: UiLanguage) {
-    window.localStorage.setItem("off-language", nextLanguage);
-    document.cookie = `off-language=${nextLanguage}; path=/; max-age=31536000; SameSite=Lax`;
-    document.documentElement.lang = nextLanguage;
-    window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));
-    void fetch("/api/member/preferences", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language: nextLanguage }),
-    });
+    persistClientLanguage(nextLanguage);
     setLanguageSheetOpen(false);
   }
 

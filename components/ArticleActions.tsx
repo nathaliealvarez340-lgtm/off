@@ -5,6 +5,7 @@ import { Bookmark, Ellipsis, Pause, Play, Share2, Volume2, X } from "lucide-reac
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { articleLanguages, articleUi, type ArticleLanguage } from "@/lib/article-i18n";
+import { persistClientLanguage } from "@/lib/language-preference";
 
 type Props = {
   isLoggedIn: boolean;
@@ -38,12 +39,6 @@ export function ArticleActions({ isLoggedIn, language, loginPath, slug, speechTe
     setUrl(window.location.href);
     setCanNativeShare(Boolean(navigator.share));
     setSaved(window.localStorage.getItem(storageKey) === "1");
-    const preferredLanguage = window.localStorage.getItem("off-language");
-    if (preferredLanguage && ["es", "en", "it", "pt"].includes(preferredLanguage) && preferredLanguage !== language) {
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set("lang", preferredLanguage);
-      router.replace(`${nextUrl.pathname}${nextUrl.search}`);
-    }
     return () => window.speechSynthesis?.cancel();
   }, [language, router, storageKey]);
 
@@ -77,12 +72,7 @@ export function ArticleActions({ isLoggedIn, language, loginPath, slug, speechTe
   }, [readerOpen, shareOpen]);
 
   function changeLanguage(nextLanguage: ArticleLanguage) {
-    window.localStorage.setItem("off-language", nextLanguage);
-    void fetch("/api/member/preferences", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language: nextLanguage }),
-    });
+    persistClientLanguage(nextLanguage);
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("lang", nextLanguage);
     router.push(`${nextUrl.pathname}${nextUrl.search}`);

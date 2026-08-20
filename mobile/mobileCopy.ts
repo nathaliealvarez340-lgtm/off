@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { persistClientLanguage, resolveClientLanguage } from "@/lib/language-preference";
 import { normalizeUiLanguage, type UiLanguage } from "@/lib/ui-i18n";
 
 export const mobileEase = [0.23, 1, 0.32, 1] as const;
@@ -216,8 +217,9 @@ export function useMobileCopy(initialLanguage?: string | null) {
   const [language, setLanguage] = useState<UiLanguage>(() => normalizeUiLanguage(initialLanguage ?? null));
 
   useEffect(() => {
-    const sync = (value?: string) => setLanguage(normalizeUiLanguage(value ?? window.localStorage.getItem("off-language") ?? initialLanguage ?? null));
+    const sync = (value?: string) => setLanguage(value ? normalizeUiLanguage(value) : resolveClientLanguage(initialLanguage));
     sync();
+    persistClientLanguage(resolveClientLanguage(initialLanguage), false);
     const listener = (event: Event) => sync((event as CustomEvent<string>).detail);
     const storageListener = () => sync();
     window.addEventListener("off-language-change", listener);

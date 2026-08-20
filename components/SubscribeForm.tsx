@@ -2,11 +2,13 @@
 
 import { useActionState, useEffect } from "react";
 import { subscribeAction } from "@/app/actions";
+import { useOffLanguage } from "@/components/useOffLanguage";
 
 const initialState = { ok: false, message: "" };
 
 export function SubscribeForm() {
   const [state, action, pending] = useActionState(subscribeAction, initialState);
+  const { language } = useOffLanguage();
 
   useEffect(() => {
     if (!state.ok) return;
@@ -18,6 +20,7 @@ export function SubscribeForm() {
 
   return (
     <form action={action} className="form-grid">
+      <input name="preferredLanguage" type="hidden" value={language} />
       <label className="field">
         Nombre
         <input name="name" placeholder="Tu nombre" autoComplete="name" required />
