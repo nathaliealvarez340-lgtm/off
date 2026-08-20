@@ -27,6 +27,7 @@ type LoungeArticle = {
   publishedAt: string;
   readTime: string;
   translations?: ArticleTranslationMap;
+  editionNumber?: number;
 };
 
 type DraftEdition = { id: string; title: string; excerpt: string; date: string; translations?: ArticleTranslationMap };
@@ -54,6 +55,10 @@ export type MobileMemberLoungeProps = {
   articles: LoungeArticle[];
   loungeContent: LoungeContent[];
   draftEditions: DraftEdition[];
+  lastReadArticleId?: string | null;
+  lastReadProgress?: number;
+  lastReadPosition?: number;
+  preferredLanguage?: UiLanguage;
 };
 
 const languageOptions: Array<[UiLanguage, string]> = [
@@ -67,8 +72,9 @@ function clean(value?: string | null) {
   return (value ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
-function articleHref(slug: string, language: string) {
-  return `/off/${slug}?lang=${language}`;
+function articleHref(slug: string, language: string, lastPosition = 0) {
+  const resume = lastPosition > 0 ? `&resume=${Math.round(lastPosition)}` : "";
+  return `/off/${slug}?lang=${language}${resume}`;
 }
 
 export function MobileMemberLounge({
@@ -81,12 +87,16 @@ export function MobileMemberLounge({
   articles,
   loungeContent,
   draftEditions,
+  lastReadArticleId,
+  lastReadPosition = 0,
+  preferredLanguage = "es",
 }: MobileMemberLoungeProps) {
-  const { copy, language } = useMobileCopy();
+  const { copy, language } = useMobileCopy(preferredLanguage);
   const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
   const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
-  const current = localizedArticles[0];
+  const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
+  const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
@@ -95,6 +105,11 @@ export function MobileMemberLounge({
     document.cookie = `off-language=${nextLanguage}; path=/; max-age=31536000; SameSite=Lax`;
     document.documentElement.lang = nextLanguage;
     window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));
+    void fetch("/api/member/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: nextLanguage }),
+    });
     setLanguageSheetOpen(false);
   }
 
@@ -122,13 +137,13 @@ export function MobileMemberLounge({
           <motion.p variants={mobileMotion.item}>{copy.loungeCopy}</motion.p>
           {current ? (
             <motion.div variants={mobileMotion.item}>
-              <Link className="mobile-primary" href={articleHref(current.slug, language)}>{copy.continueReading}</Link>
+              <Link className="mobile-primary" href={articleHref(current.slug, language, currentPosition)}>{copy.continueReading}</Link>
             </motion.div>
           ) : null}
         </motion.div>
       </motion.header>
 
-      <MobileReveal className="mobile-member-strip" aria-label="Datos de miembro">
+      <MobileReveal className="mobile-member-strip" aria-label={copy.memberData}>
         <article><span>{copy.memberSince}</span><strong><LocalDate value={memberSince} /></strong></article>
         <article><span>OFF ID</span><strong>#{memberNumber}</strong></article>
         <article><span>{copy.timeInvested}</span><strong>{activeTime}</strong></article>
@@ -140,11 +155,11 @@ export function MobileMemberLounge({
           <span>{copy.library}</span>
         </div>
         <motion.div className="mobile-snap-row mobile-library-row" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
-          {localizedArticles.map((article) => (
+          {localizedArticles.map((article, index) => (
             <motion.div variants={mobileMotion.item} key={article.id}>
               <Link className="mobile-article-card lounge-card" href={articleHref(article.slug, language)}>
                 <img src={article.coverImage || "/images/cap1-off.webp"} alt="" loading="lazy" />
-                <span>{article.category}</span>
+                <span>Ed. {article.editionNumber ?? index + 1} · {article.category}</span>
                 <h3>{clean(article.title)}</h3>
                 <p>{clean(article.excerpt)}</p>
                 <small>{article.readTime}</small>
@@ -153,7 +168,7 @@ export function MobileMemberLounge({
           ))}
           {libraries.map((item) => (
             <motion.article className="mobile-article-card lounge-card" variants={mobileMotion.item} key={item.id}>
-              <span>Volumen {item.number ?? ""}</span>
+              <span>{copy.volume} {item.number ?? ""}</span>
               <h3>{clean(item.title)}</h3>
               <p>{clean(item.description ?? item.content)}</p>
             </motion.article>
@@ -206,7 +221,7 @@ export function MobileMemberLounge({
         </div>
       </MobileReveal>
 
-      <nav className="mobile-bottom-nav" aria-label="Navegación mobile lounge">
+      <nav className="mobile-bottom-nav" aria-label={copy.mobileLoungeNavigation}>
         <a href="#biblioteca"><BookOpen aria-hidden="true" /><span>{copy.library}</span></a>
         <a href="#mi-yo"><Brain aria-hidden="true" /><span>{copy.mySelfKicker}</span></a>
         <a href="#early"><CalendarClock aria-hidden="true" /><span>Early</span></a>
@@ -215,7 +230,7 @@ export function MobileMemberLounge({
         <button type="button" onClick={() => setLanguageSheetOpen(true)} aria-haspopup="dialog" aria-expanded={languageSheetOpen}>
           <span className="mobile-nav-icon"><Globe2 aria-hidden="true" /></span><span>{copy.language}</span>
         </button>
-        <a href="#conoce-mas"><Sparkles aria-hidden="true" /><span>Más</span></a>
+        <a href="#conoce-mas"><Sparkles aria-hidden="true" /><span>{copy.more}</span></a>
         <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button></form>
       </nav>
 

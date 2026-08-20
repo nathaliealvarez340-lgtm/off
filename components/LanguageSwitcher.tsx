@@ -48,6 +48,11 @@ export function LanguageSwitcher({ compact = false, label }: { compact?: boolean
     document.documentElement.lang = nextLanguage;
     translateStaticLabels(nextLanguage);
     window.dispatchEvent(new CustomEvent("off-language-change", { detail: nextLanguage }));
+    void fetch("/api/member/preferences", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: nextLanguage }),
+    });
     setLanguage(nextLanguage);
     setOpen(false);
   }

@@ -62,17 +62,22 @@ function ExternalLink({ href, className, children }: { href: string; className: 
   return <a className={className} href={href} target="_blank" rel="noreferrer">{children}</a>;
 }
 
+function SocialProfileContent({ profile }: { profile: SocialProfile }) {
+  return (
+    <>
+      <span className="social-card-icon"><SocialIcon type={profile.key} /></span>
+      <span className="social-card-copy">
+        <strong>{profile.platform}</strong>
+        <small>{profile.display}</small>
+      </span>
+    </>
+  );
+}
+
 export function SocialCard({ profile }: { profile: SocialProfile }) {
   return (
     <ExternalLink className="profile-social-card" href={profile.href}>
-      <div className="profile-social-head">
-        <span className="platform-mark"><SocialIcon type={profile.key} /></span>
-        <strong>{profile.platform}</strong>
-      </div>
-      <div className="profile-social-body">
-        <span className="social-user">{profile.display}</span>
-        <span className="social-profile-button">Ver perfil</span>
-      </div>
+      <SocialProfileContent profile={profile} />
     </ExternalLink>
   );
 }
@@ -80,9 +85,7 @@ export function SocialCard({ profile }: { profile: SocialProfile }) {
 export function SocialTile({ profile }: { profile: SocialProfile }) {
   return (
     <ExternalLink className="lounge-social-card" href={profile.href}>
-      <span><SocialIcon type={profile.key} /></span>
-      <strong>{profile.platform}</strong>
-      <small>{profile.display}</small>
+      <SocialProfileContent profile={profile} />
     </ExternalLink>
   );
 }
@@ -90,8 +93,7 @@ export function SocialTile({ profile }: { profile: SocialProfile }) {
 export function SocialPill({ profile }: { profile: SocialProfile }) {
   return (
     <ExternalLink className="mobile-social-pill" href={profile.href}>
-      <strong><SocialIcon type={profile.key} /></strong>
-      <span>{profile.display}</span>
+      <SocialProfileContent profile={profile} />
     </ExternalLink>
   );
 }

@@ -4,8 +4,10 @@ import { getPlainTextPreview, INTERNAL_CONTENT_CATEGORIES } from "@/lib/articles
 import { extractArticleTranslations } from "@/lib/article-localization";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { sortEditorially } from "@/lib/editorial-order";
 import { earnedBadges, formatActiveTime, getOrCreateMemberNumber } from "@/lib/member-progress";
 import { ResponsiveMemberLounge } from "@/mobile/ResponsiveMemberLounge";
+import { normalizeUiLanguage } from "@/lib/ui-i18n";
 
 export const metadata: Metadata = {
   title: "The Member Lounge | OFF",
@@ -22,14 +24,20 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [articles, drafts, memberNumber, loungeContent, activity, completedCount] = await Promise.all([
-    db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
+  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading] = await Promise.all([
+    db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } } }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     getOrCreateMemberNumber(user.id),
     db.loungeContent.findMany({ where: { status: "published" }, orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }] }),
     db.memberActivity.findUnique({ where: { userId: user.id } }),
     db.articleCompletion.count({ where: { userId: user.id } }),
+    db.articleReadingProgress.findFirst({
+      where: { userId: user.id, article: { status: "published" } },
+      orderBy: { updatedAt: "desc" },
+      select: { articleId: true, progress: true, lastPosition: true },
+    }),
   ]);
+  const articles = sortEditorially(rawArticles);
   const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
 
   return (
@@ -40,7 +48,7 @@ export default async function LoungePage() {
       activeTime={formatActiveTime(activity?.totalSeconds ?? 0)}
       completedCount={completedCount}
       badges={earnedBadges(completedCount)}
-      articles={articles.map((article) => ({
+      articles={articles.map((article, index) => ({
         id: article.id,
         title: getPlainTextPreview(article.title, 140),
         slug: article.slug,
@@ -50,6 +58,7 @@ export default async function LoungePage() {
         publishedAt: article.publishedAt?.toISOString() ?? article.updatedAt.toISOString(),
         readTime: article.readTime,
         translations: extractArticleTranslations(article.content).translations,
+        editionNumber: index + 1,
       }))}
       loungeContent={visibleLoungeContent.map((item) => ({
         id: item.id,
@@ -70,6 +79,10 @@ export default async function LoungePage() {
         date: article.updatedAt.toISOString(),
         translations: extractArticleTranslations(article.content).translations,
       }))}
+      lastReadArticleId={lastReading?.articleId ?? null}
+      lastReadProgress={lastReading?.progress ?? 0}
+      lastReadPosition={lastReading?.lastPosition ?? 0}
+      preferredLanguage={normalizeUiLanguage(user.preferredLanguage)}
     />
   );
 }

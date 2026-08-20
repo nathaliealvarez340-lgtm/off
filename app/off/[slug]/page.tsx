@@ -159,7 +159,7 @@ export default async function ArticlePage({
   if (isInternalContentCategory(article.category) && !user) notFound();
 
   const cookieLanguage = (await cookies()).get("off-language")?.value;
-  const language = normalizeArticleLanguage(lang ?? cookieLanguage);
+  const language = normalizeArticleLanguage(lang ?? cookieLanguage ?? user?.preferredLanguage);
   const translatedArticle = resolveArticleTranslation(article, language);
   const blocks = renderRichContent(translatedArticle.content);
   const isFirstChapter = stripHtml(translatedArticle.title).toLowerCase().startsWith("cap1:") || firstArticle?.id === article.id;
@@ -181,20 +181,20 @@ export default async function ArticlePage({
   return (
     <main className="site-shell">
       {user ? <MemberActivityTracker /> : null}
-      <ReadingProgress />
+      <ReadingProgress articleId={article.id} enabled={Boolean(user && user.role === "USER")} />
       <nav className="nav">
         <Link href="/" className="brand article-logo-brand">
           <img src="/logo/logo-off.png" alt="OFF" className="article-nav-logo" />
         </Link>
         <div className="nav-links">
           <LanguageSwitcher compact />
-          <Link href="/#capitulos">Capítulos</Link>
-          <Link href="/#suscripcion">Suscripción</Link>
+          <Link href="/#capitulos">{t.chapters}</Link>
+          <Link href="/#suscripcion">{t.subscription}</Link>
           {user ? (
             <>
-              <Link href="/lounge">Member Lounge</Link>
+              <Link href="/lounge">{t.lounge}</Link>
               <form action={logoutAction}>
-                <button className="nav-logout" type="submit">Cerrar sesión</button>
+                <button className="nav-logout" type="submit">{t.logout}</button>
               </form>
             </>
           ) : null}
@@ -337,25 +337,25 @@ export default async function ArticlePage({
 
           {!canReadFull ? (
             <aside className="reader-gate">
-              <p className="eyebrow">OFF completo</p>
-              <h2>Hay más detrás de esta historia.</h2>
-              <p>Suscríbete para seguir leyendo y descubrir nuevas formas de entender tus 20 y entender lo que pasa cuando dejamos de vivir en automático.</p>
+              <p className="eyebrow">{t.complete}</p>
+              <h2>{t.gateTitle}</h2>
+              <p>{t.gateCopy}</p>
               <Link className="button violet-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
-                Entrar a OFF
+                {t.enterOff}
               </Link>
             </aside>
           ) : null}
 
           {user ? (
             <section className="member-article-exclusive">
-              <p className="eyebrow">Portafolio privado</p>
-              <h2>Exclusivo para miembros</h2>
+              <p className="eyebrow">{t.privatePortfolio}</p>
+              <h2>{t.membersOnly}</h2>
               <div>
-                <article><span>Ejercicio</span><p>Escribe qué parte de tu vida se ve bien por fuera, pero ya no se siente tuya.</p></article>
-                <article><span>Journaling prompt</span><p>¿Qué decisión tomarías si no tuvieras que explicársela a nadie?</p></article>
-                <article><span>Framework</span><p>Distingue entre lo que estás construyendo por dirección y lo que sostienes por inercia.</p></article>
+                <article><span>{t.exercise}</span><p>{t.exerciseText}</p></article>
+                <article><span>{t.journal}</span><p>{t.journalText}</p></article>
+                <article><span>{t.framework}</span><p>{t.frameworkText}</p></article>
               </div>
-              <NotaDeNathalie>Guarda estas preguntas. No necesitas responderlas rápido; necesitas responderlas con honestidad.</NotaDeNathalie>
+              <NotaDeNathalie>{t.note}</NotaDeNathalie>
             </section>
           ) : null}
 
@@ -366,31 +366,31 @@ export default async function ArticlePage({
           {user ? (
             <section className="topic-suggestion-section">
               <div>
-                <p className="eyebrow">OFF escucha</p>
-                <h2>¿De qué te gustaría hablar en el próximo capítulo?</h2>
+                <p className="eyebrow">{t.listens}</p>
+                <h2>{t.topicQuestion}</h2>
               </div>
               <form action={topicSuggestionAction}>
                 <input name="articleId" type="hidden" value={article.id} />
                 <input name="articleSlug" type="hidden" value={article.slug} />
                 <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
-                <textarea name="content" placeholder="Escribe una idea o tensión..." required minLength={2} />
-                <button className="button violet-button" type="submit">Enviar</button>
+                <textarea name="content" placeholder={t.topicPlaceholder} required minLength={2} />
+                <button className="button violet-button" type="submit">{t.send}</button>
               </form>
             </section>
           ) : null}
 
           <section className="comments-section">
             <div className="comments-head">
-              <p className="eyebrow">Sala privada</p>
-              <h2>OFF Conversations</h2>
+              <p className="eyebrow">{t.privateRoom}</p>
+              <h2>{t.conversation}</h2>
             </div>
 
         {!user ? (
           <div className="comment-login locked-comments">
-            <h3><span aria-hidden="true">🔒</span> Compartir reflexión</h3>
-            <p>Tu historia también importa.<br />Únete a OFF para compartir tus pensamientos, responder y formar parte de la conversación.</p>
+            <h3><span aria-hidden="true">🔒</span> {t.shareReflection}</h3>
+            <p>{t.story}</p>
             <Link className="button violet-button locked-comment-button" href={`/login?next=${encodeURIComponent(`/off/${article.slug}`)}`}>
-              Unirme
+              {t.join}
             </Link>
           </div>
         ) : (
@@ -400,10 +400,10 @@ export default async function ArticlePage({
               <input name="articleSlug" type="hidden" value={article.slug} />
               <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
               <label className="field">
-                Compartir reflexión
+                {t.shareReflection}
                 <textarea name="content" required minLength={2} />
               </label>
-              <button className="button" type="submit">Continuar conversación</button>
+              <button className="button" type="submit">{t.continueConversation}</button>
             </form>
 
             <div className="comment-list">
@@ -417,8 +417,8 @@ export default async function ArticlePage({
                     <input name="articleSlug" type="hidden" value={article.slug} />
                     <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
                     <input name="parentId" type="hidden" value={comment.id} />
-                    <textarea name="content" placeholder="Responder pensamiento..." required minLength={2} />
-                    <button type="submit">Responder pensamiento</button>
+                    <textarea name="content" placeholder={t.replyPlaceholder} required minLength={2} />
+                    <button type="submit">{t.reply}</button>
                   </form>
                   {comment.replies.length > 0 ? (
                     <div className="reply-list">

@@ -28,7 +28,7 @@ export const mobileCopy = {
     loungeCopy: "Una sala privada para leer sin prisa, encontrar dirección y volver a ideas que merecen quedarse contigo.",
     continueReading: "Continuar leyendo",
     memberSince: "Miembro desde",
-    timeInvested: "Tiempo invertido",
+    timeInvested: "Tiempo",
     editorialCollections: "COLECCIONES EDITORIALES",
     library: "Biblioteca",
     mySelfTitle: "Conociendo mi modo ON",
@@ -46,6 +46,16 @@ export const mobileCopy = {
     articlesCompleted: "Artículos completados",
     badges: "Insignias",
     noArticles: "Cuando publiques capítulos, aparecerán aquí con datos reales.",
+    volume: "Volumen",
+    more: "Más",
+    mobileLoungeNavigation: "Navegación del Lounge",
+    memberData: "Datos de miembro",
+    chatWelcome: "Hola, soy tu asistente OFF. Estoy aquí para ayudarte a ordenar ideas, entender lo que estás sintiendo y convertirlo en claridad accionable.",
+    chatPending: "Ordenando la idea...",
+    chatPlaceholder: "Escribe lo que quieres ordenar...",
+    chatMessage: "Mensaje para el asistente OFF",
+    send: "Enviar",
+    backToLounge: "Volver al Lounge",
   },
   en: {
     login: "Login",
@@ -69,7 +79,7 @@ export const mobileCopy = {
     loungeCopy: "A private room to read slowly, find direction and return to ideas worth keeping.",
     continueReading: "Continue reading",
     memberSince: "Member since",
-    timeInvested: "Time invested",
+    timeInvested: "Time",
     editorialCollections: "EDITORIAL COLLECTIONS",
     library: "Library",
     mySelfTitle: "Knowing my ON mode",
@@ -87,6 +97,16 @@ export const mobileCopy = {
     articlesCompleted: "Articles completed",
     badges: "Badges",
     noArticles: "When chapters are published, they will appear here with real data.",
+    volume: "Volume",
+    more: "More",
+    mobileLoungeNavigation: "Lounge navigation",
+    memberData: "Member data",
+    chatWelcome: "Hi, I am your OFF assistant. I am here to help you organize ideas, understand what you feel and turn it into actionable clarity.",
+    chatPending: "Organizing the idea...",
+    chatPlaceholder: "Write what you want to organize...",
+    chatMessage: "Message for the OFF assistant",
+    send: "Send",
+    backToLounge: "Back to the Lounge",
   },
   it: {
     login: "Login",
@@ -110,7 +130,7 @@ export const mobileCopy = {
     loungeCopy: "Una sala privata per leggere senza fretta, trovare direzione e tornare a idee che meritano di restare.",
     continueReading: "Continua a leggere",
     memberSince: "Membro da",
-    timeInvested: "Tempo investito",
+    timeInvested: "Tempo",
     editorialCollections: "COLLEZIONI EDITORIALI",
     library: "Biblioteca",
     mySelfTitle: "Conoscere il mio modo ON",
@@ -128,6 +148,16 @@ export const mobileCopy = {
     articlesCompleted: "Articoli completati",
     badges: "Badge",
     noArticles: "Quando pubblicherai capitoli, appariranno qui con dati reali.",
+    volume: "Volume",
+    more: "Altro",
+    mobileLoungeNavigation: "Navigazione Lounge",
+    memberData: "Dati membro",
+    chatWelcome: "Ciao, sono il tuo assistente OFF. Ti aiuto a ordinare le idee, capire ciò che senti e trasformarlo in chiarezza concreta.",
+    chatPending: "Sto ordinando l'idea...",
+    chatPlaceholder: "Scrivi ciò che vuoi mettere in ordine...",
+    chatMessage: "Messaggio per l'assistente OFF",
+    send: "Invia",
+    backToLounge: "Torna al Lounge",
   },
   pt: {
     login: "Login",
@@ -151,7 +181,7 @@ export const mobileCopy = {
     loungeCopy: "Uma sala privada para ler sem pressa, encontrar direção e voltar a ideias que merecem ficar.",
     continueReading: "Continuar lendo",
     memberSince: "Membro desde",
-    timeInvested: "Tempo investido",
+    timeInvested: "Tempo",
     editorialCollections: "COLEÇÕES EDITORIAIS",
     library: "Biblioteca",
     mySelfTitle: "Conhecendo meu modo ON",
@@ -169,14 +199,24 @@ export const mobileCopy = {
     articlesCompleted: "Artigos concluídos",
     badges: "Insígnias",
     noArticles: "Quando capítulos forem publicados, aparecerão aqui com dados reais.",
+    volume: "Volume",
+    more: "Mais",
+    mobileLoungeNavigation: "Navegação do Lounge",
+    memberData: "Dados de membro",
+    chatWelcome: "Olá, sou seu assistente OFF. Estou aqui para ajudar a organizar ideias, entender o que você sente e transformar isso em clareza prática.",
+    chatPending: "Organizando a ideia...",
+    chatPlaceholder: "Escreva o que você quer organizar...",
+    chatMessage: "Mensagem para o assistente OFF",
+    send: "Enviar",
+    backToLounge: "Voltar ao Lounge",
   },
 } as const;
 
-export function useMobileCopy() {
-  const [language, setLanguage] = useState<UiLanguage>("es");
+export function useMobileCopy(initialLanguage?: string | null) {
+  const [language, setLanguage] = useState<UiLanguage>(() => normalizeUiLanguage(initialLanguage ?? null));
 
   useEffect(() => {
-    const sync = (value?: string) => setLanguage(normalizeUiLanguage(value ?? window.localStorage.getItem("off-language")));
+    const sync = (value?: string) => setLanguage(normalizeUiLanguage(value ?? window.localStorage.getItem("off-language") ?? initialLanguage ?? null));
     sync();
     const listener = (event: Event) => sync((event as CustomEvent<string>).detail);
     const storageListener = () => sync();
@@ -186,7 +226,7 @@ export function useMobileCopy() {
       window.removeEventListener("off-language-change", listener);
       window.removeEventListener("storage", storageListener);
     };
-  }, []);
+  }, [initialLanguage]);
 
   return { language, copy: mobileCopy[language] };
 }

@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { normalizeUiLanguage, uiCopy, type UiCopyKey, type UiLanguage } from "@/lib/ui-i18n";
 
-export function useOffLanguage() {
-  const [language, setLanguage] = useState<UiLanguage>("es");
+export function useOffLanguage(initialLanguage?: string | null) {
+  const [language, setLanguage] = useState<UiLanguage>(() => normalizeUiLanguage(initialLanguage ?? null));
 
   useEffect(() => {
     function sync(next?: string) {
-      setLanguage(normalizeUiLanguage(next ?? window.localStorage.getItem("off-language")));
+      setLanguage(normalizeUiLanguage(next ?? window.localStorage.getItem("off-language") ?? initialLanguage ?? null));
     }
 
     sync();
@@ -20,7 +20,7 @@ export function useOffLanguage() {
       window.removeEventListener("off-language-change", listener);
       window.removeEventListener("storage", storageListener);
     };
-  }, []);
+  }, [initialLanguage]);
 
   function t(key: UiCopyKey) {
     return uiCopy[language][key] ?? uiCopy.es[key];

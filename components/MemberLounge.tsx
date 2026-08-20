@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { BookOpen, Brain, CalendarClock, Languages, LogOut, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { GlobalFooter } from "@/components/GlobalFooter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -15,6 +15,7 @@ import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import { useOffLanguage } from "@/components/useOffLanguage";
+import type { UiLanguage } from "@/lib/ui-i18n";
 
 type LoungeArticle = {
   id: string;
@@ -26,6 +27,7 @@ type LoungeArticle = {
   publishedAt: string;
   readTime: string;
   translations?: ArticleTranslationMap;
+  editionNumber?: number;
 };
 type DraftEdition = { id: string; title: string; excerpt: string; date: string; translations?: ArticleTranslationMap };
 type LoungeContent = {
@@ -53,8 +55,9 @@ function cleanText(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
-function articleHref(slug: string, language: string) {
-  return `/off/${slug}?lang=${language}`;
+function articleHref(slug: string, language: string, lastPosition = 0) {
+  const resume = lastPosition > 0 ? `&resume=${Math.round(lastPosition)}` : "";
+  return `/off/${slug}?lang=${language}${resume}`;
 }
 
 function links(item?: LoungeContent) {
@@ -86,6 +89,10 @@ export function MemberLounge({
   articles,
   loungeContent,
   draftEditions,
+  lastReadArticleId,
+  lastReadProgress = 0,
+  lastReadPosition = 0,
+  preferredLanguage = "es",
 }: {
   name: string;
   memberSince: string;
@@ -96,12 +103,21 @@ export function MemberLounge({
   articles: LoungeArticle[];
   loungeContent: LoungeContent[];
   draftEditions: DraftEdition[];
+  lastReadArticleId?: string | null;
+  lastReadProgress?: number;
+  lastReadPosition?: number;
+  preferredLanguage?: UiLanguage;
 }) {
   const [activeSection, setActiveSection] = useState("collections");
-  const { language } = useOffLanguage();
+  const heroRef = useRef<HTMLElement>(null);
+  const nextSectionRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const { language } = useOffLanguage(preferredLanguage);
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
   const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
-  const current = localizedArticles[0];
+  const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
+  const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
+  const currentProgress = current?.id === lastReadArticleId ? Math.round(lastReadProgress) : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const manualEarlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
   const libraryItems = [
@@ -146,10 +162,42 @@ export function MemberLounge({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (reducedMotion || window.scrollY > 12) return;
+
+    let timer = window.setTimeout(() => {
+      cleanup();
+      nextSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 4000);
+
+    const cancel = () => {
+      window.clearTimeout(timer);
+      cleanup();
+    };
+    const cleanup = () => {
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchstart", cancel);
+      window.removeEventListener("keydown", cancel);
+      window.removeEventListener("scroll", cancel);
+      heroRef.current?.removeEventListener("pointerdown", cancel);
+    };
+
+    window.addEventListener("wheel", cancel, { passive: true });
+    window.addEventListener("touchstart", cancel, { passive: true });
+    window.addEventListener("keydown", cancel);
+    window.addEventListener("scroll", cancel, { passive: true });
+    heroRef.current?.addEventListener("pointerdown", cancel);
+
+    return () => {
+      window.clearTimeout(timer);
+      cleanup();
+    };
+  }, [reducedMotion]);
+
   return (
     <main className="member-lounge">
       <MemberActivityTracker />
-      <motion.header className="lounge-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.85 }}>
+      <motion.header ref={heroRef} className="lounge-hero" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.85 }}>
         <img src="/images/cap2-off.webp" alt="" />
         <div className="lounge-hero-overlay" />
         <div className="lounge-hero-copy">
@@ -159,11 +207,11 @@ export function MemberLounge({
             <span>Actualmente estas explorando</span>
             <strong>{current ? cleanText(current.title) : "El portafolio OFF"}</strong>
           </div>
-          {current ? <Link href={articleHref(current.slug, language)}>Continuar leyendo</Link> : null}
+          {current ? <Link className="button violet-button lounge-hero-cta" href={articleHref(current.slug, language, currentPosition)}>Continuar leyendo</Link> : null}
         </div>
       </motion.header>
 
-      <div className="lounge-after-hero">
+      <div className="lounge-after-hero" ref={nextSectionRef}>
         <nav className="lounge-nav" aria-label="Member Lounge">
           <Link href="/lounge" aria-label="OFF Member Lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
           <div className="lounge-nav-inner">
@@ -211,11 +259,16 @@ export function MemberLounge({
           </Reveal>
 
           <Reveal className="lounge-section continue-reading">
-            <div className="lounge-heading"><span>En tu mesa</span><h2>Continuar leyendo</h2></div>
+            <div className="lounge-heading"><span>En tu mesa</span></div>
             {current ? (
-              <Link className="continue-editorial" href={articleHref(current.slug, language)}>
+              <Link className="continue-editorial" href={articleHref(current.slug, language, currentPosition)}>
                 <img src={current.coverImage || "/images/cap1-off.webp"} alt="" />
-                <div><span>{current.readTime}</span><h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p><strong>Volver a la lectura</strong></div>
+                <div>
+                  <span>{current.readTime}{currentProgress > 0 ? ` · ${currentProgress}% leído` : ""}</span>
+                  <h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p>
+                  {currentProgress > 0 ? <span className="lounge-reading-progress" aria-label={`${currentProgress}% leído`}><i style={{ width: `${currentProgress}%` }} /></span> : null}
+                  <strong>Volver a la lectura</strong>
+                </div>
               </Link>
             ) : <p className="lounge-empty">El portafolio se abrira con la proxima edicion.</p>}
           </Reveal>
