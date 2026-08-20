@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Role {
@@ -26,24 +27,24 @@ enum LoungeContentType {
 }
 
 model Article {
-  id          String    @id @default(cuid())
-  title       String
-  slug        String    @unique
-  excerpt     String
-  content     String
-  coverImage  String
-  category    String
-  author      String    @default("Nathalie Garcia")
-  readTime    String
-  publishedAt DateTime?
-  status      String    @default("draft")
-  featured    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  comments    Comment[]
+  id               String                   @id @default(cuid())
+  title            String
+  slug             String                   @unique
+  excerpt          String
+  content          String
+  coverImage       String
+  category         String
+  author           String                   @default("Nathalie Garcia")
+  readTime         String
+  publishedAt      DateTime?
+  status           String                   @default("draft")
+  featured         Boolean                  @default(false)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  comments         Comment[]
   topicSuggestions TopicSuggestion[]
-  completions ArticleCompletion[]
-  readingProgress ArticleReadingProgress[]
+  completions      ArticleCompletion[]
+  readingProgress  ArticleReadingProgress[]
 }
 
 model LoungeContent {
@@ -76,23 +77,23 @@ model Subscriber {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  accessCodeHash String?
-  accessCodeLookup String? @unique
-  role         Role      @default(USER)
-  preferredLanguage String @default("es")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
-  comments     Comment[]
-  topicSuggestions TopicSuggestion[]
-  activity     MemberActivity?
-  completions  ArticleCompletion[]
-  readingProgress ArticleReadingProgress[]
-  memberProfile MemberProfile?
+  id                  String                   @id @default(cuid())
+  name                String
+  email               String                   @unique
+  passwordHash        String
+  accessCodeHash      String?
+  accessCodeLookup    String?                  @unique
+  role                Role                     @default(USER)
+  preferredLanguage   String                   @default("es")
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  sessions            Session[]
+  comments            Comment[]
+  topicSuggestions    TopicSuggestion[]
+  activity            MemberActivity?
+  completions         ArticleCompletion[]
+  readingProgress     ArticleReadingProgress[]
+  memberProfile       MemberProfile?
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -138,22 +139,6 @@ model ArticleCompletion {
   @@index([articleId])
 }
 
-model RegistrationVerification {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  codeHash     String
-  accessCodeHash String
-  accessCodeLookup String @unique
-  attempts     Int      @default(0)
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([expiresAt])
-}
-
 model PasswordResetToken {
   id        String    @id @default(cuid())
   tokenHash String    @unique
@@ -166,6 +151,21 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model AuthThrottle {
+  key         String    @id
+  attempts    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([updatedAt])
+}
+
+model AccessCodeRegistry {
+  lookup    String   @id
+  userId    String   @unique
+  createdAt DateTime @default(now())
 }
 
 model Session {

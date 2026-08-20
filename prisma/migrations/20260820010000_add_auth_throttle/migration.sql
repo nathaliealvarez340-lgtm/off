@@ -1,0 +1,2 @@
+-- Reserved migration identifier. The additive schema changes are applied by the
+-- immediately following access-code registry migration.

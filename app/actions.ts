@@ -4,11 +4,17 @@ import { mkdir, writeFile } from "fs/promises";
 import { createHash, randomBytes, randomInt } from "crypto";
 import path from "path";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { clearSession, createSession, getCurrentUser, hashToken, requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { notifySubscribers, sendPasswordResetEmail, sendRegistrationCode } from "@/lib/newsletter";
+import {
+  notifySubscribers,
+  sendPasswordResetEmail,
+  sendRegistrationConfirmationEmail,
+} from "@/lib/newsletter";
 import { startOffOnboardingSafely } from "@/lib/off-onboarding";
 import { isInternalContentCategory } from "@/lib/articles";
 import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
@@ -29,11 +35,11 @@ function accessCodeLookup(code: string) {
 
 async function isAccessCodeAvailable(db: ReturnType<typeof getDb>, code: string) {
   const lookup = accessCodeLookup(code);
-  const [user, verification] = await Promise.all([
+  const [user, registryEntry] = await Promise.all([
     db.user.findUnique({ where: { accessCodeLookup: lookup }, select: { id: true } }),
-    db.registrationVerification.findUnique({ where: { accessCodeLookup: lookup }, select: { id: true } }),
+    db.accessCodeRegistry.findUnique({ where: { lookup }, select: { lookup: true } }),
   ]);
-  return !user && !verification;
+  return !user && !registryEntry;
 }
 
 async function generateUniqueAccessCode(db: ReturnType<typeof getDb>) {
@@ -44,13 +50,61 @@ async function generateUniqueAccessCode(db: ReturnType<typeof getDb>) {
   throw new Error("No pudimos generar un código único. Intenta de nuevo.");
 }
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_MINUTES = 15;
+const INVALID_LOGIN_MESSAGE = "Los datos de acceso no son válidos.";
+
+async function authThrottleKey(email: string, purpose = "login") {
+  const requestHeaders = await headers();
+  const forwardedFor = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const secret = process.env.AUTH_SECRET || process.env.USER_CODE_SECRET || "off-auth-throttle";
+  return createHash("sha256").update(`${purpose}:${secret}:${email}:${forwardedFor}`).digest("hex");
+}
+
+async function isLoginLocked(db: ReturnType<typeof getDb>, key: string) {
+  const throttle = await db.authThrottle.findUnique({ where: { key } });
+  if (!throttle) return false;
+  if (throttle.lockedUntil && throttle.lockedUntil > new Date()) return true;
+  if (throttle.lockedUntil) {
+    await db.authThrottle.update({ where: { key }, data: { attempts: 0, lockedUntil: null } });
+  }
+  return false;
+}
+
+async function recordLoginFailure(db: ReturnType<typeof getDb>, key: string) {
+  const current = await db.authThrottle.findUnique({ where: { key } });
+  const attempts = (current?.attempts ?? 0) + 1;
+  const lockedUntil = attempts >= MAX_LOGIN_ATTEMPTS
+    ? new Date(Date.now() + LOGIN_LOCK_MINUTES * 60 * 1000)
+    : null;
+
+  await db.authThrottle.upsert({
+    where: { key },
+    update: { attempts, lockedUntil },
+    create: { key, attempts, lockedUntil },
+  });
+}
+
+async function lockAuthThrottle(db: ReturnType<typeof getDb>, key: string, durationMs: number) {
+  await db.authThrottle.upsert({
+    where: { key },
+    update: { attempts: MAX_LOGIN_ATTEMPTS, lockedUntil: new Date(Date.now() + durationMs) },
+    create: { key, attempts: MAX_LOGIN_ATTEMPTS, lockedUntil: new Date(Date.now() + durationMs) },
+  });
+}
+
 export async function loginAction(_: unknown, formData: FormData) {
-  const email = stringValue(formData, "email");
+  const email = stringValue(formData, "email").toLowerCase();
   const credential = stringValue(formData, "password");
   const next = stringValue(formData, "next") || "/";
 
   const db = getDb();
-  let user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
+  const throttleKey = await authThrottleKey(email);
+  if (await isLoginLocked(db, throttleKey)) {
+    return { ok: false, message: `${INVALID_LOGIN_MESSAGE} Intenta de nuevo más tarde.` };
+  }
+
+  let user = await db.user.findUnique({ where: { email } });
 
   if (!user && email === ADMIN_EMAIL.toLowerCase() && credential === ADMIN_PASSWORD) {
     user = await db.user.create({
@@ -69,9 +123,11 @@ export async function loginAction(_: unknown, formData: FormData) {
     : false;
 
   if (!user || (!passwordMatches && !codeMatches)) {
-    return { ok: false, message: "Correo, contraseña o código incorrectos." };
+    await recordLoginFailure(db, throttleKey);
+    return { ok: false, message: INVALID_LOGIN_MESSAGE };
   }
 
+  await db.authThrottle.deleteMany({ where: { key: throttleKey } });
   await createSession(user.id);
 
   if (user.role === "ADMIN") {
@@ -85,156 +141,202 @@ export async function loginAction(_: unknown, formData: FormData) {
 export type RegistrationState = {
   ok: boolean;
   message: string;
-  step?: "register" | "verify" | "login";
+  step?: "register" | "success" | "login";
   email?: string;
+  emailSent?: boolean;
+  errorCode?: "REGISTER_FAILED" | "ACCESS_CODE_UNAVAILABLE" | "EMAIL_SEND_FAILED";
 };
+
+export type AccessCodeState = {
+  ok: boolean;
+  status: "idle" | "invalid" | "available" | "occupied" | "error";
+  message: string;
+  code?: string;
+};
+
+export async function generateAvailableAccessCodeAction(): Promise<AccessCodeState> {
+  try {
+    const code = await generateUniqueAccessCode(getDb());
+    return { ok: true, status: "available", message: "Código disponible", code };
+  } catch {
+    return { ok: false, status: "error", message: "No pudimos generar un código. Intenta de nuevo." };
+  }
+}
+
+export async function checkAccessCodeAvailabilityAction(code: string): Promise<AccessCodeState> {
+  const normalizedCode = code.replace(/\D/g, "").slice(0, 4);
+  if (!/^\d{4}$/.test(normalizedCode)) {
+    return { ok: false, status: "invalid", message: "Tu código debe tener exactamente 4 dígitos." };
+  }
+
+  try {
+    const available = await isAccessCodeAvailable(getDb(), normalizedCode);
+    return available
+      ? { ok: true, status: "available", message: "Código disponible", code: normalizedCode }
+      : { ok: false, status: "occupied", message: "Este código ya está en uso. Elige otro." };
+  } catch {
+    return { ok: false, status: "error", message: "No pudimos comprobar el código. Intenta de nuevo." };
+  }
+}
 
 function validateRegistration(formData: FormData):
   | { ok: false; error: string }
-  | { ok: true; name: string; email: string; password: string; customAccessCode: string | null } {
+  | { ok: true; name: string; email: string; password: string; accessCode: string; preferredLanguage: "es" | "en" | "it" | "pt" } {
   const name = stringValue(formData, "name");
   const email = stringValue(formData, "email").toLowerCase();
   const password = stringValue(formData, "password");
   const repeatPassword = stringValue(formData, "repeatPassword");
-  const accessCodeMode = stringValue(formData, "accessCodeMode");
-  const customAccessCode = stringValue(formData, "customAccessCode");
+  const accessCode = stringValue(formData, "accessCode");
+  const language = stringValue(formData, "preferredLanguage");
+  const preferredLanguage = language === "en" || language === "it" || language === "pt" ? language : "es";
 
   if (name.length < 2) return { ok: false, error: "Escribe tu nombre." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Escribe un correo válido." };
   if (password.length < 6 || password.length > 8) return { ok: false, error: "La contraseña debe tener entre 6 y 8 caracteres." };
   if (password !== repeatPassword) return { ok: false, error: "Las contraseñas no coinciden." };
-  if ((accessCodeMode === "custom" || customAccessCode) && !/^\d{4}$/.test(customAccessCode)) {
-    return { ok: false, error: "Tu código personalizado debe tener exactamente 4 dígitos." };
-  }
+  if (!/^\d{4}$/.test(accessCode)) return { ok: false, error: "Elige un código OFF válido de 4 dígitos." };
 
-  return { ok: true, name, email, password, customAccessCode: customAccessCode || null };
+  return { ok: true, name, email, password, accessCode, preferredLanguage };
 }
 
 export async function registerAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const values = validateRegistration(formData);
-  if (!values.ok) return { ok: false, message: values.error };
+  if (!values.ok) {
+    return {
+      ok: false,
+      message: values.error,
+      errorCode: values.error.includes("código OFF") ? "ACCESS_CODE_UNAVAILABLE" : "REGISTER_FAILED",
+    };
+  }
 
-  const { name, email, password, customAccessCode } = values;
+  const { name, email, password, accessCode, preferredLanguage } = values;
   const db = getDb();
   const existingUser = await db.user.findUnique({ where: { email } });
-  if (existingUser) return { ok: false, message: "Ese correo ya está registrado." };
-
-  const code = String(randomInt(1000, 10000));
-  const accessCode = customAccessCode ?? await generateUniqueAccessCode(db);
-  if (customAccessCode && !(await isAccessCodeAvailable(db, customAccessCode))) {
-    return { ok: false, message: "Ese código ya está en uso. Elige otro de 4 dígitos." };
+  if (existingUser) return { ok: false, message: "Ya existe una cuenta asociada a este correo.", errorCode: "REGISTER_FAILED" };
+  if (!(await isAccessCodeAvailable(db, accessCode))) {
+    return { ok: false, message: "Ese código acaba de ser utilizado. Elige otro.", errorCode: "ACCESS_CODE_UNAVAILABLE" };
   }
-  const accessCodeHash = await bcrypt.hash(accessCode, 10);
+
+  const [passwordHash, accessCodeHash] = await Promise.all([
+    bcrypt.hash(password, 12),
+    bcrypt.hash(accessCode, 12),
+  ]);
   const accessCodeLookupHash = accessCodeLookup(accessCode);
+  let registeredUser: { id: string; email: string; name: string; preferredLanguage: string };
+  let subscriberId: string;
 
   try {
-    await db.registrationVerification.upsert({
-      where: { email },
-      update: {
-        name,
-        passwordHash: await bcrypt.hash(password, 12),
-        codeHash: await bcrypt.hash(code, 10),
-        accessCodeHash,
-        accessCodeLookup: accessCodeLookupHash,
-        attempts: 0,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-      create: {
-        name,
-        email,
-        passwordHash: await bcrypt.hash(password, 12),
-        codeHash: await bcrypt.hash(code, 10),
-        accessCodeHash,
-        accessCodeLookup: accessCodeLookupHash,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
-    });
-    await sendRegistrationCode(email, name, code, accessCode);
-  } catch (error) {
-    await db.registrationVerification.deleteMany({ where: { email } });
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos iniciar el registro." };
-  }
-
-  return { ok: true, message: "Enviamos un código de cuatro dígitos a tu correo.", step: "verify", email };
-}
-
-export async function verifyRegistrationAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
-  const email = stringValue(formData, "email").toLowerCase();
-  const code = stringValue(formData, "code");
-  const db = getDb();
-  const verification = await db.registrationVerification.findUnique({ where: { email } });
-
-  if (!verification) return { ok: false, message: "No encontramos una verificación activa. Regístrate de nuevo.", step: "register" };
-  if (verification.expiresAt < new Date()) {
-    await db.registrationVerification.delete({ where: { id: verification.id } });
-    return { ok: false, message: "El código expiró. Regístrate de nuevo.", step: "register" };
-  }
-  if (verification.attempts >= 5) {
-    await db.registrationVerification.delete({ where: { id: verification.id } });
-    return { ok: false, message: "Superaste el máximo de intentos. Regístrate de nuevo.", step: "register" };
-  }
-  if (!/^\d{4}$/.test(code) || !(await bcrypt.compare(code, verification.codeHash))) {
-    await db.registrationVerification.update({ where: { id: verification.id }, data: { attempts: { increment: 1 } } });
-    return { ok: false, message: "El código no es correcto.", step: "verify", email };
-  }
-
-  let onboardingInput: Parameters<typeof startOffOnboardingSafely>[0] | null = null;
-
-  try {
-    const [user, subscriber] = await db.$transaction([
-      db.user.create({
+    const result = await db.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
-          name: verification.name,
-          email: verification.email,
-          passwordHash: verification.passwordHash,
-          accessCodeHash: verification.accessCodeHash,
-          accessCodeLookup: verification.accessCodeLookup,
+          name,
+          email,
+          passwordHash,
+          accessCodeHash,
+          accessCodeLookup: accessCodeLookupHash,
+          preferredLanguage,
           role: "USER",
         },
-      }),
-      db.subscriber.upsert({
-        where: { email: verification.email },
-        update: { name: verification.name, consent: true },
-        create: { name: verification.name, email: verification.email, interest: "Todos", consent: true },
-      }),
-      db.registrationVerification.delete({ where: { id: verification.id } }),
-    ]);
-
-    onboardingInput = {
-      email: user.email,
-      name: user.name,
-      userId: user.id,
-      subscriberId: subscriber.id,
-    };
-  } catch {
-    return { ok: false, message: "No pudimos terminar el registro. Intenta iniciar sesión.", step: "login" };
+        select: { id: true, email: true, name: true, preferredLanguage: true },
+      });
+      const subscriber = await tx.subscriber.upsert({
+        where: { email },
+        update: { name, consent: true },
+        create: { name, email, interest: "Todos", consent: true },
+        select: { id: true },
+      });
+      await tx.accessCodeRegistry.create({ data: { lookup: accessCodeLookupHash, userId: user.id } });
+      return { user, subscriberId: subscriber.id };
+    });
+    registeredUser = result.user;
+    subscriberId = result.subscriberId;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const target = Array.isArray(error.meta?.target) ? error.meta.target.join(" ") : String(error.meta?.target ?? "");
+      if (target.includes("email")) {
+        return { ok: false, message: "Ya existe una cuenta asociada a este correo.", errorCode: "REGISTER_FAILED" };
+      }
+      return { ok: false, message: "Ese código acaba de ser utilizado. Elige otro.", errorCode: "ACCESS_CODE_UNAVAILABLE" };
+    }
+    console.error("Registration failed", { error });
+    return { ok: false, message: "No pudimos crear tu cuenta. Intenta de nuevo.", errorCode: "REGISTER_FAILED" };
   }
 
-  await startOffOnboardingSafely(onboardingInput);
+  await startOffOnboardingSafely({
+    email: registeredUser.email,
+    name: registeredUser.name,
+    userId: registeredUser.id,
+    subscriberId,
+  });
 
-  return { ok: true, message: "Cuenta verificada. Ya puedes iniciar sesión.", step: "login" };
+  try {
+    await sendRegistrationConfirmationEmail({
+      to: registeredUser.email,
+      name: registeredUser.name,
+      accessCode,
+      language: preferredLanguage,
+    });
+    return {
+      ok: true,
+      message: "Tu cuenta fue creada correctamente. Enviamos tu código OFF a tu correo.",
+      step: "success",
+      email,
+      emailSent: true,
+    };
+  } catch (error) {
+    console.error("Registration email failed", { userId: registeredUser.id, error });
+    return {
+      ok: true,
+      message: "Tu cuenta fue creada correctamente, pero no pudimos enviar el correo de confirmación.",
+      step: "success",
+      email,
+      emailSent: false,
+      errorCode: "EMAIL_SEND_FAILED",
+    };
+  }
 }
 
-export async function resendRegistrationCodeAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
+export async function resendAccessCodeEmailAction(_: RegistrationState, formData: FormData): Promise<RegistrationState> {
   const email = stringValue(formData, "email").toLowerCase();
+  const accessCode = stringValue(formData, "accessCode");
   const db = getDb();
-  const verification = await db.registrationVerification.findUnique({ where: { email } });
-  if (!verification) return { ok: false, message: "No encontramos una verificación activa.", step: "register" };
+  const throttleKey = await authThrottleKey(email, "resend-access-code");
 
-  const code = String(randomInt(1000, 10000));
+  if (await isLoginLocked(db, throttleKey)) {
+    return { ok: false, message: "Espera un momento antes de solicitar otro correo.", step: "success", email };
+  }
+
+  const user = await db.user.findUnique({ where: { email } });
+  const validCode = user?.accessCodeHash && /^\d{4}$/.test(accessCode)
+    ? await bcrypt.compare(accessCode, user.accessCodeHash)
+    : false;
+
+  if (!user || !validCode) {
+    await recordLoginFailure(db, throttleKey);
+    return { ok: false, message: "No pudimos reenviar el código.", step: "success", email };
+  }
+
   try {
-    await sendRegistrationCode(email, verification.name, code);
-    await db.registrationVerification.update({
-      where: { id: verification.id },
-      data: {
-        codeHash: await bcrypt.hash(code, 10),
-        attempts: 0,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      },
+    await sendRegistrationConfirmationEmail({
+      to: user.email,
+      name: user.name,
+      accessCode,
+      language: user.preferredLanguage === "en" || user.preferredLanguage === "it" || user.preferredLanguage === "pt"
+        ? user.preferredLanguage
+        : "es",
     });
-    return { ok: true, message: "Enviamos un código nuevo. Expira en 10 minutos.", step: "verify", email };
+    await lockAuthThrottle(db, throttleKey, 60 * 1000);
+    return { ok: true, message: "Enviamos nuevamente tu código OFF.", step: "success", email, emailSent: true };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "No pudimos reenviar el código.", step: "verify", email };
+    console.error("Registration email resend failed", { userId: user.id, error });
+    return {
+      ok: false,
+      message: "No pudimos reenviar el correo en este momento.",
+      step: "success",
+      email,
+      emailSent: false,
+      errorCode: "EMAIL_SEND_FAILED",
+    };
   }
 }
 

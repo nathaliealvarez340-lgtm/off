@@ -1,12 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useState, useTransition } from "react";
+import { RefreshCw } from "lucide-react";
 import {
+  checkAccessCodeAvailabilityAction,
+  generateAvailableAccessCodeAction,
   loginAction,
   registerAction,
   requestPasswordResetAction,
-  resendRegistrationCodeAction,
-  verifyRegistrationAction,
+  resendAccessCodeEmailAction,
+  type AccessCodeState,
   type PasswordRecoveryState,
   type RegistrationState,
 } from "@/app/actions";
@@ -17,42 +20,35 @@ import { useOffLanguage } from "@/components/useOffLanguage";
 const initialState = { ok: false, message: "" };
 const initialRegistrationState: RegistrationState = { ok: false, message: "", step: "register" };
 const initialPasswordRecoveryState: PasswordRecoveryState = { ok: false, message: "" };
+const initialAccessCodeState: AccessCodeState = { ok: false, status: "idle", message: "" };
 
 export function AuthForms({ next, initialMessage = "" }: { next: string; initialMessage?: string }) {
-  const [mode, setMode] = useState<"login" | "register" | "verify" | "forgot">("login");
+  const customCodeStatusId = useId();
+  const [mode, setMode] = useState<"login" | "register" | "success" | "forgot">("login");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [transitionMessage, setTransitionMessage] = useState(initialMessage);
-  const [digits, setDigits] = useState(["", "", "", ""]);
-  const [accessCodeMode, setAccessCodeMode] = useState<"auto" | "custom">("auto");
-  const digitRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [accessCodeMode, setAccessCodeMode] = useState<"generated" | "custom">("generated");
+  const [accessCode, setAccessCode] = useState("");
+  const [accessCodeState, setAccessCodeState] = useState<AccessCodeState>(initialAccessCodeState);
+  const [generatingCode, startGeneratingCode] = useTransition();
+  const [checkingCode, startCheckingCode] = useTransition();
   const [loginState, login, loginPending] = useActionState(loginAction, initialState);
   const [registerState, register, registerPending] = useActionState(registerAction, initialRegistrationState);
-  const [verifyState, verify, verifyPending] = useActionState(verifyRegistrationAction, initialRegistrationState);
-  const [resendState, resend, resendPending] = useActionState(resendRegistrationCodeAction, initialRegistrationState);
+  const [resendAccessState, resendAccessCode, resendAccessPending] = useActionState(resendAccessCodeEmailAction, initialRegistrationState);
   const [recoveryState, requestRecovery, recoveryPending] = useActionState(requestPasswordResetAction, initialPasswordRecoveryState);
-  const { t } = useOffLanguage();
+  const { language, t } = useOffLanguage();
 
   useEffect(() => {
     if (registerState.message) setTransitionMessage(registerState.message);
-    if (registerState.step === "verify" && registerState.email) {
+    if (registerState.step === "success" && registerState.email) {
       setVerificationEmail(registerState.email);
-      setMode("verify");
+      setMode("success");
     }
   }, [registerState]);
 
   useEffect(() => {
-    if (verifyState.message) setTransitionMessage(verifyState.message);
-    if (verifyState.step === "login" && verifyState.ok) {
-      setMode("login");
-      setDigits(["", "", "", ""]);
-    } else if (verifyState.step === "register") {
-      setMode("register");
-    }
-  }, [verifyState]);
-
-  useEffect(() => {
-    if (resendState.message) setTransitionMessage(resendState.message);
-  }, [resendState]);
+    if (resendAccessState.message) setTransitionMessage(resendAccessState.message);
+  }, [resendAccessState]);
 
   useEffect(() => {
     if (loginState.message) setTransitionMessage(loginState.message);
@@ -62,25 +58,60 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
     if (recoveryState.message) setTransitionMessage(recoveryState.message);
   }, [recoveryState]);
 
-  function updateDigit(index: number, value: string) {
-    const nextDigit = value.replace(/\D/g, "").slice(-1);
-    setDigits((current) => current.map((digit, digitIndex) => (digitIndex === index ? nextDigit : digit)));
-    if (nextDigit && index < 3) digitRefs.current[index + 1]?.focus();
-  }
-
-  function pasteCode(value: string) {
-    const nextDigits = value.replace(/\D/g, "").slice(0, 4).split("");
-    if (nextDigits.length === 4) {
-      setDigits(nextDigits);
-      digitRefs.current[3]?.focus();
+  useEffect(() => {
+    if (accessCodeMode !== "custom") return;
+    if (!/^\d{4}$/.test(accessCode)) {
+      setAccessCodeState(accessCode
+        ? { ok: false, status: "invalid", message: "Tu código debe tener exactamente 4 dígitos." }
+        : initialAccessCodeState);
+      return;
     }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      startCheckingCode(async () => {
+        const result = await checkAccessCodeAvailabilityAction(accessCode);
+        if (!cancelled) setAccessCodeState(result);
+      });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [accessCodeMode, accessCode]);
+
+  function generateAccessCode() {
+    setAccessCodeMode("generated");
+    setAccessCode("");
+    setAccessCodeState(initialAccessCodeState);
+    startGeneratingCode(async () => {
+      const result = await generateAvailableAccessCodeAction();
+      setAccessCodeState(result);
+      setAccessCode(result.code ?? "");
+    });
   }
 
+  function selectCustomAccessCode() {
+    setAccessCodeMode("custom");
+    setAccessCode("");
+    setAccessCodeState(initialAccessCodeState);
+    setTransitionMessage("");
+  }
+
+  const codeReady = accessCodeState.status === "available" && /^\d{4}$/.test(accessCode);
   const state = mode === "login" ? loginState : mode === "forgot" ? recoveryState : registerState;
+  const registerButtonCopy = language === "en"
+    ? (registerPending ? "Creating account..." : "Register")
+    : language === "it"
+      ? (registerPending ? "Creazione account..." : "Registrarmi")
+      : language === "pt"
+        ? (registerPending ? "Criando conta..." : "Registrar")
+        : (registerPending ? "Creando cuenta..." : "Registrarme");
 
   return (
     <div className="auth-card auth-access-card">
-      {mode !== "verify" ? (
+      {mode !== "success" ? (
         <div className="auth-tabs">
           <button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setTransitionMessage(""); }} type="button">
             {t("loginTab")}
@@ -111,6 +142,8 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
 
       {mode === "register" ? (
         <form action={register} className="editor-form">
+          <input name="preferredLanguage" type="hidden" value={language} />
+          <input name="accessCode" type="hidden" value={accessCode} />
           <label className="field">
             {t("name")}
             <input name="name" autoComplete="name" data-i18n-placeholder="namePlaceholder" minLength={2} placeholder={t("namePlaceholder")} required />
@@ -121,66 +154,83 @@ export function AuthForms({ next, initialMessage = "" }: { next: string; initial
             <PasswordField label={t("repeatPassword")} name="repeatPassword" autoComplete="new-password" minLength={6} maxLength={8} required />
           </div>
           <div className="access-code-panel">
-            <input name="accessCodeMode" type="hidden" value={accessCodeMode} />
             <div>
               <strong>Código único de usuario</strong>
-              <p>Puedes recibir uno aleatorio o crear un código personalizado de 4 dígitos.</p>
+              <p>Elige uno aleatorio o crea un código personalizado de 4 dígitos.</p>
             </div>
             <div className="access-code-options">
-              <button className={accessCodeMode === "auto" ? "active" : ""} onClick={() => setAccessCodeMode("auto")} type="button">
-                Generar mi código
+              <button
+                aria-label={accessCodeMode === "generated" && accessCode ? "Generar otro código" : "Generar mi código"}
+                className={`access-code-choice generated ${accessCodeMode === "generated" ? "active" : ""}`}
+                disabled={generatingCode}
+                onClick={generateAccessCode}
+                title={accessCode ? "Generar otro código" : undefined}
+                type="button"
+              >
+                <span>{generatingCode ? "••••" : accessCodeMode === "generated" && accessCode ? accessCode : "Generar mi código"}</span>
+                {accessCodeMode === "generated" && accessCode ? (
+                  <RefreshCw aria-hidden="true" className={generatingCode ? "is-spinning" : ""} size={15} />
+                ) : null}
               </button>
-              <button className={accessCodeMode === "custom" ? "active" : ""} onClick={() => setAccessCodeMode("custom")} type="button">
-                Código personalizado
-              </button>
+              {accessCodeMode === "custom" ? (
+                <label className="access-code-choice custom active">
+                  <span className="sr-only">Código personalizado</span>
+                  <input
+                    aria-describedby={customCodeStatusId}
+                    aria-label="Código personalizado"
+                    autoFocus
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) => setAccessCode(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                    pattern="[0-9]*"
+                    placeholder="_ _ _ _"
+                    value={accessCode}
+                  />
+                </label>
+              ) : (
+                <button className="access-code-choice" onClick={selectCustomAccessCode} type="button">
+                  Código personalizado
+                </button>
+              )}
             </div>
-            {accessCodeMode === "custom" ? (
-              <label className="field access-code-custom">
-                Código de 4 dígitos
-                <input inputMode="numeric" maxLength={4} minLength={4} name="customAccessCode" pattern="\d{4}" placeholder="2727" required />
-              </label>
-            ) : null}
+            <span className={`access-code-status ${accessCodeState.status}`} id={customCodeStatusId} role="status">
+              {generatingCode
+                ? "Generando código disponible..."
+                : checkingCode
+                  ? "Comprobando disponibilidad..."
+                  : accessCodeState.status === "available"
+                    ? "✓ Disponible"
+                    : accessCodeState.message}
+            </span>
           </div>
-          <button className="button violet-button" type="submit" disabled={registerPending}>
-            {registerPending ? t("sendingCode") : t("continue")}
+          <button className="button violet-button" type="submit" disabled={registerPending || generatingCode || checkingCode || !codeReady}>
+            {registerButtonCopy}
           </button>
         </form>
       ) : null}
 
-      {mode === "verify" ? (
-        <div className="verification-panel">
-          <div>
-            <p className="eyebrow">{t("confirmEmail")}</p>
-            <h2>{t("fourDigits")}</h2>
-            <p>{t("codeExpires")} <strong>{verificationEmail}</strong></p>
+      {mode === "success" ? (
+        <div className="registration-success-panel">
+          <p className="eyebrow">OFF / Cuenta creada</p>
+          <h2>Tu acceso está listo.</h2>
+          <p>{registerState.message}</p>
+          <div className="generated-access-code compact">
+            <span>Tu código OFF</span>
+            <strong>{accessCode}</strong>
+            <p>Úsalo junto con tu correo o inicia sesión con tu contraseña.</p>
           </div>
-          <form action={verify} className="verification-form">
+          <button
+            className="button violet-button"
+            onClick={() => { setMode("login"); setTransitionMessage("Tu cuenta está lista. Ya puedes iniciar sesión."); }}
+            type="button"
+          >
+            Iniciar sesión
+          </button>
+          <form action={resendAccessCode}>
             <input name="email" type="hidden" value={verificationEmail} />
-            <input name="code" type="hidden" value={digits.join("")} />
-            <div className="verification-code" onPaste={(event) => pasteCode(event.clipboardData.getData("text"))}>
-              {digits.map((digit, index) => (
-                <input
-                  aria-label={`Digit ${index + 1}`}
-                  inputMode="numeric"
-                  key={index}
-                  maxLength={1}
-                  onChange={(event) => updateDigit(index, event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Backspace" && !digits[index] && index > 0) digitRefs.current[index - 1]?.focus();
-                  }}
-                  ref={(element) => { digitRefs.current[index] = element; }}
-                  value={digit}
-                />
-              ))}
-            </div>
-            <button className="button violet-button" disabled={verifyPending || digits.join("").length !== 4} type="submit">
-              {verifyPending ? t("verifying") : t("finish")}
-            </button>
-          </form>
-          <form action={resend}>
-            <input name="email" type="hidden" value={verificationEmail} />
-            <button className="verification-resend" disabled={resendPending} type="submit">
-              {resendPending ? t("resending") : t("resendCode")}
+            <input name="accessCode" type="hidden" value={accessCode} />
+            <button className="verification-resend" disabled={resendAccessPending} type="submit">
+              {resendAccessPending ? "Reenviando..." : "Reenviar código por correo"}
             </button>
           </form>
         </div>
