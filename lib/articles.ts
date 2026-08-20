@@ -108,6 +108,8 @@ function tiptapInlineHtml(node: TiptapNode): string {
     else if (mark.type === "italic") html = `<em>${html}</em>`;
     else if (mark.type === "underline") html = `<u>${html}</u>`;
     else if (mark.type === "strike") html = `<s>${html}</s>`;
+    else if (mark.type === "superscript") html = `<sup>${html}</sup>`;
+    else if (mark.type === "subscript") html = `<sub>${html}</sub>`;
     else if (mark.type === "highlight") html = `<mark${safeInlineStyle({ backgroundColor: mark.attrs?.color })}>${html}</mark>`;
     else if (mark.type === "textStyle") html = `<span${safeInlineStyle(mark.attrs)}>${html}</span>`;
     else if (mark.type === "link") {

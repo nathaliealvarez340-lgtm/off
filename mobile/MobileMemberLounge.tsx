@@ -10,14 +10,12 @@ import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
 import heroMobile from "@/mobile/images/hero_mobile.png";
-import instagramLogo from "@/mobile/images/social/instagram-logo.png";
-import linkedinLogo from "@/mobile/images/social/linkedin-logo.png";
-import xLogo from "@/mobile/images/social/x-logo.jpg";
 
 type LoungeArticle = {
   id: string;
@@ -204,10 +202,7 @@ export function MobileMemberLounge({
           <span>{copy.moreKicker}</span>
         </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@off_journal</span></a>
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span></a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span></a>
-          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer"><strong><img src={xLogo.src} alt="" /></strong><span>@off_journal</span></a>
+          {socialProfiles.map((profile) => <SocialPill profile={profile} key={profile.key} />)}
         </div>
       </MobileReveal>
 

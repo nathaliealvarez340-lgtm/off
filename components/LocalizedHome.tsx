@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { logoutAction } from "@/app/actions";
+import { SocialCard, socialProfiles } from "@/components/SocialLinks";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 
@@ -63,7 +64,7 @@ const copy = {
     aboutTitle: "Qué es",
     aboutLines: ["No es motivación. Es claridad.", "No es productividad. Es comprensión.", "No es éxito vacío. Es reconexión."],
     aboutText: "OFF es el espacio donde la generación que aprendió a rendir, finalmente puede aprender a sentirse.",
-    manifest: "Leer manifiesto",
+    manifest: "Explorar OFF",
     articles: ["Artículos", "recientes"],
     viewAll: "Ver todos los artículos",
     emptyKicker: "Portafolio en construcción",
@@ -107,7 +108,7 @@ const copy = {
     aboutTitle: "What is",
     aboutLines: ["It is not motivation. It is clarity.", "It is not productivity. It is understanding.", "It is not empty success. It is reconnection."],
     aboutText: "OFF is the space where the generation that learned to perform can finally learn to feel.",
-    manifest: "Read manifesto",
+    manifest: "Explore OFF",
     articles: ["Recent", "articles"],
     viewAll: "View all articles",
     emptyKicker: "Portfolio in progress",
@@ -151,7 +152,7 @@ const copy = {
     aboutTitle: "Che cos'è",
     aboutLines: ["Non è motivazione. È chiarezza.", "Non è produttività. È comprensione.", "Non è successo vuoto. È riconnessione."],
     aboutText: "OFF è lo spazio dove la generazione che ha imparato a rendere può finalmente imparare a sentire.",
-    manifest: "Leggi manifesto",
+    manifest: "Esplora OFF",
     articles: ["Articoli", "recenti"],
     viewAll: "Vedi tutti gli articoli",
     emptyKicker: "Portafoglio in costruzione",
@@ -195,7 +196,7 @@ const copy = {
     aboutTitle: "O que é",
     aboutLines: ["Não é motivação. É clareza.", "Não é produtividade. É compreensão.", "Não é sucesso vazio. É reconexão."],
     aboutText: "OFF é o espaço onde a geração que aprendeu a performar finalmente pode aprender a sentir.",
-    manifest: "Ler manifesto",
+    manifest: "Explorar OFF",
     articles: ["Artigos", "recentes"],
     viewAll: "Ver todos os artigos",
     emptyKicker: "Portfólio em construção",
@@ -526,61 +527,7 @@ export function LocalizedHome({ articles, user }: { articles: PublicArticle[]; u
           </a>
         </div>
         <div className="social-badges">
-          <a className="profile-social-card" href="https://mx.linkedin.com/in/nathaliegarciaa" target="_blank">
-            <div className="profile-social-head">
-              <span className="platform-mark linkedin-mark">in</span>
-              <strong>LINKEDIN</strong>
-            </div>
-            <div className="profile-social-body">
-              <span className="social-user">NATHALIE GARCIA A.</span>
-              <span className="social-profile-button">Ver perfil</span>
-            </div>
-          </a>
-
-          <a className="profile-social-card" href="https://www.instagram.com/nathalie.garciaa" target="_blank">
-            <div className="profile-social-head">
-              <span className="platform-mark instagram-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img">
-                  <rect x="3" y="3" width="18" height="18" rx="5" />
-                  <circle cx="12" cy="12" r="4" />
-                  <circle cx="17" cy="7" r="1" />
-                </svg>
-              </span>
-              <strong>INSTAGRAM</strong>
-            </div>
-            <div className="profile-social-body">
-              <span className="social-user">@NATHALIE.GARCIAA</span>
-              <span className="social-profile-button">Ver perfil</span>
-            </div>
-          </a>
-
-          <a className="profile-social-card" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA==" target="_blank">
-            <div className="profile-social-head">
-              <span className="platform-mark instagram-mark" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img">
-                  <rect x="3" y="3" width="18" height="18" rx="5" />
-                  <circle cx="12" cy="12" r="4" />
-                  <circle cx="17" cy="7" r="1" />
-                </svg>
-              </span>
-              <strong>OFF OFFICIAL</strong>
-            </div>
-            <div className="profile-social-body">
-              <span className="social-user">@OFF_JOURNAL</span>
-              <span className="social-profile-button">Ver perfil</span>
-            </div>
-          </a>
-
-          <a className="profile-social-card" href="https://x.com/off_journal" target="_blank">
-            <div className="profile-social-head">
-              <span className="platform-mark x-mark">X</span>
-              <strong>X OFFICIAL</strong>
-            </div>
-            <div className="profile-social-body">
-              <span className="social-user">@OFF_JOURNAL</span>
-              <span className="social-profile-button">Ver perfil</span>
-            </div>
-          </a>
+          {socialProfiles.map((profile) => <SocialCard profile={profile} key={profile.key} />)}
         </div>
       </motion.section>
 

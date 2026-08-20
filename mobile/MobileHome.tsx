@@ -10,9 +10,7 @@ import { getLocalizedArticle } from "@/lib/article-localization";
 import { MobileImpactCarousel } from "@/mobile/MobileImpactCarousel";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
-import instagramLogo from "@/mobile/images/social/instagram-logo.png";
-import linkedinLogo from "@/mobile/images/social/linkedin-logo.png";
-import xLogo from "@/mobile/images/social/x-logo.jpg";
+import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 
 function clean(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -116,18 +114,7 @@ export function MobileHome({ articles }: { articles: PublicArticle[] }) {
           <h2>{copy.moreTitle}</h2>
         </div>
         <div className="mobile-snap-row compact">
-          <a className="mobile-social-pill" href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer">
-            <strong><img src={instagramLogo.src} alt="" /></strong><span>@off_journal</span>
-          </a>
-          <a className="mobile-social-pill" href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer">
-            <strong><img src={linkedinLogo.src} alt="" /></strong><span>Nathalie Garcia A.</span>
-          </a>
-          <a className="mobile-social-pill" href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer">
-            <strong><img src={instagramLogo.src} alt="" /></strong><span>@nathalie.garciaa</span>
-          </a>
-          <a className="mobile-social-pill" href="https://x.com/off_journal" target="_blank" rel="noreferrer">
-            <strong><img src={xLogo.src} alt="" /></strong><span>@off_journal</span>
-          </a>
+          {socialProfiles.map((profile) => <SocialPill profile={profile} key={profile.key} />)}
         </div>
       </MobileReveal>
 

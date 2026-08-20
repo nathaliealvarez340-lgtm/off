@@ -1,8 +1,5 @@
-const socialLinks = [
-  ["Instagram", "https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D"],
-  ["LinkedIn", "https://www.linkedin.com/in/nathaliegarciaa/"],
-  ["Substack", "https://substack.com/@nathalieegarcia?r=7mwiko&utm_campaign=profile&utm_medium=profile-page"],
-];
+import Link from "next/link";
+import { SocialTextLinks } from "@/components/SocialLinks";
 
 export function ArticleFooter() {
   return (
@@ -10,7 +7,7 @@ export function ArticleFooter() {
       <div>
         <p className="eyebrow">OFF / Sigue la conversación</p>
         <nav aria-label="Redes de OFF">
-          {socialLinks.map(([label, href]) => <a href={href} target="_blank" rel="noreferrer" key={label}>{label}</a>)}
+          <SocialTextLinks />
         </nav>
       </div>
       <p>© 2026 OFF. Todos los derechos reservados.</p>
@@ -22,4 +19,3 @@ export function ArticleFooter() {
     </footer>
   );
 }
-import Link from "next/link";

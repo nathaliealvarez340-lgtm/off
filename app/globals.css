@@ -5772,24 +5772,9 @@ textarea:focus {
   place-items: center;
   width: 32px;
   height: 32px;
+  color: #fff;
   font-size: 20px;
   font-weight: 900;
-}
-
-.linkedin-mark {
-  color: #4f8dff;
-  font-family: Arial, sans-serif;
-}
-
-.x-mark {
-  color: #fff;
-  font-family: Arial, sans-serif;
-}
-
-.instagram-mark {
-  border-radius: 0;
-  background: transparent;
-  color: #fff;
 }
 
 .profile-social-body {
@@ -5811,17 +5796,21 @@ textarea:focus {
   box-shadow: 0 18px 54px rgba(123, 61, 255, 0.12);
 }
 
-.instagram-mark svg {
+.social-icon {
   display: block;
-  width: 28px;
-  height: 28px;
-}
-
-.instagram-mark svg rect,
-.instagram-mark svg circle {
+  width: 24px;
+  height: 24px;
+  color: currentColor;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.social-icon.filled {
+  fill: currentColor;
+  stroke: none;
 }
 
 .social-user {
@@ -6310,6 +6299,104 @@ textarea:focus {
 
 .lounge-editor-paper small {
   color: rgba(255, 255, 255, 0.36);
+}
+
+.lounge-rich-field {
+  gap: 14px;
+}
+
+.mini-rich-editor {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(123, 61, 255, 0.12), transparent 38%),
+    rgba(8, 8, 12, 0.72);
+}
+
+.mini-rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.mini-rich-toolbar button {
+  display: inline-grid;
+  min-width: 34px;
+  min-height: 34px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.mini-rich-toolbar button:hover,
+.mini-rich-toolbar button.active {
+  border-color: rgba(123, 61, 255, 0.44);
+  background: rgba(123, 61, 255, 0.14);
+  color: #fff;
+}
+
+.mini-rich-toolbar svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mini-rich-content .ProseMirror {
+  min-height: 260px;
+  padding: 26px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 17px;
+  line-height: 1.75;
+  outline: none;
+}
+
+.mini-rich-content .ProseMirror p {
+  margin: 0 0 1em;
+}
+
+.mini-rich-content .ProseMirror h1,
+.mini-rich-content .ProseMirror h2,
+.mini-rich-content .ProseMirror h3 {
+  margin: 1.2em 0 0.42em;
+  color: #fff;
+  font-family: Georgia, serif;
+  letter-spacing: -0.035em;
+}
+
+.mini-rich-content .ProseMirror h1 { line-height: 1; }
+.mini-rich-content .ProseMirror h2 { line-height: 1.08; }
+.mini-rich-content .ProseMirror h3 { line-height: 1.15; }
+
+.mini-rich-content .ProseMirror img {
+  display: block;
+  max-width: min(100%, 680px);
+  margin: 22px auto;
+  border-radius: 18px;
+}
+
+.mini-rich-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+
+.mini-rich-message {
+  display: block;
+  padding: 0 26px 18px;
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .lounge-editor-grid {

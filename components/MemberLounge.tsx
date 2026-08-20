@@ -12,6 +12,7 @@ import { LocalDate } from "@/components/LocalDate";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
+import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import { useOffLanguage } from "@/components/useOffLanguage";
 
@@ -262,10 +263,7 @@ export function MemberLounge({
               <p>Detras de OFF hay alguien que tambien esta en construccion.</p>
             </div>
             <div className="lounge-social-cards">
-              <a href="https://www.linkedin.com/in/nathaliegarciaa/" target="_blank" rel="noreferrer"><span>in</span><strong>LINKEDIN</strong><small>Nathalie Garcia A.</small></a>
-              <a href="https://www.instagram.com/nathalie.garciaa" target="_blank" rel="noreferrer"><span>IG</span><strong>INSTAGRAM</strong><small>@nathalie.garciaa</small></a>
-              <a href="https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D" target="_blank" rel="noreferrer"><span>IG</span><strong>OFF OFFICIAL</strong><small>@off_journal</small></a>
-              <a href="https://x.com/off_journal" target="_blank" rel="noreferrer"><span>X</span><strong>X OFFICIAL</strong><small>@off_journal</small></a>
+              {socialProfiles.map((profile) => <SocialTile profile={profile} key={profile.key} />)}
             </div>
           </Reveal>
 

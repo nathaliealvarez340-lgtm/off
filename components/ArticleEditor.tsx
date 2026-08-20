@@ -8,6 +8,8 @@ import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
@@ -27,6 +29,8 @@ import {
   Pilcrow,
   Plus,
   Quote,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
   Strikethrough,
   Underline as UnderlineIcon,
 } from "lucide-react";
@@ -35,6 +39,7 @@ import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo,
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { RichPaste, lineHeightForFontSize } from "@/lib/editorial-rich-text";
 import { slugify } from "@/lib/slug";
 
 const LIMIT = 70000;
@@ -441,10 +446,12 @@ const EditorialCollage = TiptapNode.create({
   },
 });
 
-function editorExtensions(placeholder: string) {
+function editorExtensions(placeholder: string, pasteOptions: { uploadFile?: (file: File) => Promise<string>; onMessage?: (message: string) => void } = {}) {
   return [
     StarterKit,
     Underline,
+    Superscript,
+    Subscript,
     TextStyle,
     FontSize,
     Color,
@@ -460,6 +467,7 @@ function editorExtensions(placeholder: string) {
       linkOnPaste: true,
       HTMLAttributes: { rel: "noreferrer" },
     }),
+    RichPaste.configure(pasteOptions),
     Placeholder.configure({ placeholder }),
   ];
 }
@@ -505,7 +513,7 @@ function markdownToHtml(value: string) {
 }
 
 function inlineToHtml(value = "") {
-  if (/<(strong|em|u|s|mark|a|br|span)(\s|>|\/)/i.test(value)) return value;
+  if (/<(strong|b|em|i|u|s|mark|a|br|span|sup|sub)(\s|>|\/)/i.test(value)) return value;
   return markdownToHtml(value);
 }
 
@@ -572,7 +580,7 @@ function sanitizeInlineHtml(value: string) {
 
   template.content.querySelectorAll("*").forEach((element) => {
     const tag = element.tagName.toLowerCase();
-    if (!["strong", "em", "u", "s", "mark", "a", "br", "span"].includes(tag)) {
+    if (!["strong", "b", "em", "i", "u", "s", "mark", "a", "br", "span", "sup", "sub"].includes(tag)) {
       element.replaceWith(document.createTextNode(element.textContent ?? ""));
       return;
     }
@@ -580,7 +588,7 @@ function sanitizeInlineHtml(value: string) {
     Array.from(element.attributes).forEach((attribute) => {
       const name = attribute.name.toLowerCase();
       const safeLinkAttribute = tag === "a" && ["href", "target", "rel"].includes(name);
-      const safeStyleAttribute = ["span", "mark"].includes(tag) && name === "style" && !/url|expression|javascript/i.test(attribute.value);
+      const safeStyleAttribute = ["span", "mark", "sup", "sub"].includes(tag) && name === "style" && !/url|expression|javascript/i.test(attribute.value);
       if (!safeLinkAttribute && !safeStyleAttribute) {
         element.removeAttribute(attribute.name);
       }
@@ -940,7 +948,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
 
   const titleEditor = useEditor({
     immediatelyRender: false,
-    extensions: editorExtensions("Título del artículo"),
+    extensions: editorExtensions("Título del artículo", { uploadFile: uploadEditorFile, onMessage: setClientMessage }),
     content: title || "<p></p>",
     onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
     onUpdate: ({ editor: currentEditor }) => {
@@ -952,7 +960,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
 
   const excerptEditor = useEditor({
     immediatelyRender: false,
-    extensions: editorExtensions("Escribe un extracto que abra la tensión del artículo..."),
+    extensions: editorExtensions("Escribe un extracto que abra la tensión del artículo...", { uploadFile: uploadEditorFile, onMessage: setClientMessage }),
     content: excerpt || "<p></p>",
     onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
     onUpdate: ({ editor: currentEditor }) => setExcerpt(currentEditor.getHTML()),
@@ -960,7 +968,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: editorExtensions("Empieza a escribir..."),
+    extensions: editorExtensions("Empieza a escribir...", { uploadFile: uploadEditorFile, onMessage: setClientMessage }),
     content: initialEditorContent,
     editorProps: {
       handleClick(view, _pos, event) {
@@ -1506,7 +1514,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   function applyFontSize(size: string) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
-    targetEditor.chain().focus().setMark("textStyle", { fontSize: size }).run();
+    targetEditor.chain().focus().setMark("textStyle", { fontSize: size, lineHeight: lineHeightForFontSize(size) }).run();
     if (targetEditor === editor) setEditorHtml(editor.getHTML());
   }
 
@@ -2109,6 +2117,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
               <button type="button" title="Cursiva" aria-label="Cursiva" data-i18n-title="italic" data-i18n-aria-label="italic" className={toolbarEditor?.isActive("italic") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleItalic().run()}><Italic aria-hidden="true" /></button>
               <button type="button" title="Subrayado" aria-label="Subrayado" data-i18n-title="underline" data-i18n-aria-label="underline" className={toolbarEditor?.isActive("underline") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleUnderline().run()}><UnderlineIcon aria-hidden="true" /></button>
               <button type="button" title="Tachado" aria-label="Tachado" data-i18n-title="strike" data-i18n-aria-label="strike" className={toolbarEditor?.isActive("strike") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleStrike().run()}><Strikethrough aria-hidden="true" /></button>
+              <button type="button" title="Superindice" aria-label="Superindice" className={toolbarEditor?.isActive("superscript") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleSuperscript().run()}><SuperscriptIcon aria-hidden="true" /></button>
+              <button type="button" title="Subindice" aria-label="Subindice" className={toolbarEditor?.isActive("subscript") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleSubscript().run()}><SubscriptIcon aria-hidden="true" /></button>
               <button type="button" title="Resaltar" aria-label="Resaltar" data-i18n-title="highlight" data-i18n-aria-label="highlight" className={toolbarEditor?.isActive("highlight") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleHighlight({ color: "#7b3dff55" }).run()}><Highlighter aria-hidden="true" /></button>
               <button type="button" title="Enlace" aria-label="Enlace" data-i18n-title="link" data-i18n-aria-label="link" className={toolbarEditor?.isActive("link") ? "active" : ""} disabled={!canUseToolbar} onClick={applyLink}><LinkIcon aria-hidden="true" /></button>
             </div>

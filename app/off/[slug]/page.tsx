@@ -32,10 +32,10 @@ function sanitizeInlineHtml(text: string) {
   const withoutUnsafeMarkup = text
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
-    .replace(/<(?!\/?(strong|em|u|s|mark|a|br|span)(\s|>|\/))[^>]*>/gi, "");
+    .replace(/<(?!\/?(strong|b|em|i|u|s|mark|a|br|span|sup|sub)(\s|>|\/))[^>]*>/gi, "");
 
-  return withoutUnsafeMarkup.replace(/<(\/?)(strong|em|u|s|mark|a|br|span)\b([^>]*)>/gi, (_, closing: string, rawTag: string, rawAttributes: string) => {
-    const tag = rawTag.toLowerCase();
+  return withoutUnsafeMarkup.replace(/<(\/?)(strong|b|em|i|u|s|mark|a|br|span|sup|sub)\b([^>]*)>/gi, (_, closing: string, rawTag: string, rawAttributes: string) => {
+    const tag = rawTag.toLowerCase() === "b" ? "strong" : rawTag.toLowerCase() === "i" ? "em" : rawTag.toLowerCase();
     if (closing) return `</${tag}>`;
     if (tag === "br") return "<br>";
     if (tag === "a") {
@@ -44,7 +44,7 @@ function sanitizeInlineHtml(text: string) {
       const safeHref = /^(https?:\/\/|\/|#|mailto:)/i.test(href) ? href.replace(/"/g, "&quot;") : "#";
       return `<a href="${safeHref}"${target ? ` target="${target}"` : ""} rel="noreferrer">`;
     }
-    if (tag === "span" || tag === "mark") {
+    if (tag === "span" || tag === "mark" || tag === "sup" || tag === "sub") {
       const style = rawAttributes.match(/\sstyle=["']([^"']*)["']/i)?.[1] ?? "";
       const safeStyle = style
         .split(";")
@@ -75,7 +75,7 @@ function mediaFitStyle(block: { objectFit?: string; objectPosition?: string; asp
 function renderInline(text: string) {
   text = text.replace(/^<p>([\s\S]*)<\/p>$/i, "$1");
   text = text.replace(/^<h[1-6][^>]*>([\s\S]*)<\/h[1-6]>$/i, "$1");
-  if (/<(strong|em|u|s|mark|a|br|span)(\s|>|\/)/i.test(text)) {
+  if (/<(strong|b|em|i|u|s|mark|a|br|span|sup|sub)(\s|>|\/)/i.test(text)) {
     return <span dangerouslySetInnerHTML={{ __html: sanitizeInlineHtml(text) }} />;
   }
 

@@ -3,8 +3,9 @@
 import type { LoungeContent, LoungeContentType } from "@prisma/client";
 import { ArrowLeft, BookOpen, CalendarClock, Radio, Save, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { deleteLoungeContentAction, saveLoungeContentAction, type SaveLoungeContentState } from "@/app/actions";
+import { EditorialRichTextEditor } from "@/components/EditorialRichTextEditor";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const initialState: SaveLoungeContentState = { ok: false, message: "" };
@@ -36,6 +37,7 @@ function linksValue(item?: LoungeContent | null) {
 
 export function LoungeContentEditor({ item, type }: { item?: LoungeContent | null; type: LoungeContentType }) {
   const [state, action, pending] = useActionState(saveLoungeContentAction, initialState);
+  const [content, setContent] = useState(item?.content ?? "");
   const format = formats[type];
   const Icon = format.icon;
 
@@ -80,9 +82,14 @@ export function LoungeContentEditor({ item, type }: { item?: LoungeContent | nul
             </label>
           ) : null}
 
-          <label>
+          <label className="lounge-rich-field">
             <span>{type === "SIGNAL" ? "Texto del Signal" : type === "NATHALIE_NOTE" ? "Texto principal" : "Contenido editorial"}</span>
-            <textarea name="content" defaultValue={item?.content ?? ""} rows={type === "SIGNAL" ? 12 : 9} placeholder={type === "SIGNAL" ? "Escribe entre 100 y 300 palabras..." : "Escribe el contenido..."} />
+            <input name="content" type="hidden" value={content} readOnly />
+            <EditorialRichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder={type === "SIGNAL" ? "Escribe entre 100 y 300 palabras..." : "Escribe el contenido..."}
+            />
           </label>
 
           {["LIBRARY", "RESOURCE"].includes(type) ? (
