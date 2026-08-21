@@ -4933,6 +4933,8 @@ textarea:focus {
 
 .editor-paper-sheet {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100%, var(--page-width, 820px)) !important;
   min-height: var(--page-min-height, 1120px) !important;
   margin: 0 auto !important;
@@ -4947,6 +4949,31 @@ textarea:focus {
     0 0 0 1px rgba(123, 61, 255, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: width 260ms ease, min-height 260ms ease, box-shadow 260ms ease;
+}
+
+.editor-page-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.editor-paper-sheet > .off-editorial-footer {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 22px;
+  pointer-events: none;
+}
+
+.article-footer-page {
+  justify-content: flex-end;
+}
+
+.article-footer-page > .paper-label {
+  position: absolute;
+  top: clamp(34px, 5vw, 58px);
+  left: clamp(46px, 6vw, 86px);
 }
 
 .editor-paper-sheet::before {
@@ -8272,13 +8299,17 @@ textarea:focus {
 }
 
 .library-carousel-meta {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 18px;
 }
 
 .library-carousel-meta span {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   padding: 6px 9px;
@@ -8286,7 +8317,9 @@ textarea:focus {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .library-carousel-card h3 {
@@ -12238,5 +12271,130 @@ body .member-lounge {
 @media (min-width: 769px) {
   .desktop-experience {
     display: block;
+  }
+}
+
+/* Unified live typography spacing control */
+.typography-spacing-control {
+  position: relative;
+}
+
+.typography-spacing-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 80;
+  display: grid;
+  width: min(320px, calc(100vw - 32px));
+  gap: 18px;
+  border: 1px solid rgba(123, 61, 255, 0.34);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(7, 6, 11, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(22px);
+}
+
+.typography-spacing-popover label {
+  display: grid;
+  gap: 9px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.typography-spacing-popover label + label {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 16px;
+}
+
+.typography-spacing-popover label > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px;
+  gap: 12px;
+  align-items: center;
+}
+
+.typography-spacing-popover input[type="range"] {
+  width: 100%;
+  accent-color: #7b3dff;
+}
+
+.typography-spacing-popover .typography-spacing-value {
+  width: 72px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  text-align: center;
+}
+
+.typography-spacing-control.is-compact .typography-spacing-popover {
+  top: calc(100% + 8px);
+}
+
+.article-reader > .off-editorial-footer {
+  width: 100%;
+  margin-top: clamp(54px, 8vw, 88px);
+}
+
+.currently-exploring {
+  gap: 0;
+}
+
+@media (min-width: 961px) {
+  .lounge-bottom-navigation {
+    gap: 8px;
+    border-radius: 30px;
+    padding: 10px 14px;
+  }
+
+  .lounge-bottom-navigation a,
+  .lounge-bottom-navigation button {
+    min-width: 82px;
+    min-height: 66px;
+    gap: 7px;
+    border-radius: 20px;
+    padding: 10px 14px;
+    font-size: 0.68rem;
+  }
+
+  .lounge-bottom-navigation svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 960px) {
+  .lounge-bottom-navigation {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .mobile-article-card .library-carousel-meta {
+    order: -1;
+    gap: 5px;
+    margin: 0;
+  }
+
+  .mobile-article-card .library-carousel-meta span {
+    min-height: 28px;
+    padding: 4px 3px;
+    font-size: clamp(0.48rem, 2vw, 0.58rem);
+    letter-spacing: 0.04em;
+  }
+
+  .typography-spacing-popover {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom) + 18px);
+    left: 16px;
+    width: auto;
+  }
+
+  .editor-paper-sheet > .off-editorial-footer {
+    width: 100%;
   }
 }

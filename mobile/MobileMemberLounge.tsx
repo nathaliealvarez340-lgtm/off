@@ -4,10 +4,10 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { LocalDate } from "@/components/LocalDate";
+import { LibraryMetadata } from "@/components/LibraryCardDeck";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
-import { OffEditorialFooter } from "@/components/OffEditorialFooter";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
@@ -78,18 +78,15 @@ export function MobileMemberLounge({
   badges,
   articles,
   loungeContent,
-  draftEditions,
   lastReadArticleId,
   lastReadPosition = 0,
   preferredLanguage = "es",
 }: MobileMemberLoungeProps) {
   const { copy, language } = useMobileCopy(preferredLanguage);
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
-  const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
   const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
   const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
-  const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
 
   return (
     <main className="off-mobile mobile-lounge">
@@ -133,14 +130,13 @@ export function MobileMemberLounge({
           <span>{copy.library}</span>
         </div>
         <motion.div className="mobile-snap-row mobile-library-row" variants={mobileMotion.list} initial="hidden" whileInView="visible" viewport={{ amount: 0.16, once: false }}>
-          {localizedArticles.map((article, index) => (
+          {localizedArticles.map((article) => (
             <motion.div variants={mobileMotion.item} key={article.id}>
               <Link className="mobile-article-card lounge-card" href={articleHref(article.slug, language)}>
+                <LibraryMetadata category={article.category} date={article.publishedAt} readTime={article.readTime} language={language} />
                 <img src={article.coverImage || "/images/cap1-off.webp"} alt="" loading="lazy" />
-                <span>Ed. {article.editionNumber ?? index + 1} · {article.category}</span>
                 <h3>{clean(article.title)}</h3>
                 <p>{clean(article.excerpt)}</p>
-                <small>{article.readTime}</small>
               </Link>
             </motion.div>
           ))}
@@ -160,22 +156,6 @@ export function MobileMemberLounge({
           <span>{copy.mySelfKicker}</span>
         </div>
         <PersonalityTestPreview />
-      </MobileReveal>
-
-      <MobileReveal className="mobile-section" id="early">
-        <div className="mobile-section-head stacked">
-          <h2>{copy.earlyTitle}</h2>
-          <span>{copy.earlyKicker}</span>
-        </div>
-        <div className="mobile-snap-row compact">
-          {[...earlyAccess, ...localizedDrafts].map((item) => (
-            <article className="mobile-mini-card" key={item.id}>
-              <span>{"releaseDate" in item && item.releaseDate ? <LocalDate value={item.releaseDate} /> : "date" in item ? <LocalDate value={item.date} /> : "OFF"}</span>
-              <h3>{clean(item.title)}</h3>
-              <p>{clean("description" in item ? item.description ?? item.content : item.excerpt)}</p>
-            </article>
-          ))}
-        </div>
       </MobileReveal>
 
       <MobileReveal className="mobile-section" id="perfil">
@@ -199,7 +179,6 @@ export function MobileMemberLounge({
         </div>
       </MobileReveal>
 
-      <OffEditorialFooter language={language} />
       <LoungeBottomNavigation initialLanguage={preferredLanguage} />
     </main>
   );

@@ -9,7 +9,6 @@ import { LocalDate } from "@/components/LocalDate";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
-import { OffEditorialFooter } from "@/components/OffEditorialFooter";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
@@ -80,7 +79,6 @@ export function MemberLounge({
   badges,
   articles,
   loungeContent,
-  draftEditions,
   lastReadArticleId,
   lastReadProgress = 0,
   lastReadPosition = 0,
@@ -107,12 +105,10 @@ export function MemberLounge({
   const { language } = useOffLanguage(preferredLanguage);
   const copy = mobileCopy[language];
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
-  const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
   const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
   const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
   const currentProgress = current?.id === lastReadArticleId ? Math.round(lastReadProgress) : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
-  const manualEarlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
   const libraryItems = [
     ...localizedArticles.map((article, index) => ({
       id: article.id,
@@ -141,7 +137,7 @@ export function MemberLounge({
   ];
 
   useEffect(() => {
-    const sections = ["collections", "mi-yo", "early-access", "member-profile", "conoce-mas"]
+    const sections = ["collections", "mi-yo", "member-profile", "conoce-mas"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];
     const observer = new IntersectionObserver(
@@ -197,7 +193,6 @@ export function MemberLounge({
           <p className="membership-kicker">The Member Lounge</p>
           <h1><MemberGreeting name={name} /></h1>
           <div className="currently-exploring">
-            <span>Actualmente estas explorando</span>
             <strong>{current ? cleanText(current.title) : "El portafolio OFF"}</strong>
           </div>
           {current ? <Link className="button violet-button lounge-hero-cta" href={articleHref(current.slug, language, currentPosition)}>Continuar leyendo</Link> : null}
@@ -246,7 +241,7 @@ export function MemberLounge({
               <h2><span data-i18n="collections">Colecciones</span><em data-i18n="editorial">editoriales</em></h2>
               <p>Volumenes para volver a ideas que merecen mas de una lectura. Una biblioteca emocional, curada para cuando necesitas direccion.</p>
             </div>
-            <LibraryCardDeck items={libraryItems} />
+            <LibraryCardDeck items={libraryItems} language={language} />
           </Reveal>
 
           <Reveal className="lounge-section lounge-self-section" id="mi-yo">
@@ -258,17 +253,8 @@ export function MemberLounge({
             </div>
           </Reveal>
 
-          <Reveal className="lounge-section early-access" id="early-access">
-            <div className="lounge-heading"><span>Early Access</span><h2>Proximamente en OFF</h2></div>
-            <div className="early-editions">
-              {manualEarlyAccess.map((edition) => <article key={edition.id}><time>{edition.releaseDate ? <LocalDate value={edition.releaseDate} /> : edition.statusLabel}</time><span>{edition.statusLabel}</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.description ?? edition.content ?? "")}</p></article>)}
-              {localizedDrafts.map((edition) => <article key={edition.id}><time><LocalDate value={edition.date} /></time><span>Borrador editorial</span><h3>{cleanText(edition.title)}</h3><p>{cleanText(edition.excerpt)}</p></article>)}
-              {!manualEarlyAccess.length && !localizedDrafts.length ? <p className="lounge-empty">La proxima edicion todavia esta tomando forma.</p> : null}
-            </div>
-          </Reveal>
-
           <Reveal className="member-profile-editorial" id="member-profile">
-            <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p>Actualmente estas explorando: <strong>{current ? "Reconstruirte" : "The OFF Portfolio"}</strong></p></div>
+            <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p><strong>{current ? cleanText(current.title) : "The OFF Portfolio"}</strong></p></div>
             <dl>
               <div><dt>Tiempo invertido en OFF</dt><dd>{activeTime}</dd></div>
               <div><dt>Articulos completados</dt><dd>{completedCount || "Aun sin registro"}</dd></div>
@@ -287,7 +273,6 @@ export function MemberLounge({
             </div>
           </Reveal>
 
-          <OffEditorialFooter language={language} />
           <GlobalFooter compact />
         </div>
       </div>
@@ -297,7 +282,6 @@ export function MemberLounge({
         targets={{
           library: "#collections",
           self: "#mi-yo",
-          early: "#early-access",
           profile: "#member-profile",
           more: "#conoce-mas",
         }}

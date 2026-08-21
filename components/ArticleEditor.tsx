@@ -17,8 +17,6 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlignVerticalSpaceAround,
-  ArrowLeftRight,
   Bold,
   Highlighter,
   Italic,
@@ -36,11 +34,12 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, useActionState, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { OffEditorialFooter } from "@/components/OffEditorialFooter";
+import { TypographySpacingControl } from "@/components/TypographySpacingControl";
 import { useOffLanguage } from "@/components/useOffLanguage";
 import { RichPaste, lineHeightForFontSize } from "@/lib/editorial-rich-text";
 import { slugify } from "@/lib/slug";
@@ -60,14 +59,6 @@ const IMAGE_ACCEPT = "image/jpeg,image/jpg,image/png,image/webp,image/gif,image/
 const IMAGE_MAX_SIZE = 25 * 1024 * 1024;
 const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const ZOOM_LEVELS = [75, 100, 125, 150];
-const LINE_HEIGHT_OPTIONS = ["0.5", "1", "1.5", "2", "2.5"] as const;
-const LETTER_SPACING_OPTIONS = [
-  { labelKey: "letterSpacingVeryTight", value: "-0.05em" },
-  { labelKey: "letterSpacingTight", value: "-0.025em" },
-  { labelKey: "letterSpacingNormal", value: "0em" },
-  { labelKey: "letterSpacingWide", value: "0.05em" },
-  { labelKey: "letterSpacingVeryWide", value: "0.1em" },
-] as const;
 const LETTER_SPACING_PATTERN = /^-?(?:0(?:\.\d+)?|\.\d+)em$/;
 const HEADING_TOKENS = {
   H1: { fontSize: "48px", lineHeight: "1" },
@@ -676,11 +667,11 @@ function normalizeExistingTitleHtml(html: string) {
 
     const lineHeight = element.style.lineHeight;
     const lineHeightValue = Number.parseFloat(lineHeight);
-    if (/^\d+(?:\.\d+)?$/.test(lineHeight) && lineHeightValue >= 0.5 && lineHeightValue <= 2.5) styles.push(`line-height: ${lineHeight}`);
+    if (/^\d+(?:\.\d+)?$/.test(lineHeight) && lineHeightValue >= 0.8 && lineHeightValue <= 3) styles.push(`line-height: ${lineHeight}`);
 
     const letterSpacing = element.style.letterSpacing;
     const letterSpacingValue = Number.parseFloat(letterSpacing);
-    if (letterSpacing === "normal" || (LETTER_SPACING_PATTERN.test(letterSpacing) && letterSpacingValue >= -0.08 && letterSpacingValue <= 0.15)) {
+    if (letterSpacing === "normal" || (LETTER_SPACING_PATTERN.test(letterSpacing) && letterSpacingValue >= -0.1 && letterSpacingValue <= 0.2)) {
       styles.push(`letter-spacing: ${letterSpacing}`);
     }
     if (element.style.fontFamily && !/url|expression|javascript/i.test(element.style.fontFamily)) styles.push(`font-family: ${element.style.fontFamily}`);
@@ -990,9 +981,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [spotifyCreateModal, setSpotifyCreateModal] = useState({ open: false, title: "Contenido de Spotify", url: "" });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
-  const [lineHeightOpen, setLineHeightOpen] = useState(false);
-  const [letterSpacingOpen, setLetterSpacingOpen] = useState(false);
-  const [customLetterSpacing, setCustomLetterSpacing] = useState("0.025em");
   const [fontOpen, setFontOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const [insertView, setInsertView] = useState<"main" | "image" | "video">("main");
@@ -1017,6 +1005,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [rightRailCollapsed, setRightRailCollapsed] = useState(false);
   const [activeEditor, setActiveEditor] = useState<TiptapEditor | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [footerOnOwnPage, setFooterOnOwnPage] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1027,8 +1016,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const paletteMenuRef = useRef<HTMLDivElement | null>(null);
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
   const headingMenuRef = useRef<HTMLDivElement | null>(null);
-  const lineHeightMenuRef = useRef<HTMLDivElement | null>(null);
-  const letterSpacingMenuRef = useRef<HTMLDivElement | null>(null);
+  const lastPageContentRef = useRef<HTMLDivElement | null>(null);
   const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
@@ -1268,7 +1256,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   }, [insertOpen]);
 
   useEffect(() => {
-    if (!paletteOpen && !fontOpen && !headingOpen && !lineHeightOpen && !letterSpacingOpen) return;
+    if (!paletteOpen && !fontOpen && !headingOpen) return;
 
     function closeToolbarMenus(event: MouseEvent | KeyboardEvent) {
       if (event instanceof KeyboardEvent && event.key !== "Escape") return;
@@ -1278,9 +1266,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         (
           paletteMenuRef.current?.contains(target) ||
           fontMenuRef.current?.contains(target) ||
-          headingMenuRef.current?.contains(target) ||
-          lineHeightMenuRef.current?.contains(target) ||
-          letterSpacingMenuRef.current?.contains(target)
+          headingMenuRef.current?.contains(target)
         )
       ) {
         return;
@@ -1289,8 +1275,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       setPaletteOpen(false);
       setFontOpen(false);
       setHeadingOpen(false);
-      setLineHeightOpen(false);
-      setLetterSpacingOpen(false);
     }
 
     document.addEventListener("mousedown", closeToolbarMenus);
@@ -1299,7 +1283,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       document.removeEventListener("mousedown", closeToolbarMenus);
       document.removeEventListener("keydown", closeToolbarMenus);
     };
-  }, [fontOpen, headingOpen, letterSpacingOpen, lineHeightOpen, paletteOpen]);
+  }, [fontOpen, headingOpen, paletteOpen]);
 
   useEffect(() => {
     if (!mediaContext.open || mediaContext.pos === null || !editor) return;
@@ -1647,23 +1631,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     if (targetEditor === editor) setEditorHtml(targetEditor.getHTML());
   }
 
-  function applyLineHeight(lineHeight: string) {
-    applyTextStyleToSelectionOrBlock({ lineHeight });
-    setLineHeightOpen(false);
-  }
-
-  function applyLetterSpacing(letterSpacing: string) {
-    const numericValue = Number.parseFloat(letterSpacing);
-    if (!LETTER_SPACING_PATTERN.test(letterSpacing) || !Number.isFinite(numericValue) || numericValue < -0.08 || numericValue > 0.15) {
-      setClientMessage("Usa un valor entre -0.08em y 0.15em.");
-      return;
-    }
-    applyTextStyleToSelectionOrBlock({ letterSpacing });
-    setCustomLetterSpacing(letterSpacing);
-    setLetterSpacingOpen(false);
-    setClientMessage("");
-  }
-
   function applyHeadingToken(token: string) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
@@ -1903,8 +1870,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const canUseToolbar = Boolean(toolbarEditor);
   const activeTextStyle = toolbarEditor?.getAttributes("textStyle") ?? {};
   const activeFont = EDITOR_FONTS.find((font) => activeTextStyle.fontFamily === font.family);
-  const activeLineHeight = String(activeTextStyle.lineHeight ?? "");
-  const activeLetterSpacing = String(activeTextStyle.letterSpacing ?? "");
   const activeHeadingToken = toolbarEditor?.isActive("heading", { level: 1 })
     ? "H1"
     : toolbarEditor?.isActive("heading", { level: 2 })
@@ -1913,6 +1878,32 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         ? "H3"
         : "";
   const page = PAGE_SIZES[pageSize];
+
+  useLayoutEffect(() => {
+    const content = lastPageContentRef.current;
+    if (!content) return;
+    const pageContent = content;
+
+    function evaluateFooterPlacement() {
+      const sheet = pageContent.closest<HTMLElement>(".editor-paper-sheet");
+      if (!sheet) return;
+      const style = window.getComputedStyle(sheet);
+      const verticalPadding = Number.parseFloat(style.paddingTop) + Number.parseFloat(style.paddingBottom);
+      const footerReserve = 190;
+      const availableHeight = Math.max(260, page.minHeight - verticalPadding - footerReserve);
+      setFooterOnOwnPage(pageContent.scrollHeight > availableHeight);
+    }
+
+    const frame = window.requestAnimationFrame(evaluateFooterPlacement);
+    const observer = new ResizeObserver(evaluateFooterPlacement);
+    observer.observe(pageContent);
+    window.addEventListener("resize", evaluateFooterPlacement);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("resize", evaluateFooterPlacement);
+    };
+  }, [combinedEditorHtml, excerpt, extraPages.length, page.minHeight, title]);
 
   function returnToAdmin() {
     if (hasUnsavedChanges && !window.confirm("Tienes cambios recientes. ¿Quieres regresar al dashboard sin esperar otro guardado?")) return;
@@ -2196,59 +2187,11 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   </div>
                 ) : null}
               </div>
-              <div className="toolbar-dropdown line-height-dropdown" ref={lineHeightMenuRef}>
-                <button
-                  type="button"
-                  title="Interlineado"
-                  aria-label="Interlineado"
-                  data-i18n-title="lineHeight"
-                  data-i18n-aria-label="lineHeight"
-                  aria-expanded={lineHeightOpen}
-                  className={activeLineHeight ? "active" : ""}
-                  disabled={!canUseToolbar}
-                  onClick={() => setLineHeightOpen((open) => !open)}
-                >
-                  <AlignVerticalSpaceAround aria-hidden="true" />
-                </button>
-                {lineHeightOpen ? (
-                  <div className="toolbar-menu line-height-menu" aria-label="Interlineado">
-                    <span data-i18n="lineHeight">Interlineado</span>
-                    {LINE_HEIGHT_OPTIONS.map((value) => (
-                      <button type="button" key={value} onClick={() => applyLineHeight(value)}>
-                        {activeLineHeight === value ? "✓ " : ""}{Number(value).toFixed(1)}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              <div className="toolbar-dropdown letter-spacing-dropdown" ref={letterSpacingMenuRef}>
-                <button
-                  type="button"
-                  title={t("letterSpacing")}
-                  aria-label={t("letterSpacing")}
-                  aria-expanded={letterSpacingOpen}
-                  className={activeLetterSpacing ? "active" : ""}
-                  disabled={!canUseToolbar}
-                  onClick={() => setLetterSpacingOpen((open) => !open)}
-                >
-                  <ArrowLeftRight aria-hidden="true" />
-                </button>
-                {letterSpacingOpen ? (
-                  <div className="toolbar-menu letter-spacing-menu" role="dialog" aria-label={t("letterSpacing")}>
-                    <span>{t("letterSpacing")}</span>
-                    {LETTER_SPACING_OPTIONS.map((option) => (
-                      <button className={activeLetterSpacing === option.value ? "active" : ""} type="button" key={option.value} onClick={() => applyLetterSpacing(option.value)}>
-                        <span>{t(option.labelKey)}</span><small>{option.value}</small>
-                      </button>
-                    ))}
-                    <label>
-                      <span>{t("letterSpacingCustom")}</span>
-                      <input value={customLetterSpacing} onChange={(event) => setCustomLetterSpacing(event.target.value.trim())} placeholder="0.025em" inputMode="decimal" />
-                    </label>
-                    <button type="button" onClick={() => applyLetterSpacing(customLetterSpacing)}>{t("letterSpacingApply")}</button>
-                  </div>
-                ) : null}
-              </div>
+              <TypographySpacingControl
+                editor={toolbarEditor}
+                onChange={(html) => { if (toolbarEditor === editor) setEditorHtml(html); }}
+                labels={{ letterSpacing: t("letterSpacing"), lineHeight: t("lineHeight"), control: `${t("letterSpacing")} / ${t("lineHeight")}` }}
+              />
               <button type="button" title="Cita" aria-label="Cita" data-i18n-title="quote" data-i18n-aria-label="quote" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
                 <Quote aria-hidden="true" />
               </button>
@@ -2391,15 +2334,18 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
             >
               <input name="title" type="hidden" value={title} />
               <input name="excerpt" type="hidden" value={excerpt} />
-              <div className="paper-label">{page.label} · {zoom}%</div>
-              <EditorContent editor={titleEditor} className="tiptap-title-editor document-title" />
-              <EditorContent editor={excerptEditor} className="tiptap-excerpt-editor document-excerpt" />
-              <div className="document-meta-line">
-                <span>{article?.status ?? "draft"}</span>
-                <span>{characterCount.toLocaleString()} caracteres</span>
-                <span>{localSave}</span>
+              <div className="editor-page-content" ref={extraPages.length === 0 ? lastPageContentRef : undefined}>
+                <div className="paper-label">{page.label} · {zoom}%</div>
+                <EditorContent editor={titleEditor} className="tiptap-title-editor document-title" />
+                <EditorContent editor={excerptEditor} className="tiptap-excerpt-editor document-excerpt" />
+                <div className="document-meta-line">
+                  <span>{article?.status ?? "draft"}</span>
+                  <span>{characterCount.toLocaleString()} caracteres</span>
+                  <span>{localSave}</span>
+                </div>
+                <EditorContent editor={editor} className="tiptap-editor" />
               </div>
-              <EditorContent editor={editor} className="tiptap-editor" />
+              {extraPages.length === 0 && !footerOnOwnPage ? <OffEditorialFooter language={language} sourceContent={combinedEditorHtml} protectedPreview /> : null}
             </motion.main>
             <AnimatePresence>
               {extraPages.map((pageHtml, index) => (
@@ -2412,19 +2358,36 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   exit={{ opacity: 0, y: -18, scale: 0.96 }}
                   transition={{ duration: 0.36, ease: "easeOut" }}
                 >
-                  <span className="paper-label">Hoja {index + 2}</span>
-                  <div
-                    className="extra-page-editor"
-                    contentEditable
-                    suppressContentEditableWarning
-                    dangerouslySetInnerHTML={{ __html: pageHtml }}
-                    onInput={(event) => {
-                      const html = event.currentTarget.innerHTML;
-                      setExtraPages((current) => current.map((page, pageIndex) => pageIndex === index ? html : page));
-                    }}
-                  />
+                  <div className="editor-page-content" ref={index === extraPages.length - 1 ? lastPageContentRef : undefined}>
+                    <span className="paper-label">Hoja {index + 2}</span>
+                    <div
+                      className="extra-page-editor"
+                      contentEditable
+                      suppressContentEditableWarning
+                      dangerouslySetInnerHTML={{ __html: pageHtml }}
+                      onInput={(event) => {
+                        const html = event.currentTarget.innerHTML;
+                        setExtraPages((current) => current.map((page, pageIndex) => pageIndex === index ? html : page));
+                      }}
+                    />
+                  </div>
+                  {index === extraPages.length - 1 && !footerOnOwnPage ? <OffEditorialFooter language={language} sourceContent={combinedEditorHtml} protectedPreview /> : null}
                 </motion.section>
               ))}
+              {footerOnOwnPage ? (
+                <motion.section
+                  className="editor-paper-sheet editor-paper-sheet-extra article-footer-page"
+                  style={{ "--page-width": `${page.width}px`, "--page-min-height": `${page.minHeight}px` } as CSSProperties}
+                  key="automatic-footer-page"
+                  initial={{ opacity: 0, y: 28, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -18, scale: 0.96 }}
+                  transition={{ duration: 0.36, ease: "easeOut" }}
+                >
+                  <span className="paper-label">Hoja {extraPages.length + 2}</span>
+                  <OffEditorialFooter language={language} sourceContent={combinedEditorHtml} protectedPreview />
+                </motion.section>
+              ) : null}
             </AnimatePresence>
           </div>
         </section>
@@ -2497,12 +2460,6 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 <button type="button" onClick={() => toolbarEditor?.chain().focus().setTextAlign("center").run()}>Centro</button>
                 <button type="button" onClick={() => toolbarEditor?.chain().focus().setTextAlign("right").run()}>Derecha</button>
               </div>
-              <label className="field">Espaciado
-                <select onChange={(event) => applyLineHeight(event.target.value)} defaultValue="">
-                  <option value="" disabled>Seleccionar</option>
-                  {LINE_HEIGHT_OPTIONS.map((value) => <option value={value} key={value}>{Number(value).toFixed(1)}</option>)}
-                </select>
-              </label>
               {selectedKind === "image" || lastSelectedImage ? (
                 <>
                   <label className="field">Ancho de imagen<input placeholder="100%, 720px..." onBlur={(event) => event.target.value && applyImageWidth(event.target.value)} /></label>

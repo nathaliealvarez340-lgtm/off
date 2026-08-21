@@ -359,6 +359,7 @@ export default async function ArticlePage({
             </section>
           ) : null}
 
+          <OffEditorialFooter language={language} sourceContent={translatedArticle.content} />
           {user ? <CompleteArticleButton articleId={article.id} initiallyCompleted={Boolean(completion)} /> : null}
         </article>
 
@@ -439,7 +440,6 @@ export default async function ArticlePage({
           </section>
         </aside>
       </div>
-      <OffEditorialFooter language={language} sourceContent={translatedArticle.content} />
     </main>
   );
 }

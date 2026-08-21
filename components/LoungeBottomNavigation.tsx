@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Brain, CalendarClock, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
+import { BookOpen, Brain, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
@@ -11,7 +11,6 @@ import { mobileCopy } from "@/mobile/mobileCopy";
 type LoungeNavigationTargets = {
   library: string;
   self: string;
-  early: string;
   profile: string;
   more: string;
 };
@@ -19,7 +18,6 @@ type LoungeNavigationTargets = {
 const defaultTargets: LoungeNavigationTargets = {
   library: "#biblioteca",
   self: "#mi-yo",
-  early: "#early",
   profile: "#perfil",
   more: "#conoce-mas",
 };
@@ -41,7 +39,6 @@ export function LoungeBottomNavigation({
   const items = [
     { href: targets.library, label: copy.library, icon: BookOpen },
     { href: targets.self, label: copy.mySelfKicker, icon: Brain },
-    { href: targets.early, label: "Early", icon: CalendarClock },
     { href: targets.profile, label: copy.profileKicker, icon: UserRound },
   ];
   const resolvedActiveSection = activeSection ?? observedSection;
@@ -58,7 +55,7 @@ export function LoungeBottomNavigation({
     }, { rootMargin: "-28% 0px -58% 0px", threshold: [0.05, 0.25, 0.5] });
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [activeSection, targets.early, targets.library, targets.more, targets.profile, targets.self]);
+  }, [activeSection, targets.library, targets.more, targets.profile, targets.self]);
 
   useEffect(() => {
     if (!languageOpen) return;

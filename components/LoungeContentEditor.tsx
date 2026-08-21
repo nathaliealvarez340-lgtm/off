@@ -7,8 +7,6 @@ import { useActionState, useState } from "react";
 import { deleteLoungeContentAction, saveLoungeContentAction, type SaveLoungeContentState } from "@/app/actions";
 import { EditorialRichTextEditor } from "@/components/EditorialRichTextEditor";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { OffEditorialFooter } from "@/components/OffEditorialFooter";
-import { useOffLanguage } from "@/components/useOffLanguage";
 
 const initialState: SaveLoungeContentState = { ok: false, message: "" };
 
@@ -40,7 +38,6 @@ function linksValue(item?: LoungeContent | null) {
 export function LoungeContentEditor({ item, type }: { item?: LoungeContent | null; type: LoungeContentType }) {
   const [state, action, pending] = useActionState(saveLoungeContentAction, initialState);
   const [content, setContent] = useState(item?.content ?? "");
-  const { language } = useOffLanguage();
   const format = formats[type];
   const Icon = format.icon;
 
@@ -94,8 +91,6 @@ export function LoungeContentEditor({ item, type }: { item?: LoungeContent | nul
               placeholder={type === "SIGNAL" ? "Escribe entre 100 y 300 palabras..." : "Escribe el contenido..."}
             />
           </label>
-
-          <OffEditorialFooter language={language} sourceContent={content} protectedPreview />
 
           {["LIBRARY", "RESOURCE"].includes(type) ? (
             <label>

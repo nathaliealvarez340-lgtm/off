@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
+import type { UiLanguage } from "@/lib/ui-i18n";
 
 type LibraryItem = {
   id?: string;
@@ -30,12 +31,23 @@ function normalizeImageUrl(value?: string | null, index = 0) {
   return fallbackImages[index % fallbackImages.length];
 }
 
-function formatDate(value?: string | null) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+function formatDate(value: string, language: UiLanguage) {
+  const locales: Record<UiLanguage, string> = { es: "es-MX", en: "en-US", it: "it-IT", pt: "pt-BR" };
+  return new Intl.DateTimeFormat(locales[language], { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 }
 
-export function LibraryCardDeck({ items }: { items: LibraryItem[] }) {
+export function LibraryMetadata({ category, date, readTime, language = "es" }: {
+  category?: string | null;
+  date?: string | null;
+  readTime?: string | null;
+  language?: UiLanguage;
+}) {
+  const values = [category, date ? formatDate(date, language) : null, readTime].filter((value): value is string => Boolean(value));
+  if (!values.length) return null;
+  return <div className="library-carousel-meta">{values.map((value, index) => <span key={`${value}-${index}`}>{value}</span>)}</div>;
+}
+
+export function LibraryCardDeck({ items, language = "es" }: { items: LibraryItem[]; language?: UiLanguage }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const safeItems = useMemo(() => items.filter((item) => item.title), [items]);
   const active = safeItems[activeIndex] ?? safeItems[0];
@@ -60,12 +72,7 @@ export function LibraryCardDeck({ items }: { items: LibraryItem[] }) {
         <img src={normalizeImageUrl(active.image, activeIndex)} alt="" />
       </div>
       <div className="library-carousel-copy">
-        <div className="library-carousel-meta">
-          <span>{active.number ?? String(activeIndex + 1).padStart(2, "0")}</span>
-          <span>{active.category ?? "Biblioteca"}</span>
-          {formatDate(active.date) ? <span>{formatDate(active.date)}</span> : null}
-          {active.readTime ? <span>{active.readTime}</span> : null}
-        </div>
+        <LibraryMetadata category={active.category ?? "Biblioteca"} date={active.date} readTime={active.readTime} language={language} />
         <h3>{active.title}</h3>
         {active.description ? <p>{active.description}</p> : null}
         <strong>{active.cta ?? "Abrir volumen"}</strong>
