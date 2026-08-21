@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { OFF_SOCIAL_LINKS } from "@/lib/off-social-links";
 
 type SocialProfile = {
   key: "instagram" | "linkedin" | "x";
@@ -14,21 +15,21 @@ export const socialProfiles: SocialProfile[] = [
     label: "Instagram OFF",
     platform: "INSTAGRAM",
     display: "@off_journal",
-    href: "https://www.instagram.com/off_journal?igsh=MWloaWd4NTFkZWRlcA%3D%3D",
+    href: OFF_SOCIAL_LINKS.instagram,
   },
   {
     key: "linkedin",
     label: "LinkedIn",
     platform: "LINKEDIN",
     display: "Nathalie Garcia A.",
-    href: "https://www.linkedin.com/in/nathaliegarciaa/",
+    href: OFF_SOCIAL_LINKS.linkedinProfile,
   },
   {
     key: "x",
     label: "X OFF",
-    platform: "X",
+    platform: "X OFFICIAL",
     display: "@off_journal",
-    href: "https://x.com/off_journal",
+    href: OFF_SOCIAL_LINKS.x,
   },
 ];
 
@@ -107,7 +108,7 @@ export function SocialTextLinks({ includeSubstack = true }: { includeSubstack?: 
           label: "Substack",
           platform: "SUBSTACK",
           display: "Substack",
-          href: "https://substack.com/@nathalieegarcia?r=7mwiko&utm_campaign=profile&utm_medium=profile-page",
+          href: OFF_SOCIAL_LINKS.substack,
         }]
       : []),
   ];

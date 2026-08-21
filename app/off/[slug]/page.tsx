@@ -6,10 +6,10 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
 import { ArticleActions } from "@/components/ArticleActions";
-import { ArticleFooter } from "@/components/ArticleFooter";
 import { CompleteArticleButton } from "@/components/CompleteArticleButton";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
+import { OffEditorialFooter } from "@/components/OffEditorialFooter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import {
@@ -49,7 +49,7 @@ function sanitizeInlineHtml(text: string) {
       const safeStyle = style
         .split(";")
         .map((rule: string) => rule.trim())
-        .filter((rule: string) => /^(color|background-color|font-size|line-height|font-family|font-variation-settings|text-decoration)\s*:/i.test(rule))
+        .filter((rule: string) => /^(color|background-color|font-size|line-height|letter-spacing|font-family|font-variation-settings|text-decoration)\s*:/i.test(rule))
         .filter((rule: string) => !/url|expression|javascript|[<>]/i.test(rule))
         .join("; ");
       return `<${tag}${safeStyle ? ` style="${safeStyle.replace(/"/g, "&quot;")}"` : ""}>`;
@@ -439,7 +439,7 @@ export default async function ArticlePage({
           </section>
         </aside>
       </div>
-      <ArticleFooter />
+      <OffEditorialFooter language={language} sourceContent={translatedArticle.content} />
     </main>
   );
 }

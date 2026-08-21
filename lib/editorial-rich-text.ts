@@ -15,6 +15,7 @@ const SAFE_STYLE_PROPERTIES = new Set([
   "background-color",
   "font-size",
   "line-height",
+  "letter-spacing",
   "font-family",
   "font-variation-settings",
   "text-align",
@@ -110,6 +111,11 @@ export const RichTextStyleAttributes = Extension.create({
             default: null,
             parseHTML: (element) => element.style.lineHeight || null,
             renderHTML: (attributes) => (attributes.lineHeight && !attributes.fontSize ? { style: `line-height: ${attributes.lineHeight};` } : {}),
+          },
+          letterSpacing: {
+            default: null,
+            parseHTML: (element) => element.style.letterSpacing || null,
+            renderHTML: (attributes) => (attributes.letterSpacing ? { style: `letter-spacing: ${attributes.letterSpacing};` } : {}),
           },
           fontFamily: {
             default: null,

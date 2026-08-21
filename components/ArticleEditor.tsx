@@ -18,6 +18,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlignVerticalSpaceAround,
+  ArrowLeftRight,
   Bold,
   Highlighter,
   Italic,
@@ -39,6 +40,8 @@ import { type CSSProperties, type FormEvent, useActionState, useEffect, useMemo,
 import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAction, type AutosaveArticlePayload, type SaveArticleState } from "@/app/actions";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { OffEditorialFooter } from "@/components/OffEditorialFooter";
+import { useOffLanguage } from "@/components/useOffLanguage";
 import { RichPaste, lineHeightForFontSize } from "@/lib/editorial-rich-text";
 import { slugify } from "@/lib/slug";
 
@@ -58,6 +61,14 @@ const IMAGE_MAX_SIZE = 25 * 1024 * 1024;
 const VIDEO_MAX_SIZE = 150 * 1024 * 1024;
 const ZOOM_LEVELS = [75, 100, 125, 150];
 const LINE_HEIGHT_OPTIONS = ["0.5", "1", "1.5", "2", "2.5"] as const;
+const LETTER_SPACING_OPTIONS = [
+  { labelKey: "letterSpacingVeryTight", value: "-0.05em" },
+  { labelKey: "letterSpacingTight", value: "-0.025em" },
+  { labelKey: "letterSpacingNormal", value: "0em" },
+  { labelKey: "letterSpacingWide", value: "0.05em" },
+  { labelKey: "letterSpacingVeryWide", value: "0.1em" },
+] as const;
+const LETTER_SPACING_PATTERN = /^-?(?:0(?:\.\d+)?|\.\d+)em$/;
 const HEADING_TOKENS = {
   H1: { fontSize: "48px", lineHeight: "1" },
   H2: { fontSize: "38px", lineHeight: "1.1" },
@@ -156,6 +167,7 @@ const FontSize = Extension.create({
               const styles = [];
               if (attributes.fontSize) styles.push(`font-size: ${attributes.fontSize}`);
               if (attributes.lineHeight) styles.push(`line-height: ${attributes.lineHeight}`);
+              if (attributes.letterSpacing) styles.push(`letter-spacing: ${attributes.letterSpacing}`);
               if (attributes.fontFamily) styles.push(`font-family: ${attributes.fontFamily}`);
               if (attributes.fontVariationSettings) styles.push(`font-variation-settings: ${attributes.fontVariationSettings}`);
               if (styles.length === 0) return {};
@@ -165,6 +177,10 @@ const FontSize = Extension.create({
           lineHeight: {
             default: null,
             parseHTML: (element) => element.style.lineHeight.replace(/['"]+/g, ""),
+          },
+          letterSpacing: {
+            default: null,
+            parseHTML: (element) => element.style.letterSpacing.replace(/["']+/g, ""),
           },
           fontFamily: {
             default: null,
@@ -513,7 +529,7 @@ function markdownToHtml(value: string) {
 }
 
 function inlineToHtml(value = "") {
-  if (/<(strong|b|em|i|u|s|mark|a|br|span|sup|sub)(\s|>|\/)/i.test(value)) return value;
+  if (/<(p|h[1-6]|strong|b|em|i|u|s|mark|a|br|span|sup|sub)(\s|>|\/)/i.test(value)) return value;
   return markdownToHtml(value);
 }
 
@@ -612,6 +628,71 @@ function htmlToText(value: string) {
   const template = document.createElement("template");
   template.innerHTML = value.replace(/<br\s*\/?>/gi, "\n");
   return template.content.textContent ?? "";
+}
+
+function titlePasteToCleanHtml(html: string) {
+  if (typeof document === "undefined") return `<p>${escapeHtml(html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim())}</p>`;
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  function textWithBreaks(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    if (!(node instanceof HTMLElement)) return Array.from(node.childNodes).map(textWithBreaks).join("");
+    if (node.tagName === "BR") return "\n";
+    const text = Array.from(node.childNodes).map(textWithBreaks).join("");
+    return /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test(node.tagName) ? `${text}\n` : text;
+  }
+
+  const cleanText = textWithBreaks(template.content)
+    .replace(/\u00a0/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return cleanText
+    .split(/\n+/)
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("") || "<p></p>";
+}
+
+function normalizeExistingTitleHtml(html: string) {
+  if (typeof document === "undefined") return html;
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  template.content.querySelectorAll<HTMLElement>("*").forEach((element) => {
+    element.removeAttribute("class");
+    element.removeAttribute("id");
+    Array.from(element.attributes).forEach((attribute) => {
+      if (attribute.name !== "style" && !["href", "target", "rel"].includes(attribute.name)) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+
+    const styles: string[] = [];
+    const fontSize = element.style.fontSize;
+    const fontSizePixels = Number.parseFloat(fontSize);
+    if (/^\d+(?:\.\d+)?px$/i.test(fontSize) && fontSizePixels >= 8 && fontSizePixels <= 160) styles.push(`font-size: ${fontSize}`);
+
+    const lineHeight = element.style.lineHeight;
+    const lineHeightValue = Number.parseFloat(lineHeight);
+    if (/^\d+(?:\.\d+)?$/.test(lineHeight) && lineHeightValue >= 0.5 && lineHeightValue <= 2.5) styles.push(`line-height: ${lineHeight}`);
+
+    const letterSpacing = element.style.letterSpacing;
+    const letterSpacingValue = Number.parseFloat(letterSpacing);
+    if (letterSpacing === "normal" || (LETTER_SPACING_PATTERN.test(letterSpacing) && letterSpacingValue >= -0.08 && letterSpacingValue <= 0.15)) {
+      styles.push(`letter-spacing: ${letterSpacing}`);
+    }
+    if (element.style.fontFamily && !/url|expression|javascript/i.test(element.style.fontFamily)) styles.push(`font-family: ${element.style.fontFamily}`);
+    if (element.style.fontVariationSettings && !/url|expression|javascript/i.test(element.style.fontVariationSettings)) styles.push(`font-variation-settings: ${element.style.fontVariationSettings}`);
+    if (element.style.color && !/url|expression|javascript/i.test(element.style.color)) styles.push(`color: ${element.style.color}`);
+    if (element.style.textAlign) styles.push(`text-align: ${element.style.textAlign}`);
+
+    if (styles.length) element.setAttribute("style", styles.join("; "));
+    else element.removeAttribute("style");
+  });
+
+  return template.innerHTML || "<p></p>";
 }
 
 type TranslationEnvelope = {
@@ -878,6 +959,7 @@ function canLoadRemoteMedia(kind: "image" | "video", url: string) {
 
 export function ArticleEditor({ article, articles = [], initialCategory }: { article?: Article | null; articles?: Article[]; initialCategory?: string }) {
   const router = useRouter();
+  const { language, t } = useOffLanguage();
   const translationEnvelope = useMemo(() => readTranslationEnvelope(article?.content), [article?.content]);
   const originalTranslation = translationEnvelope?.translations?.[translationEnvelope.originalLanguage ?? "es"];
   const originalContent = originalTranslation?.content ?? article?.content;
@@ -909,6 +991,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [headingOpen, setHeadingOpen] = useState(false);
   const [lineHeightOpen, setLineHeightOpen] = useState(false);
+  const [letterSpacingOpen, setLetterSpacingOpen] = useState(false);
+  const [customLetterSpacing, setCustomLetterSpacing] = useState("0.025em");
   const [fontOpen, setFontOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const [insertView, setInsertView] = useState<"main" | "image" | "video">("main");
@@ -944,12 +1028,22 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const fontMenuRef = useRef<HTMLDivElement | null>(null);
   const headingMenuRef = useRef<HTMLDivElement | null>(null);
   const lineHeightMenuRef = useRef<HTMLDivElement | null>(null);
+  const letterSpacingMenuRef = useRef<HTMLDivElement | null>(null);
   const bodySelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const titleEditor = useEditor({
     immediatelyRender: false,
     extensions: editorExtensions("Título del artículo", { uploadFile: uploadEditorFile, onMessage: setClientMessage }),
     content: title || "<p></p>",
+    editorProps: {
+      transformPastedHTML: titlePasteToCleanHtml,
+      transformPastedText: (text) => text.replace(/\r\n?/g, "\n"),
+    },
+    onCreate: ({ editor: currentEditor }) => {
+      const normalized = normalizeExistingTitleHtml(currentEditor.getHTML());
+      if (normalized !== currentEditor.getHTML()) currentEditor.commands.setContent(normalized, { emitUpdate: false });
+      setTitle(normalized);
+    },
     onFocus: ({ editor: currentEditor }) => setActiveEditor(currentEditor),
     onUpdate: ({ editor: currentEditor }) => {
       const nextTitle = currentEditor.getHTML();
@@ -1174,7 +1268,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   }, [insertOpen]);
 
   useEffect(() => {
-    if (!paletteOpen && !fontOpen && !headingOpen && !lineHeightOpen) return;
+    if (!paletteOpen && !fontOpen && !headingOpen && !lineHeightOpen && !letterSpacingOpen) return;
 
     function closeToolbarMenus(event: MouseEvent | KeyboardEvent) {
       if (event instanceof KeyboardEvent && event.key !== "Escape") return;
@@ -1185,7 +1279,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
           paletteMenuRef.current?.contains(target) ||
           fontMenuRef.current?.contains(target) ||
           headingMenuRef.current?.contains(target) ||
-          lineHeightMenuRef.current?.contains(target)
+          lineHeightMenuRef.current?.contains(target) ||
+          letterSpacingMenuRef.current?.contains(target)
         )
       ) {
         return;
@@ -1195,6 +1290,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       setFontOpen(false);
       setHeadingOpen(false);
       setLineHeightOpen(false);
+      setLetterSpacingOpen(false);
     }
 
     document.addEventListener("mousedown", closeToolbarMenus);
@@ -1203,7 +1299,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       document.removeEventListener("mousedown", closeToolbarMenus);
       document.removeEventListener("keydown", closeToolbarMenus);
     };
-  }, [fontOpen, headingOpen, lineHeightOpen, paletteOpen]);
+  }, [fontOpen, headingOpen, letterSpacingOpen, lineHeightOpen, paletteOpen]);
 
   useEffect(() => {
     if (!mediaContext.open || mediaContext.pos === null || !editor) return;
@@ -1514,18 +1610,18 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   function applyFontSize(size: string) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
-    targetEditor.chain().focus().setMark("textStyle", { fontSize: size, lineHeight: lineHeightForFontSize(size) }).run();
-    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+    const currentLineHeight = targetEditor.getAttributes("textStyle").lineHeight as string | undefined;
+    applyTextStyleToSelectionOrBlock({
+      fontSize: size,
+      lineHeight: currentLineHeight || (targetEditor === titleEditor ? "1.2" : lineHeightForFontSize(size)),
+    });
   }
 
   function applyFont(font: (typeof EDITOR_FONTS)[number]) {
-    const targetEditor = currentEditor();
-    if (!targetEditor) return;
-    targetEditor.chain().focus().setMark("textStyle", {
+    applyTextStyleToSelectionOrBlock({
       fontFamily: font.family,
       fontVariationSettings: font.variation ?? null,
-    }).run();
-    if (targetEditor === editor) setEditorHtml(editor.getHTML());
+    });
     setFontOpen(false);
   }
 
@@ -1537,14 +1633,15 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     const range = empty
       ? { from: $from.start(), to: $from.end() }
       : { from, to };
+    const mergedAttributes = { ...targetEditor.getAttributes("textStyle"), ...attributes };
     const chain = targetEditor
       .chain()
       .focus()
       .setTextSelection(range)
-      .setMark("textStyle", attributes)
+      .setMark("textStyle", mergedAttributes)
       .setTextSelection({ from, to });
 
-    if (empty) chain.setMark("textStyle", attributes);
+    if (empty) chain.setMark("textStyle", mergedAttributes);
     chain.run();
 
     if (targetEditor === editor) setEditorHtml(targetEditor.getHTML());
@@ -1555,15 +1652,30 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     setLineHeightOpen(false);
   }
 
+  function applyLetterSpacing(letterSpacing: string) {
+    const numericValue = Number.parseFloat(letterSpacing);
+    if (!LETTER_SPACING_PATTERN.test(letterSpacing) || !Number.isFinite(numericValue) || numericValue < -0.08 || numericValue > 0.15) {
+      setClientMessage("Usa un valor entre -0.08em y 0.15em.");
+      return;
+    }
+    applyTextStyleToSelectionOrBlock({ letterSpacing });
+    setCustomLetterSpacing(letterSpacing);
+    setLetterSpacingOpen(false);
+    setClientMessage("");
+  }
+
   function applyHeadingToken(token: string) {
     const targetEditor = currentEditor();
     if (!targetEditor) return;
     const style = HEADING_TOKENS[token as keyof typeof HEADING_TOKENS];
     if (!style) return;
-    if (token === "H1") targetEditor.chain().focus().toggleHeading({ level: 1 }).run();
-    else if (token === "H2") targetEditor.chain().focus().toggleHeading({ level: 2 }).run();
-    else if (token === "H3") targetEditor.chain().focus().toggleHeading({ level: 3 }).run();
-    applyTextStyleToSelectionOrBlock(style);
+    if (targetEditor !== titleEditor) {
+      if (token === "H1") targetEditor.chain().focus().toggleHeading({ level: 1 }).run();
+      else if (token === "H2") targetEditor.chain().focus().toggleHeading({ level: 2 }).run();
+      else if (token === "H3") targetEditor.chain().focus().toggleHeading({ level: 3 }).run();
+    }
+    const currentLineHeight = targetEditor.getAttributes("textStyle").lineHeight as string | undefined;
+    applyTextStyleToSelectionOrBlock({ ...style, lineHeight: currentLineHeight || (targetEditor === titleEditor ? "1.2" : style.lineHeight) });
     setHeadingOpen(false);
   }
 
@@ -1792,6 +1904,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const activeTextStyle = toolbarEditor?.getAttributes("textStyle") ?? {};
   const activeFont = EDITOR_FONTS.find((font) => activeTextStyle.fontFamily === font.family);
   const activeLineHeight = String(activeTextStyle.lineHeight ?? "");
+  const activeLetterSpacing = String(activeTextStyle.letterSpacing ?? "");
   const activeHeadingToken = toolbarEditor?.isActive("heading", { level: 1 })
     ? "H1"
     : toolbarEditor?.isActive("heading", { level: 2 })
@@ -2108,6 +2221,34 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   </div>
                 ) : null}
               </div>
+              <div className="toolbar-dropdown letter-spacing-dropdown" ref={letterSpacingMenuRef}>
+                <button
+                  type="button"
+                  title={t("letterSpacing")}
+                  aria-label={t("letterSpacing")}
+                  aria-expanded={letterSpacingOpen}
+                  className={activeLetterSpacing ? "active" : ""}
+                  disabled={!canUseToolbar}
+                  onClick={() => setLetterSpacingOpen((open) => !open)}
+                >
+                  <ArrowLeftRight aria-hidden="true" />
+                </button>
+                {letterSpacingOpen ? (
+                  <div className="toolbar-menu letter-spacing-menu" role="dialog" aria-label={t("letterSpacing")}>
+                    <span>{t("letterSpacing")}</span>
+                    {LETTER_SPACING_OPTIONS.map((option) => (
+                      <button className={activeLetterSpacing === option.value ? "active" : ""} type="button" key={option.value} onClick={() => applyLetterSpacing(option.value)}>
+                        <span>{t(option.labelKey)}</span><small>{option.value}</small>
+                      </button>
+                    ))}
+                    <label>
+                      <span>{t("letterSpacingCustom")}</span>
+                      <input value={customLetterSpacing} onChange={(event) => setCustomLetterSpacing(event.target.value.trim())} placeholder="0.025em" inputMode="decimal" />
+                    </label>
+                    <button type="button" onClick={() => applyLetterSpacing(customLetterSpacing)}>{t("letterSpacingApply")}</button>
+                  </div>
+                ) : null}
+              </div>
               <button type="button" title="Cita" aria-label="Cita" data-i18n-title="quote" data-i18n-aria-label="quote" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
                 <Quote aria-hidden="true" />
               </button>
@@ -2420,6 +2561,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
             <h1 dangerouslySetInnerHTML={{ __html: safePreviewHtml(title || "Titulo del articulo") }} />
             <div className="preview-excerpt" dangerouslySetInnerHTML={{ __html: safePreviewHtml(excerpt || "Extracto editorial") }} />
             <div className="reader" dangerouslySetInnerHTML={{ __html: safePreviewHtml(combinedEditorHtml) }} />
+            <OffEditorialFooter language={language} sourceContent={combinedEditorHtml} />
           </section>
         </div>
       ) : null}

@@ -90,6 +90,7 @@ function safeInlineStyle(attrs?: Record<string, unknown>) {
     ["background-color", attrs.backgroundColor],
     ["font-size", attrs.fontSize],
     ["line-height", attrs.lineHeight],
+    ["letter-spacing", attrs.letterSpacing],
     ["font-family", attrs.fontFamily],
     ["font-variation-settings", attrs.fontVariationSettings],
   ]

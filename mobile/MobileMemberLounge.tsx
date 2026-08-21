@@ -1,18 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
-import { BookOpen, Brain, CalendarClock, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { logoutAction } from "@/app/actions";
 import { LocalDate } from "@/components/LocalDate";
+import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { OffEditorialFooter } from "@/components/OffEditorialFooter";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
-import { persistClientLanguage } from "@/lib/language-preference";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
@@ -62,13 +60,6 @@ export type MobileMemberLoungeProps = {
   preferredLanguage?: UiLanguage;
 };
 
-const languageOptions: Array<[UiLanguage, string]> = [
-  ["es", "Español"],
-  ["en", "English"],
-  ["it", "Italiano"],
-  ["pt", "Português"],
-];
-
 function clean(value?: string | null) {
   return (value ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
@@ -93,18 +84,12 @@ export function MobileMemberLounge({
   preferredLanguage = "es",
 }: MobileMemberLoungeProps) {
   const { copy, language } = useMobileCopy(preferredLanguage);
-  const [languageSheetOpen, setLanguageSheetOpen] = useState(false);
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
   const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
   const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
   const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
   const earlyAccess = loungeContent.filter((item) => item.type === "EARLY_ACCESS");
-
-  function selectLanguage(nextLanguage: UiLanguage) {
-    persistClientLanguage(nextLanguage);
-    setLanguageSheetOpen(false);
-  }
 
   return (
     <main className="off-mobile mobile-lounge">
@@ -207,47 +192,15 @@ export function MobileMemberLounge({
       <MobileReveal className="mobile-section" id="conoce-mas">
         <div className="mobile-section-head stacked">
           <h2>{copy.moreTitle}</h2>
-          <span>{copy.moreKicker}</span>
+          <span>{copy.behindOff}</span>
         </div>
         <div className="mobile-snap-row compact">
           {socialProfiles.map((profile) => <SocialPill profile={profile} key={profile.key} />)}
         </div>
       </MobileReveal>
 
-      <nav className="mobile-bottom-nav" aria-label={copy.mobileLoungeNavigation}>
-        <a href="#biblioteca"><BookOpen aria-hidden="true" /><span>{copy.library}</span></a>
-        <a href="#mi-yo"><Brain aria-hidden="true" /><span>{copy.mySelfKicker}</span></a>
-        <a href="#early"><CalendarClock aria-hidden="true" /><span>Early</span></a>
-        <a href="#perfil"><UserRound aria-hidden="true" /><span>{copy.profileKicker}</span></a>
-        <Link href="/mobile/chat"><MessageCircle aria-hidden="true" /><span>{copy.chatKicker}</span></Link>
-        <button type="button" onClick={() => setLanguageSheetOpen(true)} aria-haspopup="dialog" aria-expanded={languageSheetOpen}>
-          <span className="mobile-nav-icon"><Globe2 aria-hidden="true" /></span><span>{copy.language}</span>
-        </button>
-        <a href="#conoce-mas"><Sparkles aria-hidden="true" /><span>{copy.more}</span></a>
-        <form action={logoutAction}><button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button></form>
-      </nav>
-
-      {languageSheetOpen ? (
-        <div className="mobile-language-sheet-backdrop" role="presentation" onClick={() => setLanguageSheetOpen(false)}>
-          <motion.div
-            className="mobile-language-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label={copy.language}
-            initial={{ opacity: 0, y: 26 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.24, ease: mobileEase }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <span>{copy.language}</span>
-            {languageOptions.map(([value, label]) => (
-              <button type="button" className={language === value ? "is-active" : ""} onClick={() => selectLanguage(value)} key={value}>
-                {label}
-              </button>
-            ))}
-          </motion.div>
-        </div>
-      ) : null}
+      <OffEditorialFooter language={language} />
+      <LoungeBottomNavigation initialLanguage={preferredLanguage} />
     </main>
   );
 }

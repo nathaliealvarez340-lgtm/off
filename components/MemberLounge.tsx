@@ -1,21 +1,21 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { BookOpen, Brain, CalendarClock, Languages, LogOut, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { logoutAction } from "@/app/actions";
 import { GlobalFooter } from "@/components/GlobalFooter";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LibraryCardDeck } from "@/components/LibraryCardDeck";
 import { LocalDate } from "@/components/LocalDate";
+import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { OffEditorialFooter } from "@/components/OffEditorialFooter";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import { useOffLanguage } from "@/components/useOffLanguage";
 import type { UiLanguage } from "@/lib/ui-i18n";
+import { mobileCopy } from "@/mobile/mobileCopy";
 
 type LoungeArticle = {
   id: string;
@@ -42,14 +42,6 @@ type LoungeContent = {
   releaseDate: string | null;
   statusLabel: string | null;
 };
-
-const loungeNavItems = [
-  { id: "collections", label: "Colecciones", href: "#collections", icon: BookOpen },
-  { id: "mi-yo", label: "Mi yo", href: "#mi-yo", icon: Brain },
-  { id: "early-access", label: "Early Access", href: "#early-access", icon: CalendarClock },
-  { id: "member-profile", label: "Perfil", href: "#member-profile", icon: UserRound },
-  { id: "conoce-mas", label: "Conoce mas", href: "#conoce-mas", icon: Sparkles },
-];
 
 function cleanText(value: string) {
   return value.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -113,6 +105,7 @@ export function MemberLounge({
   const nextSectionRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const { language } = useOffLanguage(preferredLanguage);
+  const copy = mobileCopy[language];
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
   const localizedDrafts = draftEditions.map((article) => ({ ...article, ...getLocalizedArticle({ ...article, category: "Borrador", readTime: "" }, language) }));
   const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
@@ -212,32 +205,6 @@ export function MemberLounge({
       </motion.header>
 
       <div className="lounge-after-hero" ref={nextSectionRef}>
-        <nav className="lounge-nav" aria-label="Member Lounge">
-          <Link href="/lounge" aria-label="OFF Member Lounge"><img src="/logo/logo-off.png" alt="OFF" /></Link>
-          <div className="lounge-nav-inner">
-            <div className="lounge-nav-menu">
-              {loungeNavItems.map(({ id, label, href, icon: Icon }) => (
-                <a className={activeSection === id ? "active" : ""} href={href} key={id}>
-                  <span className="lounge-nav-icon"><Icon aria-hidden="true" /></span>
-                  <span>{label}</span>
-                </a>
-              ))}
-            </div>
-            <div className="lounge-nav-actions">
-              <div className="lounge-language-row">
-                <span className="lounge-nav-icon"><Languages aria-hidden="true" /></span>
-                <LanguageSwitcher compact label="Idioma" initialLanguage={preferredLanguage} />
-              </div>
-              <form action={logoutAction}>
-                <button type="submit">
-                  <span className="lounge-nav-icon"><LogOut aria-hidden="true" /></span>
-                  <span>Cerrar sesion</span>
-                </button>
-              </form>
-            </div>
-          </div>
-        </nav>
-
         <div className="lounge-content-column">
           <Reveal className="lounge-about-off">
             <div>
@@ -311,18 +278,30 @@ export function MemberLounge({
 
           <Reveal className="lounge-more" id="conoce-mas">
             <div>
-              <p className="membership-kicker">Detras de OFF</p>
-              <h2>Conoce <em>mas</em></h2>
-              <p>Detras de OFF hay alguien que tambien esta en construccion.</p>
+              <p className="membership-kicker">{copy.behindOff}</p>
+              <h2>{copy.moreTitle}</h2>
+              <p>{copy.behindOffCopy}</p>
             </div>
             <div className="lounge-social-cards">
               {socialProfiles.map((profile) => <SocialTile profile={profile} key={profile.key} />)}
             </div>
           </Reveal>
 
+          <OffEditorialFooter language={language} />
           <GlobalFooter compact />
         </div>
       </div>
+      <LoungeBottomNavigation
+        activeSection={activeSection}
+        initialLanguage={preferredLanguage}
+        targets={{
+          library: "#collections",
+          self: "#mi-yo",
+          early: "#early-access",
+          profile: "#member-profile",
+          more: "#conoce-mas",
+        }}
+      />
     </main>
   );
 }
