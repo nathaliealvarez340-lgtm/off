@@ -1019,8 +1019,8 @@ export async function saveGalleryPostAction(
     const requestedMusicSource = stringValue(formData, "musicSource");
     const submittedAudioUrl = stringValue(formData, "audioUrl") || null;
     const submittedSpotifyUrl = stringValue(formData, "spotifyUrl");
-    const audioTitle = stringValue(formData, "audioTitle").replace(/<[^>]*>/g, "").slice(0, 160) || null;
-    const audioArtist = stringValue(formData, "audioArtist").replace(/<[^>]*>/g, "").slice(0, 160) || null;
+    const submittedAudioTitle = stringValue(formData, "audioTitle").replace(/<[^>]*>/g, "").slice(0, 160) || null;
+    const submittedAudioArtist = stringValue(formData, "audioArtist").replace(/<[^>]*>/g, "").slice(0, 160) || null;
     const keywords = normalizeSearchKeywords(formData.get("keywords"));
     const category = stringValue(formData, "category") as (typeof GALLERY_CATEGORIES)[number];
     const status = stringValue(formData, "publishIntent") === "publish" ? "published" : "draft";
@@ -1043,6 +1043,8 @@ export async function saveGalleryPostAction(
     const audioUrl = musicSource === "UPLOAD" ? submittedAudioUrl : null;
     const spotifyUrl = musicSource === "SPOTIFY" ? spotifyTrack?.url ?? null : null;
     const spotifyTrackId = musicSource === "SPOTIFY" ? spotifyTrack?.trackId ?? null : null;
+    const audioTitle = musicSource ? submittedAudioTitle : null;
+    const audioArtist = musicSource ? submittedAudioArtist : null;
 
     if (!GALLERY_MEDIA_TYPES.includes(mediaType)) return { ok: false, message: "Selecciona un tipo de media válido." };
     if (!GALLERY_CATEGORIES.includes(category)) return { ok: false, message: "Selecciona una categoría válida." };

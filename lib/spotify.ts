@@ -15,10 +15,19 @@ export function parseSpotifyTrackUrl(value: string): SpotifyTrack | null {
   if (!input || input.length > 2048) return null;
   try {
     const url = new URL(input);
-    if (url.protocol !== "https:" || url.host !== "open.spotify.com" || url.username || url.password) return null;
-    const parts = url.pathname.split("/").filter(Boolean);
-    if (parts.length !== 2 || parts[0] !== "track" || !isSpotifyTrackId(parts[1])) return null;
-    const trackId = parts[1];
+    if (
+      url.protocol !== "https:" ||
+      url.hostname !== "open.spotify.com" ||
+      url.port ||
+      url.username ||
+      url.password
+    ) return null;
+
+    const segments = url.pathname.split("/").filter(Boolean);
+    const trackIndex = segments.indexOf("track");
+    const trackId = trackIndex >= 0 ? segments[trackIndex + 1] : undefined;
+    if (!trackId || !isSpotifyTrackId(trackId)) return null;
+
     return {
       trackId,
       url: `https://open.spotify.com/track/${trackId}`,

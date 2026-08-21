@@ -24,18 +24,28 @@ function formatNumber(value: number, precision: number) {
 export function TypographySpacingControl({
   editor,
   onChange,
+  open: controlledOpen,
+  onOpenChange,
   compact = false,
   labels = DEFAULT_LABELS,
 }: {
   editor: Editor | null;
   onChange?: (html: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   compact?: boolean;
   labels?: { letterSpacing: string; lineHeight: string; control: string };
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineHeight, setLineHeight] = useState(1.2);
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  function setOpen(next: boolean) {
+    if (controlledOpen === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  }
 
   useEffect(() => {
     if (!editor) return;
@@ -108,7 +118,7 @@ export function TypographySpacingControl({
         aria-label={labels.control}
         aria-expanded={open}
         disabled={!editor}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpen(!open)}
       >
         <ArrowLeftRight aria-hidden="true" />
       </button>

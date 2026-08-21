@@ -981,10 +981,11 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [linkModal, setLinkModal] = useState({ open: false, title: "", url: "", newTab: true });
   const [spotifyModal, setSpotifyModal] = useState({ open: false, pos: -1, title: "", url: "" });
   const [spotifyCreateModal, setSpotifyCreateModal] = useState({ open: false, title: "Contenido de Spotify", url: "" });
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [headingOpen, setHeadingOpen] = useState(false);
-  const [fontOpen, setFontOpen] = useState(false);
-  const [insertOpen, setInsertOpen] = useState(false);
+  const [activeToolbarMenu, setActiveToolbarMenu] = useState<"palette" | "heading" | "font" | "insert" | "spacing" | null>(null);
+  const paletteOpen = activeToolbarMenu === "palette";
+  const headingOpen = activeToolbarMenu === "heading";
+  const fontOpen = activeToolbarMenu === "font";
+  const insertOpen = activeToolbarMenu === "insert";
   const [insertView, setInsertView] = useState<"main" | "image" | "video">("main");
   const [mediaContext, setMediaContext] = useState({ open: false, x: 0, y: 0, pos: null as number | null });
   const [mediaCaptionPanel, setMediaCaptionPanel] = useState({ open: false, x: 0, y: 0, width: 320, pos: null as number | null });
@@ -1245,7 +1246,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     function closeInsertMenu(event: MouseEvent | KeyboardEvent) {
       if (event instanceof KeyboardEvent && event.key !== "Escape") return;
       if (event instanceof MouseEvent && insertMenuRef.current?.contains(event.target as Node)) return;
-      setInsertOpen(false);
+      setActiveToolbarMenu(null);
       setInsertView("main");
     }
 
@@ -1274,9 +1275,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         return;
       }
 
-      setPaletteOpen(false);
-      setFontOpen(false);
-      setHeadingOpen(false);
+      setActiveToolbarMenu(null);
     }
 
     document.addEventListener("mousedown", closeToolbarMenus);
@@ -1590,7 +1589,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     targetEditor.chain().focus().setColor(color).run();
     if (targetEditor === editor) setEditorHtml(editor.getHTML());
     setHexColor(color.toUpperCase());
-    if (close) setPaletteOpen(false);
+    if (close) setActiveToolbarMenu(null);
     setClientMessage("");
   }
 
@@ -1609,7 +1608,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
       fontFamily: font.family,
       fontVariationSettings: font.variation ?? null,
     });
-    setFontOpen(false);
+    setActiveToolbarMenu(null);
   }
 
   function applyTextStyleToSelectionOrBlock(attributes: Record<string, string | null>) {
@@ -1646,7 +1645,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     }
     const currentLineHeight = targetEditor.getAttributes("textStyle").lineHeight as string | undefined;
     applyTextStyleToSelectionOrBlock({ ...style, lineHeight: currentLineHeight || (targetEditor === titleEditor ? "1.2" : style.lineHeight) });
-    setHeadingOpen(false);
+    setActiveToolbarMenu(null);
   }
 
   function applyImageLayout(layout: "center" | "left" | "right" | "full") {
@@ -1795,14 +1794,14 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   }
 
   function openSpotifyCreate() {
-    setInsertOpen(false);
+    setActiveToolbarMenu(null);
     setInsertView("main");
     setSpotifyCreateModal({ open: true, title: "Contenido de Spotify", url: "" });
   }
 
   function openMediaUrlModal(kind: "image" | "video") {
     if (editor) bodySelectionRef.current = { from: editor.state.selection.from, to: editor.state.selection.to };
-    setInsertOpen(false);
+    setActiveToolbarMenu(null);
     setInsertView("main");
     setMediaUrlModal({ open: true, kind, title: "", url: "" });
   }
@@ -2163,7 +2162,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 <Pilcrow aria-hidden="true" />
               </button>
               <div className="toolbar-dropdown font-dropdown" ref={fontMenuRef}>
-                <button className={activeFont ? "active" : ""} type="button" title="Tipografias" aria-label="Tipografias" data-i18n-title="typography" data-i18n-aria-label="typography" disabled={!canUseToolbar} onClick={() => setFontOpen((open) => !open)}>{activeFont?.label ?? "Tipografias"}</button>
+                <button className={fontOpen || activeFont ? "active" : ""} type="button" title="Tipografias" aria-label="Tipografias" aria-expanded={fontOpen} data-i18n-title="typography" data-i18n-aria-label="typography" disabled={!canUseToolbar} onClick={() => setActiveToolbarMenu((current) => current === "font" ? null : "font")}>{activeFont?.label ?? "Tipografias"}</button>
                 {fontOpen ? (
                   <div className="toolbar-menu font-menu">
                     {EDITOR_FONTS.map((font) => (
@@ -2181,7 +2180,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 ) : null}
               </div>
               <div className="toolbar-dropdown" ref={headingMenuRef}>
-                <button className={activeHeadingToken ? "active" : ""} type="button" title="Tamano de titulo" aria-label="Tamano de titulo" data-i18n-title="headingSize" data-i18n-aria-label="headingSize" disabled={!canUseToolbar} onClick={() => setHeadingOpen((open) => !open)}>{activeHeadingToken || "HT"}</button>
+                <button className={headingOpen || activeHeadingToken ? "active" : ""} type="button" title="Tamano de titulo" aria-label="Tamano de titulo" aria-expanded={headingOpen} data-i18n-title="headingSize" data-i18n-aria-label="headingSize" disabled={!canUseToolbar} onClick={() => setActiveToolbarMenu((current) => current === "heading" ? null : "heading")}>{activeHeadingToken || "HT"}</button>
                 {headingOpen ? (
                   <div className="toolbar-menu">
                     {Object.keys(HEADING_TOKENS).map((token) => (
@@ -2193,6 +2192,8 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
               <TypographySpacingControl
                 editor={toolbarEditor}
                 onChange={(html) => { if (toolbarEditor === editor) setEditorHtml(html); }}
+                open={activeToolbarMenu === "spacing"}
+                onOpenChange={(open) => setActiveToolbarMenu(open ? "spacing" : null)}
                 labels={{ letterSpacing: t("letterSpacing"), lineHeight: t("lineHeight"), control: `${t("letterSpacing")} / ${t("lineHeight")}` }}
               />
               <button type="button" title="Cita" aria-label="Cita" data-i18n-title="quote" data-i18n-aria-label="quote" className={toolbarEditor?.isActive("blockquote") ? "active" : ""} disabled={!canUseToolbar} onClick={() => toolbarEditor?.chain().focus().toggleBlockquote().run()}>
@@ -2211,7 +2212,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
             </div>
             <div className="doc-toolbar-group">
               <div className="palette-wrap" ref={paletteMenuRef}>
-                <button type="button" title="Paleta" aria-label="Paleta" data-i18n-title="palette" data-i18n-aria-label="palette" disabled={!canUseToolbar} onClick={() => setPaletteOpen((open) => !open)}><Palette aria-hidden="true" /></button>
+                <button className={paletteOpen ? "active" : ""} type="button" title="Paleta" aria-label="Paleta" aria-expanded={paletteOpen} data-i18n-title="palette" data-i18n-aria-label="palette" disabled={!canUseToolbar} onClick={() => setActiveToolbarMenu((current) => current === "palette" ? null : "palette")}><Palette aria-hidden="true" /></button>
                 {paletteOpen ? (
                   <div className="palette-popover">
                     <span data-i18n="offColors">Colores OFF</span>
@@ -2243,7 +2244,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                   aria-expanded={insertOpen}
                   disabled={!canUseToolbar || uploading}
                   onClick={() => {
-                    setInsertOpen((open) => !open);
+                    setActiveToolbarMenu((current) => current === "insert" ? null : "insert");
                     setInsertView("main");
                   }}
                 >
@@ -2269,7 +2270,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                           type="button"
                           role="menuitem"
                           onClick={() => {
-                            setInsertOpen(false);
+                            setActiveToolbarMenu(null);
                             setInsertView("main");
                             if (insertView === "image") openImagePicker();
                             else openVideoPicker();

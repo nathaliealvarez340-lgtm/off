@@ -14471,6 +14471,38 @@ body .member-lounge {
   line-height: 1.5;
 }
 
+.gallery-audio-file-control {
+  display: grid;
+  gap: 7px;
+}
+
+.gallery-audio-file-control > span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gallery-audio-file-control input[type="file"] {
+  width: 100%;
+  border: 1px dashed rgba(123, 61, 255, 0.34);
+  border-radius: 12px;
+  padding: 9px;
+  background: rgba(123, 61, 255, 0.055);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+}
+
+.gallery-audio-file-control input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
 .gallery-spotify-preview {
   margin-top: 2px;
   border: 1px solid rgba(30, 215, 96, 0.16);
