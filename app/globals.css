@@ -12710,15 +12710,77 @@ body .member-lounge {
 }
 
 @media (min-width: 961px) {
+  .member-progress-timeline {
+    min-height: 0;
+  }
+
+  .member-progress-timeline > svg {
+    position: relative;
+    top: auto;
+    left: auto;
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .member-progress-timeline > svg circle {
+    fill: #9d6aff;
+    stroke: #09070d;
+    stroke-width: 5;
+    filter: drop-shadow(0 0 8px rgba(123, 61, 255, 0.52));
+    vector-effect: non-scaling-stroke;
+  }
+
+  .member-progress-metrics {
+    gap: 0;
+    margin-top: 8px;
+  }
+
+  .member-progress-metrics > div {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .member-progress-metrics i {
+    display: none;
+  }
+
+  .lounge-self-section .off-index-question-card p {
+    font-size: 14px;
+    letter-spacing: 0;
+    line-height: 1.45;
+  }
+
+  .lounge-self-section .off-index-scale {
+    grid-template-columns: repeat(5, minmax(74px, 1fr));
+    gap: clamp(5px, 0.7vw, 10px);
+  }
+
+  .lounge-self-section .off-index-scale button {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .lounge-self-section .off-index-scale span {
+    overflow-wrap: normal;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .member-lounge {
+    --lounge-desktop-gutter: 40px;
+  }
+
   .member-lounge .lounge-hero {
-    padding-right: 40px;
-    padding-left: 40px;
+    padding-right: var(--lounge-desktop-gutter);
+    padding-left: var(--lounge-desktop-gutter);
   }
 
   body .member-lounge .lounge-content-column {
-    width: calc(100% - 40px);
+    width: calc(100% - var(--lounge-desktop-gutter));
     margin-right: 0;
-    margin-left: 40px;
+    margin-left: var(--lounge-desktop-gutter);
   }
 
   .member-lounge .lounge-content-column > .lounge-member-profile,

@@ -57,8 +57,12 @@ export function MemberProfileExperience({
       </header>
 
       <div className="member-progress-timeline" aria-label={copy.progressTimeline}>
-        <svg viewBox="0 0 1000 96" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M26 56 C150 8 250 88 382 44 S640 8 760 50 S910 84 974 34" />
+        <svg viewBox="0 0 1000 96" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <path d="M125 56 C210 12 290 86 375 44 S540 8 625 28 S790 84 875 50" />
+          <circle cx="125" cy="56" r="7" />
+          <circle cx="375" cy="44" r="7" />
+          <circle cx="625" cy="28" r="7" />
+          <circle cx="875" cy="50" r="7" />
         </svg>
         <div className="member-progress-metrics">
           {metrics.map((metric, index) => (

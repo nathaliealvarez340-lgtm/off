@@ -32,7 +32,7 @@ const QUESTIONS: Question[] = [
 ];
 
 type IndexCopy = {
-  privateTest: string; prompt: string; disclaimer: string; intro: string; welcome: string; start: string;
+  title: string; privateTest: string; prompt: string; disclaimer: string; intro: string; welcome: string; start: string;
   question: string; of: string; complete: string; progress: string; answerError: string; completeError: string;
   previous: string; next: string; showResult: string; mainResult: string; blockage: string; index: string;
   recommendation: string; dimensions: string; repeat: string;
@@ -42,7 +42,7 @@ type IndexCopy = {
 
 const INDEX_COPY: Record<UiLanguage, IndexCopy> = {
   es: {
-    privateTest: "Test privado", prompt: "¿Qué está frenando tu crecimiento en tus 20s?", disclaimer: "No es diagnóstico. Es un espejo incómodo, que aparentemente hacía falta.",
+    title: "Mi diagnóstico", privateTest: "Test privado", prompt: "¿Qué está frenando tu crecimiento en tus 20s?", disclaimer: "No es diagnóstico. Es un espejo incómodo, que aparentemente hacía falta.",
     intro: "Antes de seguir construyendo, entiende cómo estás funcionando hoy: patrones, fortalezas y tensiones que suelen pasar desapercibidas.", welcome: "Bienvenido a tu Modo ON.", start: "Iniciar",
     question: "Pregunta", of: "de", complete: "completo", progress: "Progreso", answerError: "Responde esta pregunta antes de avanzar.", completeError: "Completa todas las preguntas para ver tu resultado.",
     previous: "Anterior", next: "Siguiente", showResult: "Ver mi resultado", mainResult: "Tu resultado principal", blockage: "Nivel de bloqueo", index: "Índice OFF", recommendation: "Recomendación", dimensions: "Lectura por dimensiones", repeat: "Repetir test",
@@ -57,6 +57,7 @@ const INDEX_COPY: Record<UiLanguage, IndexCopy> = {
     },
   },
   en: {
+    title: "My diagnosis",
     privateTest: "Private test", prompt: "What is holding back your growth in your twenties?", disclaimer: "This is not a diagnosis. It is an honest mirror.", intro: "Before you keep building, understand how you are operating today: patterns, strengths and tensions that often go unnoticed.", welcome: "Welcome to your ON Mode.", start: "Start",
     question: "Question", of: "of", complete: "complete", progress: "Progress", answerError: "Answer this question before continuing.", completeError: "Complete every question to see your result.", previous: "Previous", next: "Next", showResult: "See my result", mainResult: "Your main result", blockage: "Blockage level", index: "OFF Index", recommendation: "Recommendation", dimensions: "Reading by dimension", repeat: "Retake test",
     categories: { comparison: "Comparison", clarity: "Clarity", execution: "Execution", exhaustion: "Exhaustion" }, scale: { 1: "Not at all", 2: "A little", 3: "Neutral", 4: "A lot", 5: "Completely" }, levels: ["Low", "Medium", "High"],
@@ -70,6 +71,7 @@ const INDEX_COPY: Record<UiLanguage, IndexCopy> = {
     },
   },
   it: {
+    title: "La mia diagnosi",
     privateTest: "Test privato", prompt: "Cosa sta frenando la tua crescita nei tuoi vent'anni?", disclaimer: "Non è una diagnosi. È uno specchio onesto.", intro: "Prima di continuare a costruire, comprendi come stai funzionando oggi: schemi, punti di forza e tensioni invisibili.", welcome: "Benvenuto nel tuo Modo ON.", start: "Inizia",
     question: "Domanda", of: "di", complete: "completo", progress: "Progresso", answerError: "Rispondi prima di continuare.", completeError: "Completa tutte le domande per vedere il risultato.", previous: "Indietro", next: "Avanti", showResult: "Vedi il risultato", mainResult: "Il tuo risultato principale", blockage: "Livello di blocco", index: "Indice OFF", recommendation: "Consiglio", dimensions: "Lettura per dimensione", repeat: "Ripeti il test",
     categories: { comparison: "Confronto", clarity: "Chiarezza", execution: "Esecuzione", exhaustion: "Esaurimento" }, scale: { 1: "Per niente", 2: "Poco", 3: "Neutro", 4: "Molto", 5: "Totalmente" }, levels: ["Basso", "Medio", "Alto"],
@@ -83,7 +85,7 @@ const INDEX_COPY: Record<UiLanguage, IndexCopy> = {
     },
   },
   pt: {
-    privateTest: "Teste privado", prompt: "O que está bloqueando seu crescimento nos seus 20 anos?", disclaimer: "Não é diagnóstico. É um espelho honesto.", intro: "Antes de continuar construindo, entenda como você funciona hoje: padrões, forças e tensões que passam despercebidas.", welcome: "Bem-vindo ao seu Modo ON.", start: "Começar",
+    title: "Meu diagnóstico", privateTest: "Teste privado", prompt: "O que está bloqueando seu crescimento nos seus 20 anos?", disclaimer: "Não é diagnóstico. É um espelho honesto.", intro: "Antes de continuar construindo, entenda como você funciona hoje: padrões, forças e tensões que passam despercebidas.", welcome: "Bem-vindo ao seu Modo ON.", start: "Começar",
     question: "Pergunta", of: "de", complete: "concluído", progress: "Progresso", answerError: "Responda antes de avançar.", completeError: "Complete todas as perguntas para ver o resultado.", previous: "Anterior", next: "Próxima", showResult: "Ver resultado", mainResult: "Seu resultado principal", blockage: "Nível de bloqueio", index: "Índice OFF", recommendation: "Recomendação", dimensions: "Leitura por dimensão", repeat: "Refazer teste",
     categories: { comparison: "Comparação", clarity: "Clareza", execution: "Execução", exhaustion: "Esgotamento" }, scale: { 1: "Nada", 2: "Pouco", 3: "Neutro", 4: "Muito", 5: "Totalmente" }, levels: ["Baixo", "Médio", "Alto"],
     questions: ["Sinto que estou atrasado em relação a pessoas da minha idade.", "Tenho dificuldade de aproveitar conquistas porque penso no que falta.", "Tenho objetivos claros para os próximos 12 meses.", "Sei quais habilidades estou desenvolvendo.", "Passo mais tempo planejando do que executando.", "Sinto cansaço mesmo sem esforço físico.", "Comparo meu progresso com o de outras pessoas.", "Tenho hábitos que me aproximam das metas.", "Mudo de objetivo constantemente.", "Estou construindo uma vida alinhada com quem quero ser.", "Tenho dificuldade para tomar decisões importantes.", "Tenho clareza sobre meu propósito atual.", "Consumo muito conteúdo de produtividade, mas aplico pouco.", "Sinto estabilidade emocional na maior parte do tempo.", "Se continuasse assim por cinco anos, ficaria satisfeito."],
@@ -262,8 +264,7 @@ export function PersonalityTestPreview() {
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
       >
         <div className="off-index-header">
-          <span>{copy.privateTest}</span>
-          <h2 id="off-index-title">OFF Index™</h2>
+          <h2 id="off-index-title">{copy.title}</h2>
           <p>{copy.prompt}</p>
           <small>{copy.disclaimer}</small>
         </div>
