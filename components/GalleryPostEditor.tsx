@@ -9,8 +9,10 @@ import { deleteGalleryPostAction, saveGalleryPostAction, type SaveGalleryPostSta
 import { GalleryPostViewer } from "@/components/GalleryPostViewer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SearchKeywordsInput } from "@/components/SearchKeywordsInput";
+import { SpotifyTrackEmbed } from "@/components/SpotifyTrackEmbed";
 import { DEFAULT_GALLERY_TRANSFORM, GALLERY_CATEGORIES, GALLERY_CATEGORY_LABELS, normalizeGalleryTransform, type GalleryMediaTransform, type GalleryPostData } from "@/lib/gallery";
 import { useMobileCopy } from "@/mobile/mobileCopy";
+import { parseSpotifyTrackUrl } from "@/lib/spotify";
 
 const initialState: SaveGalleryPostState = { ok: false, message: "" };
 type UploadResponse = { success?: boolean; url?: string; error?: string };
@@ -33,6 +35,10 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
   const [audioUrl, setAudioUrl] = useState(post?.audioUrl ?? "");
   const [audioTitle, setAudioTitle] = useState(post?.audioTitle ?? "");
   const [audioArtist, setAudioArtist] = useState(post?.audioArtist ?? "");
+  const [musicSource, setMusicSource] = useState<"NONE" | "UPLOAD" | "SPOTIFY">(post?.musicSource ?? (post?.spotifyTrackId ? "SPOTIFY" : post?.audioUrl ? "UPLOAD" : "NONE"));
+  const [spotifyUrl, setSpotifyUrl] = useState(post?.spotifyUrl ?? "");
+  const [spotifyTrackId, setSpotifyTrackId] = useState(post?.spotifyTrackId ?? "");
+  const [spotifyError, setSpotifyError] = useState("");
   const [title, setTitle] = useState(post?.title ?? "");
   const [caption, setCaption] = useState(post?.caption ?? "");
   const [altText, setAltText] = useState(post?.altText ?? "");
@@ -45,6 +51,7 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const posterInputRef = useRef<HTMLInputElement | null>(null);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const spotifyInputRef = useRef<HTMLInputElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
   const router = useRouter();
@@ -60,7 +67,7 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
     setUploadError("");
     try {
       const url = await uploadFile(file, kind);
-      if (kind === "audio") setAudioUrl(url);
+      if (kind === "audio") { setAudioUrl(url); setMusicSource("UPLOAD"); }
       else {
         setMediaType(kind === "video" ? "VIDEO" : "IMAGE");
         setMediaUrl(url);
@@ -72,6 +79,26 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
     } finally {
       setUploading(false);
     }
+  }
+
+  function updateSpotifyUrl(value: string) {
+    setSpotifyUrl(value);
+    if (!value.trim()) { setSpotifyTrackId(""); setSpotifyError(""); return; }
+    const track = parseSpotifyTrackUrl(value);
+    if (!track) { setSpotifyTrackId(""); setSpotifyError("Pega un enlace válido de una canción de Spotify."); return; }
+    setSpotifyUrl(track.url);
+    setSpotifyTrackId(track.trackId);
+    setSpotifyError("");
+  }
+
+  function removeMusic() {
+    setMusicSource("NONE");
+    setAudioUrl("");
+    setSpotifyUrl("");
+    setSpotifyTrackId("");
+    setAudioTitle("");
+    setAudioArtist("");
+    setSpotifyError("");
   }
 
   async function handlePoster(file?: File) {
@@ -115,6 +142,9 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
     audioUrl: audioUrl || null,
     audioTitle: audioTitle || null,
     audioArtist: audioArtist || null,
+    musicSource: musicSource === "NONE" ? null : musicSource,
+    spotifyUrl: musicSource === "SPOTIFY" && spotifyTrackId ? `https://open.spotify.com/track/${spotifyTrackId}` : null,
+    spotifyTrackId: musicSource === "SPOTIFY" ? spotifyTrackId || null : null,
     publishedAt: post?.publishedAt?.toISOString() ?? new Date().toISOString(),
     likeCount: 0,
     commentCount: 0,
@@ -138,10 +168,13 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
         <input name="thumbnailUrl" type="hidden" value={thumbnailUrl} />
         <input name="mediaTransform" type="hidden" value={JSON.stringify(transform)} />
         <input name="audioUrl" type="hidden" value={audioUrl} />
+        <input name="musicSource" type="hidden" value={musicSource} />
+        <input name="spotifyUrl" type="hidden" value={spotifyUrl} />
+        <input name="spotifyTrackId" type="hidden" value={spotifyTrackId} />
 
         <section className="gallery-editor-preview-area">
           <div className={`gallery-editor-preview ${editingMedia ? "is-editing" : ""}`} ref={frameRef} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={() => { dragRef.current = null; }}>
-            {mediaUrl ? mediaType === "IMAGE" ? <img src={mediaUrl} alt="Preview" draggable={false} style={mediaStyle} /> : <video src={mediaUrl} poster={thumbnailUrl || undefined} controls={!editingMedia} muted={Boolean(audioUrl)} preload="metadata" style={mediaStyle} /> : <div><ImagePlus /><strong>{copy.frameRecommendation}</strong></div>}
+            {mediaUrl ? mediaType === "IMAGE" ? <img src={mediaUrl} alt="Preview" draggable={false} style={mediaStyle} /> : <video src={mediaUrl} poster={thumbnailUrl || undefined} controls={!editingMedia} muted={musicSource !== "NONE"} preload="metadata" style={mediaStyle} /> : <div><ImagePlus /><strong>{copy.frameRecommendation}</strong></div>}
           </div>
           <div className="gallery-media-primary-actions">
             <button type="button" onClick={() => mediaInputRef.current?.click()} disabled={uploading}><Upload />{uploading ? copy.loading : mediaUrl ? copy.replaceFile : copy.uploadFile}</button>
@@ -159,9 +192,11 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
           <SearchKeywordsInput initialKeywords={post?.keywords ?? []} />
           {mediaType === "VIDEO" ? <div className="gallery-poster-field"><span>{copy.videoPoster}</span>{thumbnailUrl ? <img src={thumbnailUrl} alt={copy.videoPoster} /> : <Video />}<button type="button" onClick={() => posterInputRef.current?.click()} disabled={uploading}>{copy.uploadPoster}</button><input ref={posterInputRef} type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(event) => { handlePoster(event.target.files?.[0]); event.target.value = ""; }} /></div> : null}
           <div className="gallery-audio-editor">
-            <div><span>{copy.addMusic}</span><button type="button" onClick={() => audioInputRef.current?.click()}><Music2 />{audioUrl ? copy.replace : copy.uploadAudio}</button></div>
+            <div className="gallery-music-heading"><span>Música</span><div className="gallery-music-source" role="group" aria-label="Fuente de música"><button className={musicSource === "UPLOAD" ? "is-active" : ""} type="button" onClick={() => { setMusicSource("UPLOAD"); setSpotifyError(""); }}><Upload />Subir audio</button><button className={musicSource === "SPOTIFY" ? "is-active" : ""} type="button" onClick={() => { setMusicSource("SPOTIFY"); setSpotifyError(""); }}><Music2 />Spotify</button></div></div>
             <input ref={audioInputRef} type="file" hidden accept="audio/mpeg,audio/mp4,audio/wav,audio/ogg" onChange={(event) => { handleUpload(event.target.files?.[0], "audio"); event.target.value = ""; }} />
-            {audioUrl ? <><audio src={audioUrl} controls preload="metadata" /><label><span>{copy.songTitle}</span><input name="audioTitle" value={audioTitle} onChange={(event) => setAudioTitle(event.target.value)} maxLength={160} /></label><label><span>{copy.artist}</span><input name="audioArtist" value={audioArtist} onChange={(event) => setAudioArtist(event.target.value)} maxLength={160} /></label><button type="button" onClick={() => { setAudioUrl(""); setAudioTitle(""); setAudioArtist(""); }}><X />{copy.removeMusic}</button></> : null}
+            {musicSource === "UPLOAD" ? <div className="gallery-upload-music"><button type="button" onClick={() => audioInputRef.current?.click()} disabled={uploading}><Upload />{audioUrl ? copy.replace : copy.uploadAudio}</button>{audioUrl ? <audio src={audioUrl} controls preload="metadata" /> : <small>Sube un archivo de audio para asociarlo a la publicación.</small>}</div> : null}
+            {musicSource === "SPOTIFY" ? <div className="gallery-spotify-editor"><label><span>Enlace de Spotify</span><input ref={spotifyInputRef} value={spotifyUrl} onChange={(event) => updateSpotifyUrl(event.target.value)} onBlur={(event) => updateSpotifyUrl(event.target.value)} placeholder="Pega el enlace de una canción de Spotify" inputMode="url" /></label><small>Pega el enlace de la canción que quieres asociar a esta publicación.</small>{spotifyError ? <p className="gallery-editor-message error">{spotifyError}</p> : null}{spotifyTrackId ? <div className="gallery-spotify-preview"><span>Preview</span><SpotifyTrackEmbed trackId={spotifyTrackId} title={audioTitle ? `${audioTitle} en Spotify` : "Preview de Spotify"} /><div><button type="button" onClick={() => spotifyInputRef.current?.focus()}>Cambiar canción</button><button type="button" onClick={removeMusic}><X />Quitar música</button></div></div> : null}</div> : null}
+            {musicSource !== "NONE" ? <div className="gallery-music-metadata"><label><span>{copy.songTitle}</span><input name="audioTitle" value={audioTitle} onChange={(event) => setAudioTitle(event.target.value)} maxLength={160} /></label><label><span>{copy.artist}</span><input name="audioArtist" value={audioArtist} onChange={(event) => setAudioArtist(event.target.value)} maxLength={160} /></label>{musicSource === "UPLOAD" && audioUrl ? <button type="button" onClick={removeMusic}><X />{copy.removeMusic}</button> : null}</div> : null}
           </div>
           {uploadError ? <p className="gallery-editor-message error">{uploadError}</p> : null}
           {state.message ? <p className={`gallery-editor-message ${state.ok ? "success" : "error"}`}>{state.message}</p> : null}

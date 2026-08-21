@@ -1,4 +1,4 @@
-import type { GalleryCategory, GalleryMediaType, GalleryPost, Prisma } from "@prisma/client";
+import type { GalleryCategory, GalleryMediaType, GalleryMusicSource, GalleryPost, Prisma } from "@prisma/client";
 import { getDb } from "@/lib/db";
 
 export const GALLERY_CATEGORIES = ["EXPLORE", "CONFESSIONS", "PEOPLE", "START_HERE", "TWENTIES"] as const;
@@ -24,6 +24,9 @@ export type GalleryPostData = {
   audioUrl: string | null;
   audioTitle: string | null;
   audioArtist: string | null;
+  musicSource: GalleryMusicSource | null;
+  spotifyUrl: string | null;
+  spotifyTrackId: string | null;
   publishedAt: string;
   likeCount: number;
   commentCount: number;
@@ -79,6 +82,9 @@ export function serializeGalleryPost(post: GalleryPostRecord, viewerId?: string)
     audioUrl: post.audioUrl,
     audioTitle: post.audioTitle,
     audioArtist: post.audioArtist,
+    musicSource: post.musicSource ?? (post.audioUrl ? "UPLOAD" : post.spotifyTrackId ? "SPOTIFY" : null),
+    spotifyUrl: post.spotifyUrl,
+    spotifyTrackId: post.spotifyTrackId,
     publishedAt: (post.publishedAt ?? post.updatedAt).toISOString(),
     likeCount: post._count?.likes ?? 0,
     commentCount: post._count?.comments ?? 0,

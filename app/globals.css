@@ -14318,3 +14318,137 @@ body .member-lounge {
   color: #fff;
   font-size: 0.74rem;
 }
+.spotify-track-embed {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: #121212;
+}
+
+.off-gallery-spotify {
+  display: grid;
+  gap: 8px;
+  margin: 0 28px 16px;
+  border: 1px solid rgba(30, 215, 96, 0.2);
+  border-radius: 16px;
+  padding: 9px;
+  overflow: hidden;
+  background: rgba(30, 215, 96, 0.045);
+}
+
+.off-gallery-spotify > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding-inline: 3px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.off-gallery-spotify > span svg {
+  width: 14px;
+  color: #1ed760;
+}
+
+.off-gallery-spotify > span em {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-music-heading {
+  display: grid !important;
+  justify-items: stretch !important;
+  gap: 10px !important;
+}
+
+.gallery-music-source {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px !important;
+}
+
+.gallery-music-source button {
+  justify-content: center;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+}
+
+.gallery-music-source button.is-active {
+  border-color: rgba(123, 61, 255, 0.55) !important;
+  background: rgba(123, 61, 255, 0.14) !important;
+  color: #fff;
+}
+
+.gallery-upload-music,
+.gallery-spotify-editor,
+.gallery-music-metadata,
+.gallery-spotify-preview {
+  display: grid !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+
+.gallery-upload-music > button,
+.gallery-music-metadata > button {
+  justify-self: start;
+}
+
+.gallery-upload-music small,
+.gallery-spotify-editor > small {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.gallery-spotify-preview {
+  margin-top: 2px;
+  border: 1px solid rgba(30, 215, 96, 0.16);
+  border-radius: 14px;
+  padding: 9px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.gallery-spotify-preview > span {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gallery-spotify-preview > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.gallery-spotify-preview > div button {
+  min-height: 34px;
+}
+
+.gallery-music-metadata {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gallery-music-metadata > button {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .off-gallery-spotify {
+    margin-inline: 18px;
+  }
+
+  .gallery-music-metadata {
+    grid-template-columns: 1fr;
+  }
+}

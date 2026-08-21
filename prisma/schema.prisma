@@ -39,6 +39,11 @@ enum GalleryMediaType {
   VIDEO
 }
 
+enum GalleryMusicSource {
+  UPLOAD
+  SPOTIFY
+}
+
 enum GalleryShareType {
   INTERNAL
   EXTERNAL
@@ -102,6 +107,9 @@ model GalleryPost {
   audioUrl      String?
   audioTitle    String?
   audioArtist   String?
+  musicSource   GalleryMusicSource?
+  spotifyUrl    String?
+  spotifyTrackId String?
   status       String           @default("draft")
   publishedAt  DateTime?
   createdAt    DateTime         @default(now())

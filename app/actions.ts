@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { createHash, randomBytes, randomInt } from "crypto";
 import path from "path";
 import bcrypt from "bcryptjs";
-import { Prisma } from "@prisma/client";
+import { GalleryMusicSource, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -22,6 +22,7 @@ import { slugify } from "@/lib/slug";
 import { getSiteUrl } from "@/lib/site-url";
 import { isUiLanguage, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-i18n";
 import { normalizeSearchKeywords } from "@/lib/search-keywords";
+import { parseSpotifyTrackUrl } from "@/lib/spotify";
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -1015,18 +1016,38 @@ export async function saveGalleryPostAction(
     const caption = stringValue(formData, "caption").replace(/<[^>]*>/g, "").slice(0, 2000) || null;
     const altText = stringValue(formData, "altText").replace(/<[^>]*>/g, "").slice(0, 300) || null;
     const mediaTransform = galleryTransformValue(stringValue(formData, "mediaTransform"));
-    const audioUrl = stringValue(formData, "audioUrl") || null;
+    const requestedMusicSource = stringValue(formData, "musicSource");
+    const submittedAudioUrl = stringValue(formData, "audioUrl") || null;
+    const submittedSpotifyUrl = stringValue(formData, "spotifyUrl");
     const audioTitle = stringValue(formData, "audioTitle").replace(/<[^>]*>/g, "").slice(0, 160) || null;
     const audioArtist = stringValue(formData, "audioArtist").replace(/<[^>]*>/g, "").slice(0, 160) || null;
     const keywords = normalizeSearchKeywords(formData.get("keywords"));
     const category = stringValue(formData, "category") as (typeof GALLERY_CATEGORIES)[number];
     const status = stringValue(formData, "publishIntent") === "publish" ? "published" : "draft";
 
+    if (requestedMusicSource && !["NONE", "UPLOAD", "SPOTIFY"].includes(requestedMusicSource)) {
+      return { ok: false, message: "Selecciona una fuente de música válida." };
+    }
+    const spotifyTrack = requestedMusicSource === "SPOTIFY" ? parseSpotifyTrackUrl(submittedSpotifyUrl) : null;
+    if (requestedMusicSource === "SPOTIFY" && !spotifyTrack) {
+      return { ok: false, message: "Pega un enlace válido de una canción de Spotify." };
+    }
+    if (requestedMusicSource === "UPLOAD" && (!submittedAudioUrl || !isSafeMediaUrl(submittedAudioUrl))) {
+      return { ok: false, message: "Sube un archivo de música válido." };
+    }
+    const musicSource = requestedMusicSource === "UPLOAD"
+      ? GalleryMusicSource.UPLOAD
+      : requestedMusicSource === "SPOTIFY"
+        ? GalleryMusicSource.SPOTIFY
+        : null;
+    const audioUrl = musicSource === "UPLOAD" ? submittedAudioUrl : null;
+    const spotifyUrl = musicSource === "SPOTIFY" ? spotifyTrack?.url ?? null : null;
+    const spotifyTrackId = musicSource === "SPOTIFY" ? spotifyTrack?.trackId ?? null : null;
+
     if (!GALLERY_MEDIA_TYPES.includes(mediaType)) return { ok: false, message: "Selecciona un tipo de media válido." };
     if (!GALLERY_CATEGORIES.includes(category)) return { ok: false, message: "Selecciona una categoría válida." };
     if (!isSafeMediaUrl(mediaUrl)) return { ok: false, message: "Sube una imagen o video válido antes de guardar." };
     if (thumbnailUrl && !isSafeMediaUrl(thumbnailUrl)) return { ok: false, message: "El poster del video no es válido." };
-    if (audioUrl && !isSafeMediaUrl(audioUrl)) return { ok: false, message: "El archivo de música no es válido." };
     if (status === "published" && !caption) return { ok: false, message: "Agrega un caption antes de publicar." };
 
     const db = getDb();
@@ -1044,6 +1065,9 @@ export async function saveGalleryPostAction(
       audioUrl,
       audioTitle,
       audioArtist,
+      musicSource,
+      spotifyUrl,
+      spotifyTrackId,
       keywords,
       status,
       publishedAt: status === "published" ? existing?.publishedAt ?? new Date() : existing?.publishedAt ?? null,

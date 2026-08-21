@@ -1,9 +1,10 @@
 "use client";
 
-import { Heart, Link2, Music2, Pause, Play, Send, Share2, Trash2, X } from "lucide-react";
+import { Heart, Link2, Send, Share2, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { GALLERY_CATEGORY_LABELS, type GalleryPostData } from "@/lib/gallery";
+import { PostMusicPlayer } from "@/components/PostMusicPlayer";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { useMobileCopy } from "@/mobile/mobileCopy";
 
@@ -29,8 +30,6 @@ export function GalleryPostViewer({ post, initialLanguage = "es", onClose, previ
   const [memberQuery, setMemberQuery] = useState("");
   const [members, setMembers] = useState<MemberResult[]>([]);
   const [message, setMessage] = useState("");
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const transform = post.mediaTransform;
   const mediaStyle = {
@@ -49,17 +48,7 @@ export function GalleryPostViewer({ post, initialLanguage = "es", onClose, previ
         .finally(() => setCommentsLoading(false));
     }
 
-    const audio = audioRef.current;
-    if (post.audioUrl && audio) {
-      audio.currentTime = 0;
-      audio.play().then(() => setAudioPlaying(true)).catch(() => setAudioPlaying(false));
-    }
-    return () => {
-      audio?.pause();
-      if (audio) audio.currentTime = 0;
-      setAudioPlaying(false);
-    };
-  }, [post.id, post.audioUrl, post.likeCount, post.likedByViewer, previewMode]);
+  }, [post.id, post.likeCount, post.likedByViewer, previewMode]);
 
   useEffect(() => {
     if (!shareOpen || memberQuery.trim().length < 2) return setMembers([]);
@@ -142,20 +131,13 @@ export function GalleryPostViewer({ post, initialLanguage = "es", onClose, previ
     }
   }
 
-  function toggleAudio() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) audio.play().then(() => setAudioPlaying(true)).catch(() => setAudioPlaying(false));
-    else { audio.pause(); setAudioPlaying(false); }
-  }
-
   return (
     <div className={`off-gallery-viewer ${standalone ? "is-standalone" : ""}`} role={standalone ? undefined : "dialog"} aria-modal={standalone ? undefined : "true"} aria-label={post.title || copy.gallery} tabIndex={-1}>
       {onClose ? <button className="off-gallery-viewer-close" type="button" onClick={onClose} aria-label={copy.close}><X /></button> : <Link className="off-gallery-viewer-close" href="/lounge#galeria" aria-label={copy.close}><X /></Link>}
       {previousControl}{nextControl}
       <div className="off-gallery-viewer-media">
         <div className="off-gallery-media-frame">
-          {post.mediaType === "IMAGE" ? <img src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} style={mediaStyle} /> : <video ref={videoRef} src={post.mediaUrl} poster={post.thumbnailUrl || undefined} controls preload="metadata" muted={Boolean(post.audioUrl)} style={mediaStyle} />}
+          {post.mediaType === "IMAGE" ? <img src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} style={mediaStyle} /> : <video ref={videoRef} src={post.mediaUrl} poster={post.thumbnailUrl || undefined} controls preload="metadata" muted={Boolean(post.musicSource || post.audioUrl || post.spotifyTrackId)} style={mediaStyle} />}
         </div>
       </div>
       <aside className="off-gallery-viewer-panel">
@@ -165,14 +147,7 @@ export function GalleryPostViewer({ post, initialLanguage = "es", onClose, previ
           {post.caption ? <p>{post.caption}</p> : null}
           <time>{new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date(post.publishedAt))}</time>
         </div>
-        {post.audioUrl ? (
-          <div className="off-gallery-audio">
-            <audio ref={audioRef} src={post.audioUrl} preload="none" onEnded={() => setAudioPlaying(false)} />
-            <button type="button" onClick={toggleAudio} aria-label={audioPlaying ? copy.pauseMusic : copy.playMusic}>{audioPlaying ? <Pause /> : <Play />}</button>
-            <Music2 aria-hidden="true" />
-            <span><strong>{post.audioTitle || copy.music}</strong>{post.audioArtist ? <em>{post.audioArtist}</em> : null}</span>
-          </div>
-        ) : null}
+        <PostMusicPlayer key={`${post.id}-${post.musicSource ?? "none"}-${post.spotifyTrackId ?? post.audioUrl ?? ""}`} musicSource={post.musicSource} audioUrl={post.audioUrl} audioTitle={post.audioTitle} audioArtist={post.audioArtist} spotifyTrackId={post.spotifyTrackId} playLabel={copy.playMusic} pauseLabel={copy.pauseMusic} musicLabel={copy.music} />
         {!previewMode ? <><div className="off-gallery-social-actions">
           <button className={liked ? "is-active" : ""} type="button" onClick={toggleLike} aria-label={copy.like}><Heart fill={liked ? "currentColor" : "none"} /><span>{likeCount}</span></button>
           <button type="button" onClick={() => setShareOpen((value) => !value)} aria-label={copy.share}><Share2 /><span>{copy.share}</span></button>

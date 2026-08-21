@@ -130,7 +130,7 @@ export function GallerySection({ initialPosts, initialHasMore, initialLanguage =
               <Image src={post.thumbnailUrl} alt={post.altText || post.caption || copy.galleryVideoAlt} fill sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw" style={galleryMediaStyle(post)} />
             ) : <span className="off-gallery-video-fallback">OFF</span>}
             {post.mediaType === "VIDEO" ? <span className="off-gallery-play"><Play /></span> : null}
-            {post.audioUrl ? <span className="off-gallery-music"><Music2 /></span> : null}
+            {post.musicSource || post.audioUrl || post.spotifyTrackId ? <span className="off-gallery-music"><Music2 /></span> : null}
             <span className="off-gallery-card-meta"><small>{GALLERY_CATEGORY_LABELS[post.category]}</small>{post.title ? <strong>{post.title}</strong> : null}</span>
           </button>
         ))}

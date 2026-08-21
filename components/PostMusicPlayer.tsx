@@ -1,0 +1,54 @@
+"use client";
+
+import { Music2, Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { SpotifyTrackEmbed } from "@/components/SpotifyTrackEmbed";
+
+export function PostMusicPlayer({ musicSource, audioUrl, audioTitle, audioArtist, spotifyTrackId, playLabel = "Reproducir música", pauseLabel = "Pausar música", musicLabel = "Música" }: {
+  musicSource: "UPLOAD" | "SPOTIFY" | null;
+  audioUrl: string | null;
+  audioTitle: string | null;
+  audioArtist: string | null;
+  spotifyTrackId: string | null;
+  playLabel?: string;
+  pauseLabel?: string;
+  musicLabel?: string;
+}) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const source = musicSource ?? (audioUrl ? "UPLOAD" : spotifyTrackId ? "SPOTIFY" : null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (source === "UPLOAD" && audioUrl && audio) {
+      audio.currentTime = 0;
+      audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+    return () => {
+      audio?.pause();
+      if (audio) audio.currentTime = 0;
+      setPlaying(false);
+    };
+  }, [audioUrl, source]);
+
+  if (source === "SPOTIFY" && spotifyTrackId) {
+    return <div className="off-gallery-spotify"><span><Music2 />{audioTitle || "Spotify"}{audioArtist ? <em>{audioArtist}</em> : null}</span><SpotifyTrackEmbed trackId={spotifyTrackId} title={audioTitle ? `${audioTitle} en Spotify` : "Canción de Spotify"} /></div>;
+  }
+  if (source !== "UPLOAD" || !audioUrl) return null;
+
+  function toggleAudio() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    else { audio.pause(); setPlaying(false); }
+  }
+
+  return (
+    <div className="off-gallery-audio">
+      <audio ref={audioRef} src={audioUrl} preload="none" onEnded={() => setPlaying(false)} />
+      <button type="button" onClick={toggleAudio} aria-label={playing ? pauseLabel : playLabel}>{playing ? <Pause /> : <Play />}</button>
+      <Music2 aria-hidden="true" />
+      <span><strong>{audioTitle || musicLabel}</strong>{audioArtist ? <em>{audioArtist}</em> : null}</span>
+    </div>
+  );
+}
