@@ -26,6 +26,19 @@ enum LoungeContentType {
   EARLY_ACCESS
 }
 
+enum GalleryCategory {
+  EXPLORE
+  CONFESSIONS
+  PEOPLE
+  START_HERE
+  TWENTIES
+}
+
+enum GalleryMediaType {
+  IMAGE
+  VIDEO
+}
+
 model Article {
   id               String                   @id @default(cuid())
   title            String
@@ -65,6 +78,24 @@ model LoungeContent {
 
   @@index([type, status])
   @@index([publishedAt])
+}
+
+model GalleryPost {
+  id           String           @id @default(cuid())
+  mediaType    GalleryMediaType
+  mediaUrl     String
+  thumbnailUrl String?
+  title        String?
+  caption      String?
+  altText      String?
+  category     GalleryCategory
+  status       String           @default("draft")
+  publishedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([category, status])
+  @@index([status, publishedAt])
 }
 
 model Subscriber {

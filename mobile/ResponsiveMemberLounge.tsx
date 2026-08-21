@@ -1,6 +1,7 @@
 "use client";
 
 import { MemberLounge } from "@/components/MemberLounge";
+import { GlobalSearchOverlay } from "@/components/GlobalSearchOverlay";
 import { MemberNotification, type MemberNotificationData } from "@/components/MemberNotification";
 import { MobileMemberLounge, type MobileMemberLoungeProps } from "@/mobile/MobileMemberLounge";
 import { useIsMobile } from "@/mobile/useIsMobile";
@@ -12,6 +13,7 @@ export function ResponsiveMemberLounge({ notification, ...props }: MobileMemberL
     <>
       <MemberNotification notification={notification} />
       {isMobile ? <MobileMemberLounge {...props} /> : <MemberLounge {...props} />}
+      <GlobalSearchOverlay initialLanguage={props.preferredLanguage} />
     </>
   );
 }

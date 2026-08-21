@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArchiveRestore, BookOpen, Clock3, Plus, Radio, StickyNote } from "lucide-react";
+import { ArchiveRestore, BookOpen, Clock3, Images, Plus, Radio, StickyNote, Video } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
 import { logoutAction } from "@/app/actions";
 import { AdminCommunityManager, type CommunityMember } from "@/components/AdminCommunityManager";
@@ -10,6 +10,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatDate, getAllArticles, getPlainTextPreview, isInternalContentCategory } from "@/lib/articles";
 import { requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { GALLERY_CATEGORY_LABELS } from "@/lib/gallery";
 
 function formatCount(value: number) {
   if (value >= 1000) return new Intl.NumberFormat("es-MX", { notation: "compact" }).format(value);
@@ -24,15 +25,16 @@ const loungeTypeLabels = {
   EARLY_ACCESS: "Early Access",
 } as const;
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string; loungeDeleted?: string }> }) {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string; loungeDeleted?: string; galleryDeleted?: string }> }) {
   noStore();
   const currentAdmin = await requireAdmin();
 
-  const { deleted, loungeDeleted } = await searchParams;
+  const { deleted, loungeDeleted, galleryDeleted } = await searchParams;
   const db = getDb();
-  const [articles, loungeContent, users, subscribers, subscriberCount, commentCount, comments, topicSuggestions] = await Promise.all([
+  const [articles, loungeContent, galleryPosts, users, subscribers, subscriberCount, commentCount, comments, topicSuggestions] = await Promise.all([
     getAllArticles(),
     db.loungeContent.findMany({ orderBy: { updatedAt: "desc" } }),
+    db.galleryPost.findMany({ orderBy: [{ updatedAt: "desc" }] }),
     db.user.findMany({
       select: {
         id: true,
@@ -215,6 +217,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <a className="active" href="#dashboard" data-i18n="adminDashboard">Dashboard</a>
           <a href="#articulos" data-i18n="adminArticles">Articulos</a>
           <a href="#biblioteca" data-i18n="visualLibrary">Biblioteca visual</a>
+          <a href="#galeria">Galería</a>
           <a href="#suscriptores" data-i18n="subscribers">Suscriptores</a>
           <a href="#insights" data-i18n="insights">Insights</a>
           <a href="#comentarios" data-i18n="comments">Comentarios</a>
@@ -248,6 +251,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </div>
         ) : null}
         {loungeDeleted ? <div className="admin-flash success">Contenido del Lounge eliminado correctamente.</div> : null}
+        {galleryDeleted ? <div className="admin-flash success">Publicación visual eliminada correctamente.</div> : null}
 
         <header className="admin-topbar">
           <div>
@@ -258,6 +262,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <div className="admin-top-actions">
             <LanguageSwitcher compact />
             <Link className="admin-create-circle" href="/admin/new" data-i18n-title="newArticle" data-i18n-aria-label="newArticle" title="Nuevo articulo" aria-label="Nuevo articulo"><Plus /></Link>
+            <Link className="admin-create-circle" href="/admin/gallery/new" title="Nueva publicación de Galería" aria-label="Nueva publicación de Galería"><Images /></Link>
             <Link className="admin-create-circle" href="/admin/lounge/new?type=LIBRARY" data-i18n-title="newLibrary" data-i18n-aria-label="newLibrary" title="Nueva biblioteca" aria-label="Nueva biblioteca"><BookOpen /></Link>
             <Link className="admin-create-circle" href="/admin/lounge/new?type=SIGNAL" data-i18n-title="newSignal" data-i18n-aria-label="newSignal" title="Nuevo Signal" aria-label="Nuevo Signal"><Radio /></Link>
             <Link className="admin-create-circle" href="/admin/lounge/new?type=RESOURCE" data-i18n-title="newResource" data-i18n-aria-label="newResource" title="Nuevo recurso desbloqueado" aria-label="Nuevo recurso desbloqueado"><ArchiveRestore /></Link>
@@ -370,6 +375,24 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 </div>
               </article>
             )) : <div className="empty-dashboard-state">Crea contenido del Lounge desde las acciones circulares superiores.</div>}
+          </div>
+        </section>
+
+        <section className="dashboard-card articles-dashboard-card" id="galeria">
+          <div className="card-heading">
+            <div><p className="eyebrow">Archivo visual</p><h2>Galería</h2></div>
+            <div className="article-status-pills"><span>{galleryPosts.filter((post) => post.status === "published").length} publicados</span><span>{galleryPosts.filter((post) => post.status !== "published").length} drafts</span></div>
+          </div>
+          <div className="admin-gallery-list">
+            {galleryPosts.length ? galleryPosts.map((post) => (
+              <article className="admin-gallery-item" key={post.id}>
+                <div className="admin-gallery-thumb">
+                  {post.mediaType === "IMAGE" ? <img src={post.mediaUrl} alt={post.altText || ""} /> : post.thumbnailUrl ? <img src={post.thumbnailUrl} alt={post.altText || ""} /> : <Video aria-hidden="true" />}
+                </div>
+                <div><small>{GALLERY_CATEGORY_LABELS[post.category]} · {post.status}</small><h3>{getPlainTextPreview(post.title || post.caption || "Sin título", 120)}</h3><p>{getPlainTextPreview(post.caption || "Sin caption", 160)}</p></div>
+                <Link className="button" href={`/admin/gallery/${post.id}`}>Editar</Link>
+              </article>
+            )) : <div className="empty-dashboard-state">Aún no hay publicaciones visuales. Crea la primera desde la acción superior.</div>}
           </div>
         </section>
 

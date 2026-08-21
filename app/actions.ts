@@ -957,6 +957,86 @@ export async function deleteLoungeContentAction(formData: FormData) {
   redirect("/admin?loungeDeleted=1");
 }
 
+export type SaveGalleryPostState = {
+  ok: boolean;
+  message: string;
+  id?: string;
+};
+
+const GALLERY_CATEGORIES = ["EXPLORE", "CONFESSIONS", "PEOPLE", "START_HERE", "TWENTIES"] as const;
+const GALLERY_MEDIA_TYPES = ["IMAGE", "VIDEO"] as const;
+
+function isSafeMediaUrl(value: string) {
+  if (!value || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:";
+  } catch {
+    return value.startsWith("/") && !value.startsWith("//");
+  }
+}
+
+export async function saveGalleryPostAction(
+  _: SaveGalleryPostState,
+  formData: FormData,
+): Promise<SaveGalleryPostState> {
+  try {
+    await requireAdmin();
+    const id = stringValue(formData, "id");
+    const mediaType = stringValue(formData, "mediaType") as (typeof GALLERY_MEDIA_TYPES)[number];
+    const mediaUrl = stringValue(formData, "mediaUrl");
+    const thumbnailUrl = stringValue(formData, "thumbnailUrl") || null;
+    const title = stringValue(formData, "title").slice(0, 160) || null;
+    const caption = stringValue(formData, "caption").slice(0, 2000) || null;
+    const altText = stringValue(formData, "altText").slice(0, 300) || null;
+    const category = stringValue(formData, "category") as (typeof GALLERY_CATEGORIES)[number];
+    const status = stringValue(formData, "publishIntent") === "publish" ? "published" : "draft";
+
+    if (!GALLERY_MEDIA_TYPES.includes(mediaType)) return { ok: false, message: "Selecciona un tipo de media válido." };
+    if (!GALLERY_CATEGORIES.includes(category)) return { ok: false, message: "Selecciona una categoría válida." };
+    if (!isSafeMediaUrl(mediaUrl)) return { ok: false, message: "Sube una imagen o video válido antes de guardar." };
+    if (thumbnailUrl && !isSafeMediaUrl(thumbnailUrl)) return { ok: false, message: "El poster del video no es válido." };
+    if (status === "published" && !caption) return { ok: false, message: "Agrega un caption antes de publicar." };
+
+    const db = getDb();
+    const existing = id ? await db.galleryPost.findUnique({ where: { id } }) : null;
+    if (id && !existing) return { ok: false, message: "No encontramos esta publicación visual." };
+    const data = {
+      mediaType,
+      mediaUrl,
+      thumbnailUrl,
+      title,
+      caption,
+      altText,
+      category,
+      status,
+      publishedAt: status === "published" ? existing?.publishedAt ?? new Date() : existing?.publishedAt ?? null,
+    };
+    const post = existing
+      ? await db.galleryPost.update({ where: { id: existing.id }, data })
+      : await db.galleryPost.create({ data });
+
+    revalidatePath("/admin");
+    revalidatePath("/lounge");
+    return {
+      ok: true,
+      id: post.id,
+      message: status === "published" ? "Publicación visual publicada correctamente." : "Borrador visual guardado.",
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "No pudimos guardar la publicación visual." };
+  }
+}
+
+export async function deleteGalleryPostAction(formData: FormData) {
+  await requireAdmin();
+  const id = stringValue(formData, "id");
+  if (id) await getDb().galleryPost.deleteMany({ where: { id } });
+  revalidatePath("/admin");
+  revalidatePath("/lounge");
+  redirect("/admin?galleryDeleted=1");
+}
+
 export type CommunityActionState = {
   ok: boolean;
   message: string;

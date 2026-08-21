@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Brain, Globe2, LogOut, MessageCircle, Sparkles, UserRound } from "lucide-react";
+import { BookOpen, Brain, Globe2, LogOut, MessageCircle, Search, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
@@ -36,6 +36,7 @@ export function LoungeBottomNavigation({
   const [languageOpen, setLanguageOpen] = useState(false);
   const [observedSection, setObservedSection] = useState("");
   const languageDialogRef = useRef<HTMLDivElement | null>(null);
+  const searchButtonRef = useRef<HTMLButtonElement | null>(null);
   const items = [
     { href: targets.library, label: copy.library, icon: BookOpen },
     { href: targets.self, label: copy.mySelfKicker, icon: Brain },
@@ -83,6 +84,13 @@ export function LoungeBottomNavigation({
         <Link className={resolvedActiveSection === "chat" ? "is-active" : ""} href="/mobile/chat">
           <MessageCircle aria-hidden="true" /><span>{copy.chatKicker}</span>
         </Link>
+        <button
+          ref={searchButtonRef}
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("off-open-search", { detail: { opener: searchButtonRef.current } }))}
+        >
+          <Search aria-hidden="true" /><span>{copy.search}</span>
+        </button>
         <button type="button" onClick={() => setLanguageOpen(true)} aria-haspopup="dialog" aria-expanded={languageOpen}>
           <Globe2 aria-hidden="true" /><span>{copy.language}</span>
         </button>

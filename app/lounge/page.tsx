@@ -5,6 +5,7 @@ import { extractArticleTranslations } from "@/lib/article-localization";
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { sortEditorially } from "@/lib/editorial-order";
+import { getPublishedGalleryPosts, serializeGalleryPost } from "@/lib/gallery";
 import { earnedBadges, formatActiveTime, getOrCreateMemberNumber } from "@/lib/member-progress";
 import { ResponsiveMemberLounge } from "@/mobile/ResponsiveMemberLounge";
 import { normalizeUiLanguage } from "@/lib/ui-i18n";
@@ -24,7 +25,7 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading, notification] = await Promise.all([
+  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading, notification, galleryRows] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } } }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     getOrCreateMemberNumber(user.id),
@@ -41,6 +42,7 @@ export default async function LoungePage() {
       orderBy: { createdAt: "asc" },
       select: { id: true, title: true, message: true },
     }),
+    getPublishedGalleryPosts({ take: 17 }),
   ]);
   const articles = sortEditorially(rawArticles);
   const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
@@ -89,6 +91,8 @@ export default async function LoungePage() {
       lastReadPosition={lastReading?.lastPosition ?? 0}
       preferredLanguage={normalizeUiLanguage(user.preferredLanguage)}
       notification={notification}
+      galleryPosts={galleryRows.slice(0, 16).map(serializeGalleryPost)}
+      galleryHasMore={galleryRows.length > 16}
     />
   );
 }

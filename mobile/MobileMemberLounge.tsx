@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { LibraryMetadata } from "@/components/LibraryCardDeck";
+import { GallerySection } from "@/components/GallerySection";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
@@ -12,6 +13,7 @@ import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import type { UiLanguage } from "@/lib/ui-i18n";
+import type { GalleryPostData } from "@/lib/gallery";
 import { MobileReveal, mobileMotion } from "@/mobile/MobileReveal";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
 import heroMobile from "@/mobile/images/hero_mobile.png";
@@ -53,6 +55,8 @@ export type MobileMemberLoungeProps = {
   badges: string[];
   articles: LoungeArticle[];
   loungeContent: LoungeContent[];
+  galleryPosts: GalleryPostData[];
+  galleryHasMore: boolean;
   draftEditions: DraftEdition[];
   lastReadArticleId?: string | null;
   lastReadProgress?: number;
@@ -78,6 +82,8 @@ export function MobileMemberLounge({
   badges,
   articles,
   loungeContent,
+  galleryPosts,
+  galleryHasMore,
   lastReadArticleId,
   lastReadProgress = 0,
   lastReadPosition = 0,
@@ -155,6 +161,10 @@ export function MobileMemberLounge({
             </motion.article>
           ))}
         </motion.div>
+      </MobileReveal>
+
+      <MobileReveal className="mobile-section mobile-gallery-wrap">
+        <GallerySection initialPosts={galleryPosts} initialHasMore={galleryHasMore} initialLanguage={preferredLanguage} />
       </MobileReveal>
 
       <MobileReveal className="mobile-section mobile-self-section" id="mi-yo">

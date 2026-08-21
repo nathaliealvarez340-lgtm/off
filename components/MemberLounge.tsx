@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { GlobalFooter } from "@/components/GlobalFooter";
+import { GallerySection } from "@/components/GallerySection";
 import { LibraryCardDeck } from "@/components/LibraryCardDeck";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
@@ -13,6 +14,7 @@ import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import { useOffLanguage } from "@/components/useOffLanguage";
 import type { UiLanguage } from "@/lib/ui-i18n";
+import type { GalleryPostData } from "@/lib/gallery";
 import { mobileCopy } from "@/mobile/mobileCopy";
 
 type LoungeArticle = {
@@ -78,6 +80,8 @@ export function MemberLounge({
   badges,
   articles,
   loungeContent,
+  galleryPosts,
+  galleryHasMore,
   lastReadArticleId,
   lastReadProgress = 0,
   lastReadPosition = 0,
@@ -91,6 +95,8 @@ export function MemberLounge({
   badges: string[];
   articles: LoungeArticle[];
   loungeContent: LoungeContent[];
+  galleryPosts: GalleryPostData[];
+  galleryHasMore: boolean;
   draftEditions: DraftEdition[];
   lastReadArticleId?: string | null;
   lastReadProgress?: number;
@@ -220,6 +226,10 @@ export function MemberLounge({
               <p>Volumenes para volver a ideas que merecen mas de una lectura. Una biblioteca emocional, curada para cuando necesitas direccion.</p>
             </div>
             <LibraryCardDeck items={libraryItems} language={language} />
+          </Reveal>
+
+          <Reveal className="lounge-section lounge-gallery-wrap">
+            <GallerySection initialPosts={galleryPosts} initialHasMore={galleryHasMore} initialLanguage={preferredLanguage} />
           </Reveal>
 
           <Reveal className="lounge-about-off">
