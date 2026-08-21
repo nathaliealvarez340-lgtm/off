@@ -1,14 +1,13 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { GlobalFooter } from "@/components/GlobalFooter";
 import { LibraryCardDeck } from "@/components/LibraryCardDeck";
-import { LocalDate } from "@/components/LocalDate";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { MemberProfileExperience } from "@/components/MemberProfileExperience";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialTile, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
@@ -192,48 +191,27 @@ export function MemberLounge({
         <div className="lounge-hero-copy">
           <p className="membership-kicker">The Member Lounge</p>
           <h1><MemberGreeting name={name} /></h1>
-          <div className="currently-exploring">
-            <strong>{current ? cleanText(current.title) : "El portafolio OFF"}</strong>
-          </div>
-          {current ? <Link className="button violet-button lounge-hero-cta" href={articleHref(current.slug, language, currentPosition)}>Continuar leyendo</Link> : null}
         </div>
       </motion.header>
 
       <div className="lounge-after-hero" ref={nextSectionRef}>
         <div className="lounge-content-column">
-          <Reveal className="lounge-about-off">
-            <div>
-              <p className="membership-kicker">Editorial psicologica</p>
-              <h2>Que es <em>OFF</em></h2>
-              <p>OFF es el espacio donde una generacion que aprendio a rendir puede detenerse, entender lo que esta viviendo y volver a construir con direccion.</p>
-              <p>No es motivacion vacia. Es narrativa, reflexion y estrategia para crecer sin perderte a ti mismo.</p>
-            </div>
-            <figure><img src="/images/off-quees.webp" alt="Imagen editorial sobre que es OFF" /></figure>
-          </Reveal>
-
-          <Reveal className="lounge-intro">
-            <p>Una sala privada para leer sin prisa, encontrar direccion y volver a ideas que merecen quedarse contigo.</p>
-            <dl>
-              <div><dt>Miembro desde</dt><dd><LocalDate value={memberSince} /></dd></div>
-              <div><dt>Miembro OFF</dt><dd>#{memberNumber}</dd></div>
-              <div><dt>Insignia</dt><dd>{badges.at(-1) ?? "Founding Member"}</dd></div>
-            </dl>
-          </Reveal>
-
-          <Reveal className="lounge-section continue-reading">
-            <div className="lounge-heading"><span>En tu mesa</span></div>
-            {current ? (
-              <Link className="continue-editorial" href={articleHref(current.slug, language, currentPosition)}>
-                <img src={current.coverImage || "/images/cap1-off.webp"} alt="" />
-                <div>
-                  <span>{current.readTime}{currentProgress > 0 ? ` · ${currentProgress}% leído` : ""}</span>
-                  <h3>{cleanText(current.title)}</h3><p>{cleanText(current.excerpt)}</p>
-                  {currentProgress > 0 ? <span className="lounge-reading-progress" aria-label={`${currentProgress}% leído`}><i style={{ width: `${currentProgress}%` }} /></span> : null}
-                  <strong>Volver a la lectura</strong>
-                </div>
-              </Link>
-            ) : <p className="lounge-empty">El portafolio se abrira con la proxima edicion.</p>}
-          </Reveal>
+          <MemberProfileExperience
+            memberSince={memberSince}
+            memberNumber={memberNumber}
+            activeTime={activeTime}
+            completedCount={completedCount}
+            badges={badges}
+            language={language}
+            currentReading={current ? {
+              title: cleanText(current.title),
+              excerpt: cleanText(current.excerpt),
+              coverImage: current.coverImage,
+              readTime: current.readTime,
+              href: articleHref(current.slug, language, currentPosition),
+              progress: currentProgress,
+            } : null}
+          />
 
           <Reveal className="lounge-section lounge-library-deck-section" id="collections">
             <div className="library-copy-block">
@@ -244,6 +222,16 @@ export function MemberLounge({
             <LibraryCardDeck items={libraryItems} language={language} />
           </Reveal>
 
+          <Reveal className="lounge-about-off">
+            <div>
+              <p className="membership-kicker">Editorial psicologica</p>
+              <h2>Que es <em>OFF</em></h2>
+              <p>OFF es el espacio donde una generacion que aprendio a rendir puede detenerse, entender lo que esta viviendo y volver a construir con direccion.</p>
+              <p>No es motivacion vacia. Es narrativa, reflexion y estrategia para crecer sin perderte a ti mismo.</p>
+            </div>
+            <figure><img src="/images/off-quees.webp" alt="Imagen editorial sobre que es OFF" /></figure>
+          </Reveal>
+
           <Reveal className="lounge-section lounge-self-section" id="mi-yo">
             <PersonalityTestPreview />
             <div className="self-copy-block">
@@ -251,15 +239,6 @@ export function MemberLounge({
               <h2 data-i18n="knowMyself">Conociendo mi modo ON</h2>
               <p>Una base para convertir la introspeccion en lectura personal. Las preguntas definitivas se conectaran cuando el test este listo.</p>
             </div>
-          </Reveal>
-
-          <Reveal className="member-profile-editorial" id="member-profile">
-            <div><span>Perfil del miembro</span><h2><MemberGreeting name={name} /></h2><p><strong>{current ? cleanText(current.title) : "The OFF Portfolio"}</strong></p></div>
-            <dl>
-              <div><dt>Tiempo invertido en OFF</dt><dd>{activeTime}</dd></div>
-              <div><dt>Articulos completados</dt><dd>{completedCount || "Aun sin registro"}</dd></div>
-              <div><dt>Insignias ganadas</dt><dd>{badges.length ? badges.join(" - ") : "Aun sin insignias"}</dd></div>
-            </dl>
           </Reveal>
 
           <Reveal className="lounge-more" id="conoce-mas">

@@ -18,7 +18,7 @@ type LoungeNavigationTargets = {
 const defaultTargets: LoungeNavigationTargets = {
   library: "#biblioteca",
   self: "#mi-yo",
-  profile: "#perfil",
+  profile: "#member-profile",
   more: "#conoce-mas",
 };
 

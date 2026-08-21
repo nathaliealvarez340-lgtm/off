@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { LocalDate } from "@/components/LocalDate";
 import { LibraryMetadata } from "@/components/LibraryCardDeck";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { MemberGreeting } from "@/components/MemberGreeting";
+import { MemberProfileExperience } from "@/components/MemberProfileExperience";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
@@ -79,6 +79,7 @@ export function MobileMemberLounge({
   articles,
   loungeContent,
   lastReadArticleId,
+  lastReadProgress = 0,
   lastReadPosition = 0,
   preferredLanguage = "es",
 }: MobileMemberLoungeProps) {
@@ -86,6 +87,7 @@ export function MobileMemberLounge({
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
   const current = localizedArticles.find((article) => article.id === lastReadArticleId) ?? localizedArticles[0];
   const currentPosition = current?.id === lastReadArticleId ? lastReadPosition : 0;
+  const currentProgress = current?.id === lastReadArticleId ? Math.round(lastReadProgress) : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
 
   return (
@@ -109,20 +111,25 @@ export function MobileMemberLounge({
         <motion.div variants={mobileMotion.list} transition={{ staggerChildren: 0.12, delayChildren: 0.45 }}>
           <motion.span variants={mobileMotion.item}>{copy.lounge}</motion.span>
           <motion.h1 variants={mobileMotion.item}><MemberGreeting name={name} /></motion.h1>
-          <motion.p variants={mobileMotion.item}>{copy.loungeCopy}</motion.p>
-          {current ? (
-            <motion.div variants={mobileMotion.item}>
-              <Link className="mobile-primary" href={articleHref(current.slug, language, currentPosition)}>{copy.continueReading}</Link>
-            </motion.div>
-          ) : null}
         </motion.div>
       </motion.header>
 
-      <MobileReveal className="mobile-member-strip" aria-label={copy.memberData}>
-        <article><span>{copy.memberSince}</span><strong><LocalDate value={memberSince} /></strong></article>
-        <article><span>OFF ID</span><strong>#{memberNumber}</strong></article>
-        <article><span>{copy.timeInvested}</span><strong>{activeTime}</strong></article>
-      </MobileReveal>
+      <MemberProfileExperience
+        memberSince={memberSince}
+        memberNumber={memberNumber}
+        activeTime={activeTime}
+        completedCount={completedCount}
+        badges={badges}
+        language={language}
+        currentReading={current ? {
+          title: clean(current.title),
+          excerpt: clean(current.excerpt),
+          coverImage: current.coverImage,
+          readTime: current.readTime,
+          href: articleHref(current.slug, language, currentPosition),
+          progress: currentProgress,
+        } : null}
+      />
 
       <MobileReveal className="mobile-section" id="biblioteca">
         <div className="mobile-section-head stacked">
@@ -156,17 +163,6 @@ export function MobileMemberLounge({
           <span>{copy.mySelfKicker}</span>
         </div>
         <PersonalityTestPreview />
-      </MobileReveal>
-
-      <MobileReveal className="mobile-section" id="perfil">
-        <div className="mobile-section-head stacked">
-          <h2>{copy.profileTitle}</h2>
-          <span>{copy.profileKicker}</span>
-        </div>
-        <div className="mobile-metric-grid">
-          <article><strong>{completedCount || "0"}</strong><span>{copy.articlesCompleted}</span></article>
-          <article><strong>{badges.length || "0"}</strong><span>{copy.badges}</span></article>
-        </div>
       </MobileReveal>
 
       <MobileReveal className="mobile-section" id="conoce-mas">
