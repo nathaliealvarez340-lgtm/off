@@ -53,6 +53,7 @@ model Article {
   content          String
   coverImage       String
   category         String
+  keywords         String[]                 @default([])
   author           String                   @default("Nathalie Garcia")
   readTime         String
   publishedAt      DateTime?
@@ -73,6 +74,7 @@ model LoungeContent {
   number         String?
   description    String?
   content        String?
+  keywords       String[]          @default([])
   links          Json?
   relatedArticle String?
   releaseDate    DateTime?
@@ -95,6 +97,7 @@ model GalleryPost {
   caption      String?
   altText      String?
   category     GalleryCategory
+  keywords     String[]         @default([])
   mediaTransform Json?
   audioUrl      String?
   audioTitle    String?

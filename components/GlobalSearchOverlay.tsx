@@ -80,7 +80,7 @@ export function GlobalSearchOverlay({ initialLanguage = "es" }: { initialLanguag
       setLoading(true);
       setError("");
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&lang=${language}`, { signal: controller.signal });
         const data = await response.json() as SearchResponse;
         if (!response.ok || !data.success) throw new Error(data.error || copy.searchError);
         setResults(data.results ?? []);
@@ -91,7 +91,7 @@ export function GlobalSearchOverlay({ initialLanguage = "es" }: { initialLanguag
       }
     }, 300);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [category, copy.searchError, open, query]);
+  }, [category, copy.searchError, language, open, query]);
 
   async function openCategory(nextCategory: GalleryCategory) {
     setCategory(nextCategory);

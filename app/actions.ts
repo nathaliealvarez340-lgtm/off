@@ -21,6 +21,7 @@ import { deriveLoungeContentFromArticle } from "@/lib/lounge-automation";
 import { slugify } from "@/lib/slug";
 import { getSiteUrl } from "@/lib/site-url";
 import { isUiLanguage, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-i18n";
+import { normalizeSearchKeywords } from "@/lib/search-keywords";
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -618,6 +619,7 @@ export type AutosaveArticlePayload = {
   readTime: string;
   status: string;
   featured: boolean;
+  keywords: string[];
 };
 
 export type AutosaveArticleState = SaveArticleState & {
@@ -673,6 +675,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
     const intent = stringValue(formData, "publishIntent");
     const status = intent === "publish" ? "published" : intent === "draft" ? "draft" : selectedStatus;
     const featured = formData.get("featured") === "on";
+    const keywords = normalizeSearchKeywords(formData.get("keywords"));
     const slug = stringValue(formData, "slug") || slugify(title);
     const currentCover = stringValue(formData, "coverImage");
     const coverImage = await saveCoverImage(formData, currentCover);
@@ -725,6 +728,7 @@ export async function saveArticleAction(_: SaveArticleState, formData: FormData)
       author: "Nathalie Garcia",
       status,
       featured,
+      keywords,
       publishedAt,
     };
 
@@ -786,6 +790,7 @@ export async function autosaveArticleAction(payload: AutosaveArticlePayload): Pr
     const category = payload.category.trim() || "Vida";
     const readTime = payload.readTime.trim() || "5 min leer";
     const featured = Boolean(payload.featured);
+    const keywords = normalizeSearchKeywords(payload.keywords);
 
     if (!title && !excerpt && (!content || content === "[]" || content === "[{\"type\":\"paragraph\",\"text\":\"\"}]")) {
       return { ok: false, message: "No hay contenido suficiente para autoguardar." };
@@ -817,6 +822,7 @@ export async function autosaveArticleAction(payload: AutosaveArticlePayload): Pr
       author: "Nathalie Garcia",
       status: payload.status === "published" ? "published" : "draft",
       featured,
+      keywords,
       publishedAt: payload.status === "published" ? existingArticle?.publishedAt ?? new Date() : existingArticle?.publishedAt ?? null,
     };
 
@@ -890,6 +896,7 @@ export async function saveLoungeContentAction(
     const number = stringValue(formData, "number") || null;
     const description = stringValue(formData, "description") || null;
     const content = stringValue(formData, "content") || null;
+    const keywords = normalizeSearchKeywords(formData.get("keywords"));
     const relatedArticle = stringValue(formData, "relatedArticle") || null;
     const releaseDateValue = stringValue(formData, "releaseDate");
     const statusLabel = stringValue(formData, "statusLabel") || null;
@@ -923,6 +930,7 @@ export async function saveLoungeContentAction(
       number,
       description,
       content,
+      keywords,
       links,
       relatedArticle,
       releaseDate: releaseDateValue ? new Date(releaseDateValue) : null,
@@ -1010,6 +1018,7 @@ export async function saveGalleryPostAction(
     const audioUrl = stringValue(formData, "audioUrl") || null;
     const audioTitle = stringValue(formData, "audioTitle").replace(/<[^>]*>/g, "").slice(0, 160) || null;
     const audioArtist = stringValue(formData, "audioArtist").replace(/<[^>]*>/g, "").slice(0, 160) || null;
+    const keywords = normalizeSearchKeywords(formData.get("keywords"));
     const category = stringValue(formData, "category") as (typeof GALLERY_CATEGORIES)[number];
     const status = stringValue(formData, "publishIntent") === "publish" ? "published" : "draft";
 
@@ -1035,6 +1044,7 @@ export async function saveGalleryPostAction(
       audioUrl,
       audioTitle,
       audioArtist,
+      keywords,
       status,
       publishedAt: status === "published" ? existing?.publishedAt ?? new Date() : existing?.publishedAt ?? null,
     };

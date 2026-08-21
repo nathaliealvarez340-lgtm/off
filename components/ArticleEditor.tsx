@@ -39,6 +39,7 @@ import { autosaveArticleAction, deleteArticleAction, logoutAction, saveArticleAc
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { OffEditorialFooter } from "@/components/OffEditorialFooter";
+import { SearchKeywordsInput } from "@/components/SearchKeywordsInput";
 import { TypographySpacingControl } from "@/components/TypographySpacingControl";
 import { useOffLanguage } from "@/components/useOffLanguage";
 import { RichPaste, lineHeightForFontSize } from "@/lib/editorial-rich-text";
@@ -970,6 +971,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
   const [category, setCategory] = useState(article?.category && EDITOR_CATEGORIES.includes(article.category) ? article.category : initialCategory && EDITOR_CATEGORIES.includes(initialCategory) ? initialCategory : "Vida");
   const [readTime, setReadTime] = useState(article?.readTime ?? "5 min leer");
   const [featured, setFeatured] = useState(article?.featured ?? false);
+  const [keywords, setKeywords] = useState(article?.keywords ?? []);
   const initialEditorContent = useMemo(() => legacyContentToHtml(originalContent), [originalContent]);
   const initialDocumentPages = useMemo(() => initialEditorContent.split(/<hr\s*\/?>/i), [initialEditorContent]);
   const [editorHtml, setEditorHtml] = useState(initialDocumentPages[0] || "<p></p>");
@@ -1375,6 +1377,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
         readTime,
         status: statusValue === "published" ? "published" : "draft",
         featured,
+        keywords,
       };
       const result = await autosaveArticleAction(payload);
       if (result.ok) {
@@ -1388,7 +1391,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
     }, 3500);
 
     return () => window.clearTimeout(timeout);
-  }, [category, combinedEditorHtml, contentJson, cover, excerpt, excerptText, featured, overLimit, readTime, savedId, slug, statusValue, title, titleText, uploading]);
+  }, [category, combinedEditorHtml, contentJson, cover, excerpt, excerptText, featured, keywords, overLimit, readTime, savedId, slug, statusValue, title, titleText, uploading]);
 
   function currentEditor() {
     return activeEditor ?? editor;
@@ -2429,6 +2432,7 @@ export function ArticleEditor({ article, articles = [], initialCategory }: { art
                 <label className="field">Slug<input name="slug" value={slug} onChange={(event) => setSlug(event.target.value)} required /></label>
                 <label className="field">Tiempo estimado<input name="readTime" value={readTime} onChange={(event) => setReadTime(event.target.value)} required /></label>
                 <label className="checkbox"><input name="featured" type="checkbox" checked={featured} onChange={(event) => setFeatured(event.target.checked)} /><span>Destacado</span></label>
+                <SearchKeywordsInput initialKeywords={article?.keywords ?? []} onChange={setKeywords} />
                 <div className={overLimit ? "character-count over" : "character-count"}>{characterCount.toLocaleString()} / {LIMIT.toLocaleString()} caracteres</div>
                 <div className="autosave-state">{serverSave}</div>
               </div>

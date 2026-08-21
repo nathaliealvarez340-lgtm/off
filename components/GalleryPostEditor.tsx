@@ -8,6 +8,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { deleteGalleryPostAction, saveGalleryPostAction, type SaveGalleryPostState } from "@/app/actions";
 import { GalleryPostViewer } from "@/components/GalleryPostViewer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SearchKeywordsInput } from "@/components/SearchKeywordsInput";
 import { DEFAULT_GALLERY_TRANSFORM, GALLERY_CATEGORIES, GALLERY_CATEGORY_LABELS, normalizeGalleryTransform, type GalleryMediaTransform, type GalleryPostData } from "@/lib/gallery";
 import { useMobileCopy } from "@/mobile/mobileCopy";
 
@@ -155,6 +156,7 @@ export function GalleryPostEditor({ post }: { post?: GalleryPost | null }) {
           <label><span>{copy.internalTitle}</span><input name="title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} placeholder={copy.optional} /></label>
           <label className="gallery-caption-field"><span>{copy.postCaption}</span><textarea name="caption" value={caption} onChange={(event) => setCaption(event.target.value)} maxLength={2000} rows={7} placeholder={copy.postCaptionPlaceholder} /></label>
           <label><span>{copy.altTextLabel}</span><textarea name="altText" value={altText} onChange={(event) => setAltText(event.target.value)} maxLength={300} rows={3} placeholder={copy.altTextPlaceholder} /></label>
+          <SearchKeywordsInput initialKeywords={post?.keywords ?? []} />
           {mediaType === "VIDEO" ? <div className="gallery-poster-field"><span>{copy.videoPoster}</span>{thumbnailUrl ? <img src={thumbnailUrl} alt={copy.videoPoster} /> : <Video />}<button type="button" onClick={() => posterInputRef.current?.click()} disabled={uploading}>{copy.uploadPoster}</button><input ref={posterInputRef} type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(event) => { handlePoster(event.target.files?.[0]); event.target.value = ""; }} /></div> : null}
           <div className="gallery-audio-editor">
             <div><span>{copy.addMusic}</span><button type="button" onClick={() => audioInputRef.current?.click()}><Music2 />{audioUrl ? copy.replace : copy.uploadAudio}</button></div>

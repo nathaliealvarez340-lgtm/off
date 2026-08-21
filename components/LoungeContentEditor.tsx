@@ -7,6 +7,7 @@ import { useActionState, useState } from "react";
 import { deleteLoungeContentAction, saveLoungeContentAction, type SaveLoungeContentState } from "@/app/actions";
 import { EditorialRichTextEditor } from "@/components/EditorialRichTextEditor";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { SearchKeywordsInput } from "@/components/SearchKeywordsInput";
 
 const initialState: SaveLoungeContentState = { ok: false, message: "" };
 
@@ -91,6 +92,8 @@ export function LoungeContentEditor({ item, type }: { item?: LoungeContent | nul
               placeholder={type === "SIGNAL" ? "Escribe entre 100 y 300 palabras..." : "Escribe el contenido..."}
             />
           </label>
+
+          <SearchKeywordsInput initialKeywords={item?.keywords ?? []} />
 
           {["LIBRARY", "RESOURCE"].includes(type) ? (
             <label>
