@@ -1,7 +1,7 @@
-import { GalleryPostEditor } from "@/components/GalleryPostEditor";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 
 export default async function NewGalleryPostPage() {
   await requireAdmin();
-  return <GalleryPostEditor />;
+  redirect("/admin/content/new");
 }

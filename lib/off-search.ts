@@ -78,7 +78,7 @@ export async function searchOffContent(rawQuery: string): Promise<OffSearchResul
     db.galleryPost.findMany({
       where: {
         status: "published",
-        OR: [{ title: contains }, { caption: contains }, { altText: contains }, ...(matchingGalleryCategories.length ? [{ category: { in: matchingGalleryCategories } }] : [])],
+        OR: [{ title: contains }, { caption: contains }, { altText: contains }, { audioTitle: contains }, { audioArtist: contains }, ...(matchingGalleryCategories.length ? [{ category: { in: matchingGalleryCategories } }] : [])],
       },
       orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
       take: 24,
@@ -111,7 +111,7 @@ export async function searchOffContent(rawQuery: string): Promise<OffSearchResul
       };
     }),
     ...galleryPosts.map((post) => ({
-      score: relevance(query, post.title ?? "", post.caption ?? "", GALLERY_CATEGORY_LABELS[post.category], post.altText ?? ""),
+      score: relevance(query, post.title ?? "", post.caption ?? "", GALLERY_CATEGORY_LABELS[post.category], `${post.altText ?? ""} ${post.audioTitle ?? ""} ${post.audioArtist ?? ""}`),
       result: {
         id: post.id,
         type: "gallery" as const,

@@ -1,14 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Music2, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { GalleryCategory } from "@prisma/client";
 import { GALLERY_CATEGORIES, GALLERY_CATEGORY_LABELS, type GalleryPostData } from "@/lib/gallery";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { useMobileCopy } from "@/mobile/mobileCopy";
+import { GalleryPostViewer } from "@/components/GalleryPostViewer";
 
 type GalleryResponse = { success: boolean; posts?: GalleryPostData[]; post?: GalleryPostData | null; hasMore?: boolean };
+
+function galleryMediaStyle(post: GalleryPostData) {
+  const transform = post.mediaTransform;
+  return {
+    objectPosition: `${transform.x}% ${transform.y}%`,
+    transform: `scale(${transform.zoom}) rotate(${transform.rotation}deg) scaleX(${transform.flipX ? -1 : 1}) scaleY(${transform.flipY ? -1 : 1})`,
+  };
+}
 
 export function GallerySection({ initialPosts, initialHasMore, initialLanguage = "es" }: {
   initialPosts: GalleryPostData[];
@@ -84,6 +93,8 @@ export function GallerySection({ initialPosts, initialHasMore, initialLanguage =
     document.body.style.overflow = "hidden";
     viewerRef.current?.focus();
     function handleKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "Escape") setActiveId(null);
       if (event.key === "ArrowLeft") showRelative(-1);
       if (event.key === "ArrowRight") showRelative(1);
@@ -113,12 +124,13 @@ export function GallerySection({ initialPosts, initialHasMore, initialLanguage =
           <button className="off-gallery-card" type="button" onClick={() => setActiveId(post.id)} key={post.id}>
             {post.mediaType === "IMAGE" ? (
               isSvg(post.mediaUrl)
-                ? <img className="off-gallery-native-image" src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} loading="lazy" />
-                : <Image src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} fill sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw" />
+                ? <img className="off-gallery-native-image" src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} loading="lazy" style={galleryMediaStyle(post)} />
+                : <Image src={post.mediaUrl} alt={post.altText || post.caption || copy.galleryImageAlt} fill sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw" style={galleryMediaStyle(post)} />
             ) : post.thumbnailUrl ? (
-              <Image src={post.thumbnailUrl} alt={post.altText || post.caption || copy.galleryVideoAlt} fill sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw" />
+              <Image src={post.thumbnailUrl} alt={post.altText || post.caption || copy.galleryVideoAlt} fill sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw" style={galleryMediaStyle(post)} />
             ) : <span className="off-gallery-video-fallback">OFF</span>}
             {post.mediaType === "VIDEO" ? <span className="off-gallery-play"><Play /></span> : null}
+            {post.audioUrl ? <span className="off-gallery-music"><Music2 /></span> : null}
             <span className="off-gallery-card-meta"><small>{GALLERY_CATEGORY_LABELS[post.category]}</small>{post.title ? <strong>{post.title}</strong> : null}</span>
           </button>
         ))}
@@ -129,11 +141,8 @@ export function GallerySection({ initialPosts, initialHasMore, initialLanguage =
       {activePost ? (
         <div className="off-gallery-viewer-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveId(null); }}>
           <div
-            className="off-gallery-viewer"
+            className="off-gallery-viewer-host"
             ref={viewerRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label={activePost.title || copy.gallery}
             tabIndex={-1}
             onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }}
             onTouchEnd={(event) => {
@@ -143,18 +152,13 @@ export function GallerySection({ initialPosts, initialHasMore, initialLanguage =
               touchStartX.current = null;
             }}
           >
-            <button className="off-gallery-viewer-close" type="button" onClick={() => setActiveId(null)} aria-label={copy.close}><X /></button>
-            <button className="off-gallery-viewer-prev" type="button" onClick={() => showRelative(-1)} aria-label={copy.previous}><ChevronLeft /></button>
-            <div className="off-gallery-viewer-media">
-              {activePost.mediaType === "IMAGE" ? <img src={activePost.mediaUrl} alt={activePost.altText || activePost.caption || copy.galleryImageAlt} /> : <video src={activePost.mediaUrl} poster={activePost.thumbnailUrl || undefined} controls preload="metadata" />}
-            </div>
-            <div className="off-gallery-viewer-copy">
-              <small>{GALLERY_CATEGORY_LABELS[activePost.category]}</small>
-              {activePost.title ? <h3>{activePost.title}</h3> : null}
-              {activePost.caption ? <p>{activePost.caption}</p> : null}
-              <time>{new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date(activePost.publishedAt))}</time>
-            </div>
-            <button className="off-gallery-viewer-next" type="button" onClick={() => showRelative(1)} aria-label={copy.next}><ChevronRight /></button>
+            <GalleryPostViewer
+              post={activePost}
+              initialLanguage={initialLanguage}
+              onClose={() => setActiveId(null)}
+              previousControl={<button className="off-gallery-viewer-prev" type="button" onClick={() => showRelative(-1)} aria-label={copy.previous}><ChevronLeft /></button>}
+              nextControl={<button className="off-gallery-viewer-next" type="button" onClick={() => showRelative(1)} aria-label={copy.next}><ChevronRight /></button>}
+            />
           </div>
         </div>
       ) : null}

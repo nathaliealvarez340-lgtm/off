@@ -976,6 +976,23 @@ function isSafeMediaUrl(value: string) {
   }
 }
 
+function galleryTransformValue(value: string): Prisma.InputJsonValue {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    const rotationValue = Number(parsed.rotation);
+    return {
+      x: Math.min(100, Math.max(0, Number(parsed.x) || 50)),
+      y: Math.min(100, Math.max(0, Number(parsed.y) || 50)),
+      zoom: Math.min(3, Math.max(1, Number(parsed.zoom) || 1)),
+      rotation: [0, 90, 180, 270].includes(rotationValue) ? rotationValue : 0,
+      flipX: parsed.flipX === true,
+      flipY: parsed.flipY === true,
+    };
+  } catch {
+    return { x: 50, y: 50, zoom: 1, rotation: 0, flipX: false, flipY: false };
+  }
+}
+
 export async function saveGalleryPostAction(
   _: SaveGalleryPostState,
   formData: FormData,
@@ -986,9 +1003,13 @@ export async function saveGalleryPostAction(
     const mediaType = stringValue(formData, "mediaType") as (typeof GALLERY_MEDIA_TYPES)[number];
     const mediaUrl = stringValue(formData, "mediaUrl");
     const thumbnailUrl = stringValue(formData, "thumbnailUrl") || null;
-    const title = stringValue(formData, "title").slice(0, 160) || null;
-    const caption = stringValue(formData, "caption").slice(0, 2000) || null;
-    const altText = stringValue(formData, "altText").slice(0, 300) || null;
+    const title = stringValue(formData, "title").replace(/<[^>]*>/g, "").slice(0, 160) || null;
+    const caption = stringValue(formData, "caption").replace(/<[^>]*>/g, "").slice(0, 2000) || null;
+    const altText = stringValue(formData, "altText").replace(/<[^>]*>/g, "").slice(0, 300) || null;
+    const mediaTransform = galleryTransformValue(stringValue(formData, "mediaTransform"));
+    const audioUrl = stringValue(formData, "audioUrl") || null;
+    const audioTitle = stringValue(formData, "audioTitle").replace(/<[^>]*>/g, "").slice(0, 160) || null;
+    const audioArtist = stringValue(formData, "audioArtist").replace(/<[^>]*>/g, "").slice(0, 160) || null;
     const category = stringValue(formData, "category") as (typeof GALLERY_CATEGORIES)[number];
     const status = stringValue(formData, "publishIntent") === "publish" ? "published" : "draft";
 
@@ -996,6 +1017,7 @@ export async function saveGalleryPostAction(
     if (!GALLERY_CATEGORIES.includes(category)) return { ok: false, message: "Selecciona una categoría válida." };
     if (!isSafeMediaUrl(mediaUrl)) return { ok: false, message: "Sube una imagen o video válido antes de guardar." };
     if (thumbnailUrl && !isSafeMediaUrl(thumbnailUrl)) return { ok: false, message: "El poster del video no es válido." };
+    if (audioUrl && !isSafeMediaUrl(audioUrl)) return { ok: false, message: "El archivo de música no es válido." };
     if (status === "published" && !caption) return { ok: false, message: "Agrega un caption antes de publicar." };
 
     const db = getDb();
@@ -1009,6 +1031,10 @@ export async function saveGalleryPostAction(
       caption,
       altText,
       category,
+      mediaTransform,
+      audioUrl,
+      audioTitle,
+      audioArtist,
       status,
       publishedAt: status === "published" ? existing?.publishedAt ?? new Date() : existing?.publishedAt ?? null,
     };
@@ -1018,6 +1044,7 @@ export async function saveGalleryPostAction(
 
     revalidatePath("/admin");
     revalidatePath("/lounge");
+    revalidatePath(`/off/post/${post.id}`);
     return {
       ok: true,
       id: post.id,
@@ -1034,7 +1061,20 @@ export async function deleteGalleryPostAction(formData: FormData) {
   if (id) await getDb().galleryPost.deleteMany({ where: { id } });
   revalidatePath("/admin");
   revalidatePath("/lounge");
+  revalidatePath(`/off/post/${id}`);
   redirect("/admin?galleryDeleted=1");
+}
+
+export async function toggleGalleryPostStatusAction(formData: FormData) {
+  await requireAdmin();
+  const id = stringValue(formData, "id");
+  const post = id ? await getDb().galleryPost.findUnique({ where: { id } }) : null;
+  if (!post) return;
+  const status = post.status === "published" ? "draft" : "published";
+  await getDb().galleryPost.update({ where: { id: post.id }, data: { status, publishedAt: status === "published" ? post.publishedAt ?? new Date() : post.publishedAt } });
+  revalidatePath("/admin");
+  revalidatePath("/lounge");
+  revalidatePath(`/off/post/${post.id}`);
 }
 
 export type CommunityActionState = {

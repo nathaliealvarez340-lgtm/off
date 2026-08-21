@@ -40,9 +40,9 @@ export default async function LoungePage() {
     db.notification.findFirst({
       where: { userId: user.id, read: false },
       orderBy: { createdAt: "asc" },
-      select: { id: true, title: true, message: true },
+      select: { id: true, title: true, message: true, href: true },
     }),
-    getPublishedGalleryPosts({ take: 17 }),
+    getPublishedGalleryPosts({ take: 17, viewerId: user.id }),
   ]);
   const articles = sortEditorially(rawArticles);
   const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
@@ -91,7 +91,7 @@ export default async function LoungePage() {
       lastReadPosition={lastReading?.lastPosition ?? 0}
       preferredLanguage={normalizeUiLanguage(user.preferredLanguage)}
       notification={notification}
-      galleryPosts={galleryRows.slice(0, 16).map(serializeGalleryPost)}
+      galleryPosts={galleryRows.slice(0, 16).map((post) => serializeGalleryPost(post, user.id))}
       galleryHasMore={galleryRows.length > 16}
     />
   );

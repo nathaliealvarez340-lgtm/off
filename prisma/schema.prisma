@@ -39,6 +39,12 @@ enum GalleryMediaType {
   VIDEO
 }
 
+enum GalleryShareType {
+  INTERNAL
+  EXTERNAL
+  COPY_LINK
+}
+
 model Article {
   id               String                   @id @default(cuid())
   title            String
@@ -89,13 +95,64 @@ model GalleryPost {
   caption      String?
   altText      String?
   category     GalleryCategory
+  mediaTransform Json?
+  audioUrl      String?
+  audioTitle    String?
+  audioArtist   String?
   status       String           @default("draft")
   publishedAt  DateTime?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  likes         GalleryPostLike[]
+  comments      GalleryPostComment[]
+  shares        GalleryPostShare[]
 
   @@index([category, status])
   @@index([status, publishedAt])
+}
+
+model GalleryPostLike {
+  id        String      @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime    @default(now())
+  post      GalleryPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model GalleryPostComment {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  status    CommentStatus @default(PUBLISHED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  post      GalleryPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId])
+}
+
+model GalleryPostShare {
+  id          String           @id @default(cuid())
+  postId      String
+  senderId    String
+  recipientId String?
+  type        GalleryShareType
+  createdAt   DateTime         @default(now())
+  post        GalleryPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender      User             @relation("GallerySharesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User?            @relation("GallerySharesReceived", fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@index([postId, createdAt])
+  @@index([senderId])
+  @@index([recipientId])
 }
 
 model Subscriber {
@@ -127,6 +184,10 @@ model User {
   memberProfile       MemberProfile?
   passwordResetTokens PasswordResetToken[]
   notifications       Notification[]
+  galleryLikes        GalleryPostLike[]
+  galleryComments     GalleryPostComment[]
+  gallerySharesSent   GalleryPostShare[] @relation("GallerySharesSent")
+  gallerySharesReceived GalleryPostShare[] @relation("GallerySharesReceived")
 }
 
 model Notification {
@@ -135,6 +196,7 @@ model Notification {
   type      String
   title     String
   message   String
+  href      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

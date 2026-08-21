@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { X } from "lucide-react";
+import Link from "next/link";
 import { markNotificationReadAction } from "@/app/actions";
 
 export type MemberNotificationData = {
   id: string;
   title: string;
   message: string;
+  href?: string | null;
 };
 
 export function MemberNotification({ notification }: { notification?: MemberNotificationData | null }) {
@@ -37,6 +39,7 @@ export function MemberNotification({ notification }: { notification?: MemberNoti
       <p>Desde la mesa editorial</p>
       <h2 id="member-notification-title">{activeNotification.title}</h2>
       <div>{activeNotification.message}</div>
+      {activeNotification.href ? <Link href={activeNotification.href}>Ver publicación</Link> : null}
       <strong>— Nathalie / OFF</strong>
       {error ? <small>{error}</small> : null}
     </aside>
