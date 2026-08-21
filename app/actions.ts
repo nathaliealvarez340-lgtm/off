@@ -957,6 +957,133 @@ export async function deleteLoungeContentAction(formData: FormData) {
   redirect("/admin?loungeDeleted=1");
 }
 
+export type CommunityActionState = {
+  ok: boolean;
+  message: string;
+};
+
+const COMMUNITY_GREETING_TITLE = "Un saludo desde OFF";
+
+function communityGreetingMessage(name: string) {
+  return `Hola, ${name}. Me da mucho gusto saludarte y saber que estás aquí. OFF también se construye con las personas que lo leen, lo cuestionan y regresan cuando necesitan apagar un poco el ruido. Espero que encuentres algo aquí que valga la pena llevarte contigo. Nos seguimos leyendo.`;
+}
+
+export async function sendCommunityGreetingAction(userId: string): Promise<CommunityActionState> {
+  try {
+    await requireAdmin();
+    const normalizedUserId = userId.trim();
+    if (!normalizedUserId) return { ok: false, message: "No encontramos a este usuario." };
+
+    const db = getDb();
+    const targetUser = await db.user.findUnique({
+      where: { id: normalizedUserId },
+      select: { id: true, name: true, role: true },
+    });
+
+    if (!targetUser) return { ok: false, message: "Este suscriptor todavía no tiene una cuenta para recibir saludos." };
+    if (targetUser.role === "ADMIN") {
+      return { ok: false, message: "Las cuentas de administrador requieren una gestión independiente." };
+    }
+
+    await db.notification.create({
+      data: {
+        userId: targetUser.id,
+        type: "ADMIN_GREETING",
+        title: COMMUNITY_GREETING_TITLE,
+        message: communityGreetingMessage(targetUser.name),
+      },
+    });
+
+    revalidatePath("/lounge");
+    return { ok: true, message: `Saludo enviado a ${targetUser.name}.` };
+  } catch (error) {
+    console.error("No se pudo crear el saludo de Comunidad.", error);
+    return { ok: false, message: "No se pudo enviar el saludo. Intenta de nuevo." };
+  }
+}
+
+export async function markNotificationReadAction(notificationId: string): Promise<CommunityActionState> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { ok: false, message: "Inicia sesión para actualizar esta notificación." };
+
+    const result = await getDb().notification.updateMany({
+      where: { id: notificationId.trim(), userId: user.id, read: false },
+      data: { read: true },
+    });
+
+    if (result.count === 0) return { ok: false, message: "La notificación ya no está disponible." };
+    revalidatePath("/lounge");
+    return { ok: true, message: "Notificación leída." };
+  } catch (error) {
+    console.error("No se pudo marcar la notificación como leída.", error);
+    return { ok: false, message: "No se pudo cerrar el saludo. Intenta de nuevo." };
+  }
+}
+
+export async function deleteCommunityMember(
+  targetId: string,
+  targetKind: "user" | "subscriber" = "user",
+): Promise<CommunityActionState> {
+  try {
+    const currentAdmin = await requireAdmin();
+    const normalizedTargetId = targetId.trim();
+    if (!normalizedTargetId) return { ok: false, message: "No encontramos a este usuario." };
+
+    const db = getDb();
+    const result = await db.$transaction(async (tx) => {
+      const subscriber = targetKind === "subscriber"
+        ? await tx.subscriber.findUnique({ where: { id: normalizedTargetId } })
+        : null;
+
+      let targetUser = targetKind === "user"
+        ? await tx.user.findUnique({
+            where: { id: normalizedTargetId },
+            select: { id: true, email: true, role: true },
+          })
+        : null;
+
+      if (!targetUser && subscriber) {
+        targetUser = await tx.user.findFirst({
+          where: { email: { equals: subscriber.email.trim().toLowerCase(), mode: "insensitive" } },
+          select: { id: true, email: true, role: true },
+        });
+      }
+
+      if (!targetUser && !subscriber) return { deleted: false, reason: "missing" as const };
+
+      if (targetUser?.id === currentAdmin.id) return { deleted: false, reason: "self" as const };
+      if (targetUser?.role === "ADMIN") return { deleted: false, reason: "admin" as const };
+
+      if (targetUser) {
+        const normalizedEmail = targetUser.email.trim().toLowerCase();
+        await tx.subscriber.deleteMany({
+          where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+        });
+        await tx.user.delete({ where: { id: targetUser.id } });
+        return { deleted: true, reason: null };
+      }
+
+      await tx.subscriber.delete({ where: { id: subscriber!.id } });
+      return { deleted: true, reason: null };
+    });
+
+    if (!result.deleted) {
+      if (result.reason === "self") return { ok: false, message: "No puedes eliminar tu propia cuenta desde Comunidad." };
+      if (result.reason === "admin") return { ok: false, message: "Las cuentas de administrador requieren una gestión independiente." };
+      return { ok: false, message: "No encontramos a este usuario." };
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/lounge");
+    revalidatePath("/");
+    return { ok: true, message: "Usuario eliminado permanentemente." };
+  } catch (error) {
+    console.error("No se pudo eliminar permanentemente al miembro de Comunidad.", error);
+    return { ok: false, message: "No se pudo eliminar al usuario. Intenta de nuevo." };
+  }
+}
+
 export async function commentAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) {

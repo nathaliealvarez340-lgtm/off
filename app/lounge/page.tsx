@@ -24,7 +24,7 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading] = await Promise.all([
+  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading, notification] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } } }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     getOrCreateMemberNumber(user.id),
@@ -35,6 +35,11 @@ export default async function LoungePage() {
       where: { userId: user.id, article: { status: "published" } },
       orderBy: { updatedAt: "desc" },
       select: { articleId: true, progress: true, lastPosition: true },
+    }),
+    db.notification.findFirst({
+      where: { userId: user.id, read: false },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, title: true, message: true },
     }),
   ]);
   const articles = sortEditorially(rawArticles);
@@ -83,6 +88,7 @@ export default async function LoungePage() {
       lastReadProgress={lastReading?.progress ?? 0}
       lastReadPosition={lastReading?.lastPosition ?? 0}
       preferredLanguage={normalizeUiLanguage(user.preferredLanguage)}
+      notification={notification}
     />
   );
 }

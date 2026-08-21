@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { ArchiveRestore, BookOpen, Clock3, Plus, Radio, StickyNote } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
-import { redirect } from "next/navigation";
 import { logoutAction } from "@/app/actions";
+import { AdminCommunityManager, type CommunityMember } from "@/components/AdminCommunityManager";
 import { AdminEditorialTable } from "@/components/AdminEditorialTable";
 import { AdminGreeting } from "@/components/AdminGreeting";
 import { AdminSessionGuard } from "@/components/AdminSessionGuard";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { formatDate, getAllArticles, getPlainTextPreview, isInternalContentCategory } from "@/lib/articles";
-import { isAdminSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
 function formatCount(value: number) {
@@ -26,7 +26,7 @@ const loungeTypeLabels = {
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ deleted?: string; loungeDeleted?: string }> }) {
   noStore();
-  if (!(await isAdminSession())) redirect("/login");
+  const currentAdmin = await requireAdmin();
 
   const { deleted, loungeDeleted } = await searchParams;
   const db = getDb();
@@ -39,7 +39,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         name: true,
         email: true,
         role: true,
+        preferredLanguage: true,
         createdAt: true,
+        memberProfile: { select: { memberNumber: true } },
+        activity: { select: { updatedAt: true } },
+        sessions: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
         _count: { select: { comments: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -50,10 +54,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         name: true,
         email: true,
         interest: true,
+        consent: true,
         createdAt: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 12,
     }),
     db.subscriber.count(),
     db.comment.count(),
@@ -76,6 +80,51 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   ]);
 
   const editorialArticles = articles.filter((article) => !isInternalContentCategory(article.category));
+  const subscribersByEmail = new Map(subscribers.map((subscriber) => [subscriber.email.trim().toLowerCase(), subscriber]));
+  const userEmails = new Set(users.map((user) => user.email.trim().toLowerCase()));
+  const communityMembers: CommunityMember[] = [
+    ...users.map((user) => {
+      const subscriber = subscribersByEmail.get(user.email.trim().toLowerCase());
+      const lastActivity = [user.activity?.updatedAt, user.sessions[0]?.createdAt]
+        .filter((value): value is Date => Boolean(value))
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+
+      return {
+        id: user.id,
+        kind: "user" as const,
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        offId: user.memberProfile ? `#${String(user.memberProfile.memberNumber).padStart(4, "0")}` : null,
+        createdAt: user.createdAt.toISOString(),
+        preferredLanguage: user.preferredLanguage,
+        role: user.role,
+        status: subscriber?.consent ? "Activo · Suscrito" : "Cuenta activa",
+        interest: subscriber?.interest ?? null,
+        commentCount: user._count.comments,
+        lastActivity: lastActivity?.toISOString() ?? null,
+        isCurrentAdmin: user.id === currentAdmin.id,
+      };
+    }),
+    ...subscribers
+      .filter((subscriber) => !userEmails.has(subscriber.email.trim().toLowerCase()))
+      .map((subscriber) => ({
+        id: subscriber.id,
+        kind: "subscriber" as const,
+        userId: null,
+        name: subscriber.name,
+        email: subscriber.email,
+        offId: null,
+        createdAt: subscriber.createdAt.toISOString(),
+        preferredLanguage: null,
+        role: null,
+        status: subscriber.consent ? "Suscriptor activo" : "Consentimiento pendiente",
+        interest: subscriber.interest,
+        commentCount: 0,
+        lastActivity: null,
+        isCurrentAdmin: false,
+      })),
+  ];
   const articleTitlesById = new Map(articles.map((article) => [article.id, getPlainTextPreview(article.title, 120)]));
   const publishedArticles = editorialArticles.filter((article) => article.status === "published");
   const draftArticles = editorialArticles.filter((article) => article.status !== "published");
@@ -331,24 +380,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 <p className="eyebrow" data-i18n="community">Comunidad</p>
                 <h2 data-i18n="subscribers">Suscriptores</h2>
               </div>
-              <span>{users.length + subscriberCount} <span data-i18n="records">registros</span></span>
+              <span>{communityMembers.length} <span data-i18n="records">registros</span></span>
             </div>
-
-            <div className="subscriber-list">
-              {[...users.slice(0, 6), ...subscribers.slice(0, 4)].slice(0, 8).map((person) => (
-                <div className="subscriber-row" key={person.id}>
-                  <div className="profile-avatar">{person.name.slice(0, 2).toUpperCase()}</div>
-                  <div>
-                    <strong>{person.name}</strong>
-                    <span>{person.email}</span>
-                  </div>
-                  <em>{"role" in person ? person.role : person.interest}</em>
-                </div>
-              ))}
-              {users.length + subscriberCount === 0 ? (
-                <div className="empty-dashboard-state" data-i18n="noSubscribersYet">Aun no hay suscriptores ni usuarios registrados.</div>
-              ) : null}
-            </div>
+            <AdminCommunityManager members={communityMembers} />
           </article>
 
           <article className="dashboard-card visual-library-card" id="biblioteca">
