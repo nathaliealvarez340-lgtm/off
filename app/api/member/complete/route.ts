@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { syncMemberAchievements } from "@/lib/community";
 import { getDb } from "@/lib/db";
 import { completionMessage, earnedBadges } from "@/lib/member-progress";
 
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
     create: { userId: user.id, articleId },
   });
   const completedCount = await getDb().articleCompletion.count({ where: { userId: user.id } });
+  await syncMemberAchievements(user.id);
 
   return NextResponse.json({
     ok: true,

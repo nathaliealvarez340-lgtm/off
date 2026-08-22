@@ -302,10 +302,12 @@ export async function getPublishedComments(articleId: string) {
     where: { articleId, status: "PUBLISHED", parentId: null },
     include: {
       user: { select: { name: true } },
+      _count: { select: { replies: true } },
       replies: {
         where: { status: "PUBLISHED" },
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "asc" },
+        take: 3,
       },
     },
     orderBy: { createdAt: "desc" },

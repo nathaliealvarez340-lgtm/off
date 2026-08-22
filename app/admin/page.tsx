@@ -222,6 +222,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <a href="#suscriptores" data-i18n="subscribers">Suscriptores</a>
           <a href="#insights" data-i18n="insights">Insights</a>
           <a href="#comentarios" data-i18n="comments">Comentarios</a>
+          <Link href="/admin/community">Moderar Community</Link>
           <a href="#temas" data-i18n="nextTopics">Proximos temas</a>
           <a href="#actividad" data-i18n="offActivities">Actividades OFF</a>
           <a href="#configuracion" data-i18n="settings">Configuracion</a>

@@ -50,6 +50,12 @@ enum GalleryShareType {
   COPY_LINK
 }
 
+enum ConnectionStatus {
+  PENDING
+  CONNECTED
+  DECLINED
+}
+
 model Article {
   id               String                   @id @default(cuid())
   title            String
@@ -94,29 +100,29 @@ model LoungeContent {
 }
 
 model GalleryPost {
-  id           String           @id @default(cuid())
-  mediaType    GalleryMediaType
-  mediaUrl     String
-  thumbnailUrl String?
-  title        String?
-  caption      String?
-  altText      String?
-  category     GalleryCategory
-  keywords     String[]         @default([])
+  id             String               @id @default(cuid())
+  mediaType      GalleryMediaType
+  mediaUrl       String
+  thumbnailUrl   String?
+  title          String?
+  caption        String?
+  altText        String?
+  category       GalleryCategory
+  keywords       String[]             @default([])
   mediaTransform Json?
-  audioUrl      String?
-  audioTitle    String?
-  audioArtist   String?
-  musicSource   GalleryMusicSource?
-  spotifyUrl    String?
+  audioUrl       String?
+  audioTitle     String?
+  audioArtist    String?
+  musicSource    GalleryMusicSource?
+  spotifyUrl     String?
   spotifyTrackId String?
-  status       String           @default("draft")
-  publishedAt  DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  likes         GalleryPostLike[]
-  comments      GalleryPostComment[]
-  shares        GalleryPostShare[]
+  status         String               @default("draft")
+  publishedAt    DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  likes          GalleryPostLike[]
+  comments       GalleryPostComment[]
+  shares         GalleryPostShare[]
 
   @@index([category, status])
   @@index([status, publishedAt])
@@ -136,18 +142,22 @@ model GalleryPostLike {
 }
 
 model GalleryPostComment {
-  id        String        @id @default(cuid())
+  id        String               @id @default(cuid())
   postId    String
   userId    String
+  parentId  String?
   content   String
-  status    CommentStatus @default(PUBLISHED)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  post      GalleryPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    CommentStatus        @default(PUBLISHED)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  post      GalleryPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    GalleryPostComment?  @relation("GalleryCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   GalleryPostComment[] @relation("GalleryCommentReplies")
 
   @@index([postId, createdAt])
   @@index([userId])
+  @@index([parentId])
 }
 
 model GalleryPostShare {
@@ -176,29 +186,40 @@ model Subscriber {
 }
 
 model User {
-  id                  String                   @id @default(cuid())
-  name                String
-  email               String                   @unique
-  passwordHash        String
-  accessCodeHash      String?
-  accessCodeLookup    String?                  @unique
-  role                Role                     @default(USER)
-  preferredLanguage   String                   @default("es")
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  sessions            Session[]
-  comments            Comment[]
-  topicSuggestions    TopicSuggestion[]
-  activity            MemberActivity?
-  completions         ArticleCompletion[]
-  readingProgress     ArticleReadingProgress[]
-  memberProfile       MemberProfile?
-  passwordResetTokens PasswordResetToken[]
-  notifications       Notification[]
-  galleryLikes        GalleryPostLike[]
-  galleryComments     GalleryPostComment[]
-  gallerySharesSent   GalleryPostShare[] @relation("GallerySharesSent")
-  gallerySharesReceived GalleryPostShare[] @relation("GallerySharesReceived")
+  id                    String                   @id @default(cuid())
+  name                  String
+  email                 String                   @unique
+  passwordHash          String
+  accessCodeHash        String?
+  accessCodeLookup      String?                  @unique
+  role                  Role                     @default(USER)
+  preferredLanguage     String                   @default("es")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  sessions              Session[]
+  comments              Comment[]
+  topicSuggestions      TopicSuggestion[]
+  activity              MemberActivity?
+  completions           ArticleCompletion[]
+  readingProgress       ArticleReadingProgress[]
+  memberProfile         MemberProfile?
+  passwordResetTokens   PasswordResetToken[]
+  notifications         Notification[]
+  galleryLikes          GalleryPostLike[]
+  galleryComments       GalleryPostComment[]
+  gallerySharesSent     GalleryPostShare[]       @relation("GallerySharesSent")
+  gallerySharesReceived GalleryPostShare[]       @relation("GallerySharesReceived")
+  communityPosts        CommunityPost[]
+  communityPostLikes    CommunityPostLike[]
+  communityComments     CommunityComment[]
+  communityCommentLikes CommunityCommentLike[]
+  connectionsRequested  MemberConnection[]       @relation("ConnectionRequester")
+  connectionsReceived   MemberConnection[]       @relation("ConnectionReceiver")
+  achievements          MemberAchievement[]
+  achievementReactions  AchievementReaction[]
+  blocksCreated         MemberBlock[]            @relation("Blocker")
+  blocksReceived        MemberBlock[]            @relation("Blocked")
+  socialReports         SocialReport[]
 }
 
 model Notification {
@@ -327,4 +348,136 @@ model TopicSuggestion {
 
   @@index([articleId])
   @@index([userId])
+}
+
+model CommunityPost {
+  id        String              @id @default(cuid())
+  userId    String
+  content   String
+  imageUrl  String?
+  status    String              @default("published")
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     CommunityPostLike[]
+  comments  CommunityComment[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model CommunityPostLike {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model CommunityComment {
+  id        String                 @id @default(cuid())
+  postId    String
+  userId    String
+  parentId  String?
+  content   String
+  status    CommentStatus          @default(PUBLISHED)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  post      CommunityPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    CommunityComment?      @relation("CommunityCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   CommunityComment[]     @relation("CommunityCommentReplies")
+  likes     CommunityCommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CommunityCommentLike {
+  id        String           @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime         @default(now())
+  comment   CommunityComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model MemberConnection {
+  id          String           @id @default(cuid())
+  pairKey     String           @unique
+  requesterId String
+  receiverId  String
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  requester   User             @relation("ConnectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver    User             @relation("ConnectionReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId, status])
+  @@index([receiverId, status])
+}
+
+model MemberAchievement {
+  id         String                @id @default(cuid())
+  key        String                @unique
+  userId     String
+  type       String
+  title      String
+  metadata   Json?
+  achievedAt DateTime              @default(now())
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions  AchievementReaction[]
+
+  @@index([userId, achievedAt])
+  @@index([achievedAt])
+}
+
+model AchievementReaction {
+  id            String            @id @default(cuid())
+  achievementId String
+  userId        String
+  createdAt     DateTime          @default(now())
+  achievement   MemberAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, userId])
+  @@index([achievementId])
+  @@index([userId])
+}
+
+model MemberBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model SocialReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  targetType String
+  targetId   String
+  reason     String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@index([reporterId])
 }

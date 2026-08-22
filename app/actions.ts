@@ -23,6 +23,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { isUiLanguage, normalizeUiLanguage, type UiLanguage } from "@/lib/ui-i18n";
 import { normalizeSearchKeywords } from "@/lib/search-keywords";
 import { parseSpotifyTrackUrl } from "@/lib/spotify";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
 function stringValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -1248,14 +1249,23 @@ export async function commentAction(formData: FormData) {
 
   const articleId = stringValue(formData, "articleId");
   const articleSlug = stringValue(formData, "articleSlug");
-  const content = stringValue(formData, "content");
-  const parentId = stringValue(formData, "parentId");
+  const content = stringValue(formData, "content").replace(/<[^>]*>/g, "").slice(0, 1000);
+  const requestedParentId = stringValue(formData, "parentId");
 
   if (!articleId || !articleSlug || content.length < 2) {
     return;
   }
 
-  await getDb().comment.create({
+  if (!await consumeRateLimit("article-comment", user.id, 8, 60_000)) return;
+
+  const db = getDb();
+  const article = await db.article.findFirst({ where: { id: articleId, slug: articleSlug, status: "published" }, select: { id: true } });
+  if (!article) return;
+  const parent = requestedParentId ? await db.comment.findFirst({ where: { id: requestedParentId, articleId }, select: { id: true, parentId: true, userId: true } }) : null;
+  if (requestedParentId && !parent) return;
+  const parentId = parent?.parentId ?? parent?.id ?? null;
+
+  const comment = await db.comment.create({
     data: {
       articleId,
       userId: user.id,
@@ -1264,6 +1274,10 @@ export async function commentAction(formData: FormData) {
       status: "PUBLISHED",
     },
   });
+
+  if (parent && parent.userId !== user.id) {
+    await db.notification.create({ data: { userId: parent.userId, type: "COMMENT_REPLY", title: "Nueva respuesta", message: `${user.name} respondió a tu comentario.`, href: `/off/${articleSlug}#comment-${comment.id}` } });
+  }
 
   revalidatePath(`/off/${articleSlug}`);
 }
@@ -1290,4 +1304,29 @@ export async function topicSuggestionAction(formData: FormData) {
 
   revalidatePath("/admin");
   if (articleSlug) revalidatePath(`/off/${articleSlug}`);
+}
+
+export async function moderateSocialContentAction(formData: FormData) {
+  await requireAdmin();
+  const targetType = stringValue(formData, "targetType");
+  const targetId = stringValue(formData, "targetId");
+  const mode = stringValue(formData, "mode") === "delete" ? "delete" : "hide";
+  if (!targetId) return;
+  const db = getDb();
+
+  if (targetType === "COMMUNITY_POST") {
+    if (mode === "delete") await db.communityPost.deleteMany({ where: { id: targetId } });
+    else await db.communityPost.updateMany({ where: { id: targetId }, data: { status: "hidden" } });
+  } else if (targetType === "COMMUNITY_COMMENT") {
+    if (mode === "delete") await db.communityComment.deleteMany({ where: { id: targetId } });
+    else await db.communityComment.updateMany({ where: { id: targetId }, data: { status: "PENDING" } });
+  } else if (targetType === "GALLERY_COMMENT") {
+    if (mode === "delete") await db.galleryPostComment.deleteMany({ where: { id: targetId } });
+    else await db.galleryPostComment.updateMany({ where: { id: targetId }, data: { status: "PENDING" } });
+  } else return;
+
+  await db.socialReport.updateMany({ where: { targetType, targetId, status: "pending" }, data: { status: mode === "delete" ? "removed" : "hidden" } });
+  revalidatePath("/admin/community");
+  revalidatePath("/lounge/community");
+  revalidatePath("/lounge");
 }

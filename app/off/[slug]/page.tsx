@@ -27,6 +27,7 @@ import { articleSpeechText, articleUi, normalizeArticleLanguage, resolveArticleT
 import { getCurrentUser } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getSiteUrl } from "@/lib/site-url";
+import { communityCopy } from "@/lib/community-i18n";
 
 function sanitizeInlineHtml(text: string) {
   const withoutUnsafeMarkup = text
@@ -177,6 +178,7 @@ export default async function ArticlePage({
     return "";
   }).join(". ");
   const t = articleUi[language];
+  const threadCopy = communityCopy[language];
 
   return (
     <main className="site-shell">
@@ -409,7 +411,7 @@ export default async function ArticlePage({
 
             <div className="comment-list">
               {comments.map((comment) => (
-                <article className="comment-card" key={comment.id}>
+                <article className="comment-card" id={`comment-${comment.id}`} key={comment.id}>
                   <strong>{comment.user.name}</strong>
                   <span>{formatDate(comment.createdAt)}</span>
                   <p>{comment.content}</p>
@@ -422,15 +424,25 @@ export default async function ArticlePage({
                     <button type="submit">{t.reply}</button>
                   </form>
                   {comment.replies.length > 0 ? (
-                    <div className="reply-list">
+                    <details className="reply-list">
+                      <summary>{threadCopy.viewReplies} ({comment._count.replies})</summary>
                       {comment.replies.map((reply) => (
-                        <div className="comment-reply" key={reply.id}>
+                        <div className="comment-reply" id={`comment-${reply.id}`} key={reply.id}>
                           <strong>{reply.user.name}</strong>
                           <span>{formatDate(reply.createdAt)}</span>
                           <p>{reply.content}</p>
+                          <form action={commentAction} className="reply-form is-nested">
+                            <input name="articleId" type="hidden" value={article.id} />
+                            <input name="articleSlug" type="hidden" value={article.slug} />
+                            <input name="articlePath" type="hidden" value={`/off/${article.slug}`} />
+                            <input name="parentId" type="hidden" value={reply.id} />
+                            <textarea name="content" placeholder={`${threadCopy.replyingTo} ${reply.user.name}`} required minLength={2} />
+                            <button type="submit">{threadCopy.reply}</button>
+                          </form>
                         </div>
                       ))}
-                    </div>
+                      {comment._count.replies > comment.replies.length ? <p className="reply-list-more">+ {comment._count.replies - comment.replies.length} {threadCopy.moreReplies}</p> : null}
+                    </details>
                   ) : null}
                 </article>
               ))}

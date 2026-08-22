@@ -2,7 +2,7 @@
 
 import { Music2, Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { SpotifyTrackEmbed } from "@/components/SpotifyTrackEmbed";
+import { SpotifyIFramePlayer } from "@/components/SpotifyIFramePlayer";
 
 export function PostMusicPlayer({ musicSource, audioUrl, audioTitle, audioArtist, spotifyTrackId, playLabel = "Reproducir música", pauseLabel = "Pausar música", musicLabel = "Música" }: {
   musicSource: "UPLOAD" | "SPOTIFY" | null;
@@ -32,7 +32,7 @@ export function PostMusicPlayer({ musicSource, audioUrl, audioTitle, audioArtist
   }, [audioUrl, source]);
 
   if (source === "SPOTIFY" && spotifyTrackId) {
-    return <div className="off-gallery-spotify"><span><Music2 />{audioTitle || "Spotify"}{audioArtist ? <em>{audioArtist}</em> : null}</span><SpotifyTrackEmbed trackId={spotifyTrackId} title={audioTitle ? `${audioTitle} en Spotify` : "Canción de Spotify"} /></div>;
+    return <SpotifyIFramePlayer trackId={spotifyTrackId} title={audioTitle || musicLabel} artist={audioArtist} playLabel={playLabel} pauseLabel={pauseLabel} />;
   }
   if (source !== "UPLOAD" || !audioUrl) return null;
 
