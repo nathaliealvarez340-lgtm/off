@@ -145,6 +145,18 @@ export function MemberLounge({
   ];
 
   useEffect(() => {
+    const sectionId = window.location.hash.slice(1);
+    if (!sectionId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     const sections = ["collections", "mi-yo", "member-profile", "conoce-mas"]
       .map((id) => document.getElementById(id))
       .filter(Boolean) as HTMLElement[];

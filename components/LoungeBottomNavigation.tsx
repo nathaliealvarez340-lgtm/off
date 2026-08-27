@@ -2,6 +2,7 @@
 
 import { BookOpen, Brain, Globe2, LogOut, Map as MapIcon, MessageCircle, Search, Sparkles, UserRound, UsersRound } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
 import { useOffLanguage } from "@/components/useOffLanguage";
@@ -31,6 +32,7 @@ export function LoungeBottomNavigation({
   initialLanguage?: UiLanguage;
   targets?: LoungeNavigationTargets;
 }) {
+  const pathname = usePathname();
   const { language, setLanguage } = useOffLanguage(initialLanguage);
   const copy = mobileCopy[language];
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -43,6 +45,11 @@ export function LoungeBottomNavigation({
     { href: targets.profile, label: copy.profileKicker, icon: UserRound },
   ];
   const resolvedActiveSection = activeSection ?? observedSection;
+
+  function destination(target: string) {
+    if (!target.startsWith("#")) return target;
+    return pathname === "/lounge" ? target : `/lounge${target}`;
+  }
 
   useEffect(() => {
     if (activeSection) return;
@@ -76,9 +83,9 @@ export function LoungeBottomNavigation({
         {items.map(({ href, label, icon: Icon }) => {
           const current = resolvedActiveSection === href.slice(1);
           return (
-            <a className={current ? "is-active" : ""} href={href} aria-current={current ? "location" : undefined} key={href}>
+            <Link className={current ? "is-active" : ""} href={destination(href)} aria-current={current ? "location" : undefined} key={href}>
               <Icon aria-hidden="true" /><span>{label}</span>
-            </a>
+            </Link>
           );
         })}
         <Link className={resolvedActiveSection === "chat" ? "is-active" : ""} href="/mobile/chat">
@@ -100,9 +107,9 @@ export function LoungeBottomNavigation({
         <button type="button" onClick={() => setLanguageOpen(true)} aria-haspopup="dialog" aria-expanded={languageOpen}>
           <Globe2 aria-hidden="true" /><span>{copy.language}</span>
         </button>
-        <a className={resolvedActiveSection === targets.more.slice(1) ? "is-active" : ""} href={targets.more}>
+        <Link className={resolvedActiveSection === targets.more.slice(1) ? "is-active" : ""} href={destination(targets.more)}>
           <Sparkles aria-hidden="true" /><span>{copy.more}</span>
-        </a>
+        </Link>
         <form action={logoutAction}>
           <button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button>
         </form>

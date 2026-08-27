@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useEffect } from "react";
 import { LibraryMetadata } from "@/components/LibraryCardDeck";
 import { GallerySection } from "@/components/GallerySection";
 import { LoungeBottomNavigation } from "@/components/LoungeBottomNavigation";
@@ -99,6 +100,18 @@ export function MobileMemberLounge({
   const currentProgress = current?.id === lastReadArticleId ? Math.round(lastReadProgress) : 0;
   const libraries = loungeContent.filter((item) => item.type === "LIBRARY");
 
+  useEffect(() => {
+    const sectionId = window.location.hash.slice(1);
+    if (!sectionId) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <main className="off-mobile mobile-lounge">
       <MemberActivityTracker />
@@ -190,7 +203,15 @@ export function MobileMemberLounge({
         </div>
       </MobileReveal>
 
-      <LoungeBottomNavigation initialLanguage={preferredLanguage} />
+      <LoungeBottomNavigation
+        initialLanguage={preferredLanguage}
+        targets={{
+          library: "#biblioteca",
+          self: "#mi-yo",
+          profile: "#member-profile",
+          more: "#conoce-mas",
+        }}
+      />
     </main>
   );
 }
