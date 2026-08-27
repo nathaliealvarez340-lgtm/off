@@ -11,6 +11,7 @@ import { MemberGreeting } from "@/components/MemberGreeting";
 import { MemberProfileExperience } from "@/components/MemberProfileExperience";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialTile, socialProfiles } from "@/components/SocialLinks";
+import { ActiveRitualCard } from "@/components/ActiveRitualCard";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import { useOffLanguage } from "@/components/useOffLanguage";
 import type { UiLanguage } from "@/lib/ui-i18n";
@@ -86,6 +87,7 @@ export function MemberLounge({
   lastReadProgress = 0,
   lastReadPosition = 0,
   preferredLanguage = "es",
+  activeRitual = null,
 }: {
   name: string;
   memberSince: string;
@@ -102,6 +104,7 @@ export function MemberLounge({
   lastReadProgress?: number;
   lastReadPosition?: number;
   preferredLanguage?: UiLanguage;
+  activeRitual?: { id: string; title: string; prompt: string; response: string | null } | null;
 }) {
   const [activeSection, setActiveSection] = useState("collections");
   const heroRef = useRef<HTMLElement>(null);
@@ -231,6 +234,8 @@ export function MemberLounge({
           <Reveal className="lounge-section lounge-gallery-wrap">
             <GallerySection initialPosts={galleryPosts} initialHasMore={galleryHasMore} initialLanguage={preferredLanguage} />
           </Reveal>
+
+          <Reveal className="lounge-section"><ActiveRitualCard ritual={activeRitual} language={language} /></Reveal>
 
           <Reveal className="lounge-about-off">
             <div>

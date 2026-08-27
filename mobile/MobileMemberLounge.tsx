@@ -11,6 +11,7 @@ import { MemberGreeting } from "@/components/MemberGreeting";
 import { MemberProfileExperience } from "@/components/MemberProfileExperience";
 import { PersonalityTestPreview } from "@/components/PersonalityTestPreview";
 import { SocialPill, socialProfiles } from "@/components/SocialLinks";
+import { ActiveRitualCard } from "@/components/ActiveRitualCard";
 import { type ArticleTranslationMap, getLocalizedArticle } from "@/lib/article-localization";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import type { GalleryPostData } from "@/lib/gallery";
@@ -62,6 +63,7 @@ export type MobileMemberLoungeProps = {
   lastReadProgress?: number;
   lastReadPosition?: number;
   preferredLanguage?: UiLanguage;
+  activeRitual?: { id: string; title: string; prompt: string; response: string | null } | null;
 };
 
 function clean(value?: string | null) {
@@ -88,6 +90,7 @@ export function MobileMemberLounge({
   lastReadProgress = 0,
   lastReadPosition = 0,
   preferredLanguage = "es",
+  activeRitual = null,
 }: MobileMemberLoungeProps) {
   const { copy, language } = useMobileCopy(preferredLanguage);
   const localizedArticles = articles.map((article) => ({ ...article, ...getLocalizedArticle(article, language) }));
@@ -166,6 +169,8 @@ export function MobileMemberLounge({
       <MobileReveal className="mobile-section mobile-gallery-wrap">
         <GallerySection initialPosts={galleryPosts} initialHasMore={galleryHasMore} initialLanguage={preferredLanguage} />
       </MobileReveal>
+
+      <MobileReveal className="mobile-section"><ActiveRitualCard ritual={activeRitual} language={language} /></MobileReveal>
 
       <MobileReveal className="mobile-section mobile-self-section" id="mi-yo">
         <div className="mobile-section-head stacked">

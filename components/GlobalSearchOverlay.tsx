@@ -11,10 +11,10 @@ import { useMobileCopy } from "@/mobile/mobileCopy";
 type SearchResponse = { success: boolean; results?: OffSearchResult[]; error?: string };
 
 const RESULT_LABELS = {
-  es: { article: "Artículo", gallery: "Galería", library: "Biblioteca", signal: "Signal", resource: "Recurso", note: "Nota" },
-  en: { article: "Article", gallery: "Gallery", library: "Library", signal: "Signal", resource: "Resource", note: "Note" },
-  it: { article: "Articolo", gallery: "Galleria", library: "Biblioteca", signal: "Signal", resource: "Risorsa", note: "Nota" },
-  pt: { article: "Artigo", gallery: "Galeria", library: "Biblioteca", signal: "Signal", resource: "Recurso", note: "Nota" },
+  es: { article: "Artículo", gallery: "Galería", library: "Biblioteca", signal: "Signal", resource: "Recurso", note: "Nota", conversation: "Conversación" },
+  en: { article: "Article", gallery: "Gallery", library: "Library", signal: "Signal", resource: "Resource", note: "Note", conversation: "Conversation" },
+  it: { article: "Articolo", gallery: "Galleria", library: "Biblioteca", signal: "Signal", resource: "Risorsa", note: "Nota", conversation: "Conversazione" },
+  pt: { article: "Artigo", gallery: "Galeria", library: "Biblioteca", signal: "Signal", resource: "Recurso", note: "Nota", conversation: "Conversa" },
 } as const;
 
 export function GlobalSearchOverlay({ initialLanguage = "es" }: { initialLanguage?: UiLanguage }) {

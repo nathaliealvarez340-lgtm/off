@@ -14,6 +14,8 @@ type ThreadedCommentsProps = {
   allowLikes?: boolean;
   reportType?: "COMMUNITY_COMMENT" | "GALLERY_COMMENT";
   compact?: boolean;
+  readOnly?: boolean;
+  likeEndpointPrefix?: string;
 };
 
 function mergeReply(comments: SocialCommentData[], reply: SocialCommentData) {
@@ -23,7 +25,7 @@ function mergeReply(comments: SocialCommentData[], reply: SocialCommentData) {
     : comment);
 }
 
-export function ThreadedComments({ endpoint, initialComments = [], initialCount, language, allowLikes = false, reportType = "COMMUNITY_COMMENT", compact = false }: ThreadedCommentsProps) {
+export function ThreadedComments({ endpoint, initialComments = [], initialCount, language, allowLikes = false, reportType = "COMMUNITY_COMMENT", compact = false, readOnly = false, likeEndpointPrefix = "/api/community/comments" }: ThreadedCommentsProps) {
   const copy = communityCopy[language];
   const [comments, setComments] = useState(initialComments);
   const [loaded, setLoaded] = useState(initialComments.length > 0);
@@ -71,7 +73,7 @@ export function ThreadedComments({ endpoint, initialComments = [], initialCount,
     setComments((items) => items.map((item) => item.id === comment.id
       ? { ...item, likedByViewer: !item.likedByViewer, likeCount: Math.max(0, item.likeCount + (item.likedByViewer ? -1 : 1)) }
       : { ...item, replies: item.replies.map((reply) => reply.id === comment.id ? { ...reply, likedByViewer: !reply.likedByViewer, likeCount: Math.max(0, reply.likeCount + (reply.likedByViewer ? -1 : 1)) } : reply) }));
-    const response = await fetch(`/api/community/comments/${comment.id}/like`, { method: "POST" });
+    const response = await fetch(`${likeEndpointPrefix}/${comment.id}/like`, { method: "POST" });
     if (!response.ok) setMessage(copy.actionError);
   }
 
@@ -88,13 +90,15 @@ export function ThreadedComments({ endpoint, initialComments = [], initialCount,
 
   function renderComment(item: SocialCommentData, nested = false) {
     const isOpen = expanded[item.id];
+    const featuredLabel = { es: "Destacada por OFF", en: "Featured by OFF", it: "In evidenza da OFF", pt: "Destacada pela OFF" }[language];
     return (
       <article className={`off-thread-comment ${nested ? "is-reply" : ""}`} id={`comment-${item.id}`} key={item.id}>
         <div className="off-thread-comment-head"><strong>{item.user.name}</strong><small>{item.user.offId}</small><time>{new Intl.DateTimeFormat(language, { day: "numeric", month: "short" }).format(new Date(item.createdAt))}</time></div>
+        {item.featured ? <span className="off-thread-featured">{featuredLabel}</span> : null}
         <p>{item.content}</p>
         <div className="off-thread-actions">
           {allowLikes ? <button className={item.likedByViewer ? "is-active" : ""} type="button" onClick={() => toggleLike(item)}><Heart fill={item.likedByViewer ? "currentColor" : "none"} />{item.likeCount || ""}</button> : null}
-          <button type="button" onClick={() => { setReplyTo(item); setContent(""); }}>{copy.reply}</button>
+          {!readOnly ? <button type="button" onClick={() => { setReplyTo(item); setContent(""); }}>{copy.reply}</button> : null}
           {item.canDelete ? <button type="button" onClick={() => remove(item.id)} aria-label={copy.delete}><Trash2 /></button> : null}
           <button type="button" onClick={() => report(item.id)} aria-label={copy.report}><MoreHorizontal /></button>
         </div>
@@ -118,10 +122,10 @@ export function ThreadedComments({ endpoint, initialComments = [], initialCount,
       <button className="off-thread-title" type="button" onClick={loadRoots}><span>{copy.comments}</span><small>{count}</small></button>
       {!loaded && comments.length === 0 ? <button className="off-thread-open" type="button" onClick={loadRoots}>{loading ? "..." : copy.viewReplies}</button> : null}
       {loaded ? <div className="off-thread-list">{comments.map((item) => renderComment(item))}</div> : null}
-      <form className="off-thread-composer" onSubmit={submit}>
+      {!readOnly ? <form className="off-thread-composer" onSubmit={submit}>
         {replyTo ? <span>{copy.replyingTo} {replyTo.user.name}<button type="button" onClick={() => setReplyTo(null)}>×</button></span> : null}
         <div><textarea value={content} onChange={(event) => setContent(event.target.value.slice(0, 1000))} placeholder={copy.writeComment} rows={1} /><button type="submit" aria-label={copy.publish}><Send /></button></div>
-      </form>
+      </form> : null}
       {message ? <p className="off-thread-feedback" role="status">{message}</p> : null}
     </section>
   );

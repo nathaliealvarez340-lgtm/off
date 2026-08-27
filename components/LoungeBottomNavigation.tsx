@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Brain, Globe2, LogOut, MessageCircle, Search, Sparkles, UserRound, UsersRound } from "lucide-react";
+import { BookOpen, Brain, Globe2, LogOut, Map as MapIcon, MessageCircle, Search, Sparkles, UserRound, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { logoutAction } from "@/app/actions";
@@ -86,6 +86,9 @@ export function LoungeBottomNavigation({
         </Link>
         <Link className={resolvedActiveSection === "community" ? "is-active" : ""} href="/lounge/community">
           <UsersRound aria-hidden="true" /><span>{copy.community}</span>
+        </Link>
+        <Link className={resolvedActiveSection === "map" ? "is-active" : ""} href="/lounge/map">
+          <MapIcon aria-hidden="true" /><span>{copy.myMap}</span>
         </Link>
         <button
           ref={searchButtonRef}

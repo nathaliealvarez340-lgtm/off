@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { commentAction, logoutAction, topicSuggestionAction } from "@/app/actions";
 import { ArticleActions } from "@/components/ArticleActions";
+import { ArticleAnnotationLayer } from "@/components/ArticleAnnotationLayer";
 import { CompleteArticleButton } from "@/components/CompleteArticleButton";
 import { MemberActivityTracker } from "@/components/MemberActivityTracker";
 import { NotaDeNathalie } from "@/components/NotaDeNathalie";
@@ -231,6 +232,7 @@ export default async function ArticlePage({
 
       <div className="article-reader-layout">
         <article className="reader">
+          <ArticleAnnotationLayer articleId={article.id} language={language} enabled={Boolean(user)}>
           {visibleBlocks.map((block, index) => {
             switch (block.type) {
               case "paragraph":
@@ -336,6 +338,7 @@ export default async function ArticlePage({
                 );
             }
           })}
+          </ArticleAnnotationLayer>
 
           {!canReadFull ? (
             <aside className="reader-gate">

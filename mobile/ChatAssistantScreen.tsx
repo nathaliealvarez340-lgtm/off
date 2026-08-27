@@ -1,80 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plus, Send, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { type ChatMessage, sendMessage } from "@/mobile/chatService";
 import { mobileEase, useMobileCopy } from "@/mobile/mobileCopy";
 
+type HistoryItem = { id: string; title: string; usePersonalContext: boolean; updatedAt: string };
 export function ChatAssistantScreen({ preferredLanguage }: { preferredLanguage?: string | null }) {
-  const { copy } = useMobileCopy(preferredLanguage);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [pending, setPending] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const content = input.trim();
-    if (!content || pending) return;
-
-    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content };
-    setMessages((current) => [...current, userMessage]);
-    setInput("");
-    setPending(true);
-
-    try {
-      const response = await sendMessage(content);
-      setMessages((current) => [...current, response]);
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <main className="off-mobile mobile-chat-screen">
-      <nav className="mobile-chat-header">
-        <img src="/logo/logo-off.png" alt="OFF" />
-        <span>Chat</span>
-        <Link className="mobile-chat-back" href="/lounge" aria-label={copy.backToLounge}>
-          <ArrowLeft aria-hidden="true" />
-        </Link>
-      </nav>
-
-      <section className="mobile-chat-messages" aria-live="polite">
-        <motion.article
-          className="mobile-chat-bubble assistant"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: mobileEase, delay: 0.08 }}
-        >
-          {copy.chatWelcome}
-        </motion.article>
-        {messages.map((message, index) => (
-          <motion.article
-            className={`mobile-chat-bubble ${message.role}`}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: mobileEase, delay: index === 0 ? 0.08 : 0 }}
-            key={message.id}
-          >
-            {message.content}
-          </motion.article>
-        ))}
-        {pending ? <div className="mobile-chat-bubble assistant is-pending">{copy.chatPending}</div> : null}
-      </section>
-
-      <form className="mobile-chat-input" onSubmit={handleSubmit}>
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={copy.chatPlaceholder}
-          aria-label={copy.chatMessage}
-        />
-        <button type="submit" disabled={pending || !input.trim()} aria-label={copy.send}>
-          <Send aria-hidden="true" />
-        </button>
-      </form>
-    </main>
-  );
+  const { copy, language } = useMobileCopy(preferredLanguage); const labels = { es: { new: "Nueva", remove: "Eliminar", sources: "Basado en:", allow: "Permitir que Ask OFF utilice mi actividad personal", use: "Usar mi recorrido OFF en esta conversación" }, en: { new: "New", remove: "Delete", sources: "Based on:", allow: "Allow Ask OFF to use my personal activity", use: "Use my OFF journey in this conversation" }, it: { new: "Nuova", remove: "Elimina", sources: "Basato su:", allow: "Consenti ad Ask OFF di usare la mia attività personale", use: "Usa il mio percorso OFF in questa conversazione" }, pt: { new: "Nova", remove: "Excluir", sources: "Com base em:", allow: "Permitir que Ask OFF use minha atividade pessoal", use: "Usar meu percurso OFF nesta conversa" } }[language]; const [messages, setMessages] = useState<ChatMessage[]>([]); const [input, setInput] = useState(""); const [pending, setPending] = useState(false); const [conversationId, setConversationId] = useState<string | null>(null); const [history, setHistory] = useState<HistoryItem[]>([]); const [personalAllowed, setPersonalAllowed] = useState(false); const [usePersonal, setUsePersonal] = useState(false);
+  async function loadHistory() { const response = await fetch("/api/ask-off"); const data = await response.json() as { conversations?: HistoryItem[]; personalContextAllowed?: boolean }; setHistory(data.conversations ?? []); setPersonalAllowed(Boolean(data.personalContextAllowed)); }
+  useEffect(() => { void loadHistory(); }, []);
+  async function openConversation(id: string) { const response = await fetch(`/api/ask-off?conversationId=${id}`); const data = await response.json() as { conversation?: { id: string; usePersonalContext: boolean; messages: Array<{ id: string; role: string; content: string; sources: unknown }> } }; if (!data.conversation) return; setConversationId(id); setUsePersonal(data.conversation.usePersonalContext); setMessages(data.conversation.messages.map((message) => ({ id: message.id, role: message.role === "user" ? "user" : "assistant", content: message.content, sources: Array.isArray(message.sources) ? message.sources as { title: string; href: string }[] : [] }))); }
+  async function togglePersonal() { const next = !personalAllowed; const response = await fetch("/api/ask-off", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ allowPersonal: next }) }); if (response.ok) { setPersonalAllowed(next); setUsePersonal(next); } }
+  async function removeConversation(id: string) { await fetch("/api/ask-off", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: id }) }); if (conversationId === id) { setConversationId(null); setMessages([]); } await loadHistory(); }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const content = input.trim(); if (!content || pending) return; setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", content }]); setInput(""); setPending(true); try { const response = await sendMessage(content, conversationId, usePersonal && personalAllowed); setConversationId(response.conversationId); setMessages((current) => [...current, response.message]); await loadHistory(); } finally { setPending(false); } }
+  return <main className="off-mobile mobile-chat-screen ask-off-screen"><nav className="mobile-chat-header"><img src="/logo/logo-off.png" alt="OFF" /><span>Ask OFF</span><Link className="mobile-chat-back" href="/lounge" aria-label={copy.backToLounge}><ArrowLeft /></Link></nav><aside className="ask-off-history"><header><strong>Ask OFF</strong><button type="button" onClick={() => { setConversationId(null); setMessages([]); }}><Plus />{labels.new}</button></header>{history.map((item) => <div key={item.id}><button type="button" onClick={() => openConversation(item.id)}>{item.title}</button><button type="button" onClick={() => removeConversation(item.id)} aria-label={labels.remove}><Trash2 /></button></div>)}</aside><section className="mobile-chat-messages" aria-live="polite"><motion.article className="mobile-chat-bubble assistant" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .28, ease: mobileEase }}>{copy.chatWelcome}</motion.article>{messages.map((message) => <motion.article className={`mobile-chat-bubble ${message.role}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} key={message.id}><p>{message.content}</p>{message.sources?.length ? <footer><span>{labels.sources}</span>{message.sources.map((source) => <Link href={source.href} key={`${message.id}-${source.href}`}>{source.title}<ExternalLink /></Link>)}</footer> : null}</motion.article>)}{pending ? <div className="mobile-chat-bubble assistant is-pending">{copy.chatPending}</div> : null}</section><div className="ask-off-consent"><label><input type="checkbox" checked={personalAllowed} onChange={togglePersonal} />{labels.allow}</label>{personalAllowed ? <label><input type="checkbox" checked={usePersonal} onChange={(event) => setUsePersonal(event.target.checked)} />{labels.use}</label> : null}</div><form className="mobile-chat-input" onSubmit={handleSubmit}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={copy.chatPlaceholder} aria-label={copy.chatMessage} /><button type="submit" disabled={pending || !input.trim()} aria-label={copy.send}><Send /></button></form></main>;
 }

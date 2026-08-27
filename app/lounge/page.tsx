@@ -25,7 +25,8 @@ export default async function LoungePage() {
   if (user.role === "ADMIN") redirect("/admin");
 
   const db = getDb();
-  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading, notification, galleryRows] = await Promise.all([
+  const now = new Date();
+  const [rawArticles, drafts, memberNumber, loungeContent, activity, completedCount, lastReading, notification, galleryRows, activeRitual] = await Promise.all([
     db.article.findMany({ where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } } }),
     db.article.findMany({ where: { status: "draft", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } }, orderBy: { updatedAt: "desc" }, take: 4 }),
     getOrCreateMemberNumber(user.id),
@@ -43,6 +44,7 @@ export default async function LoungePage() {
       select: { id: true, title: true, message: true, href: true },
     }),
     getPublishedGalleryPosts({ take: 17, viewerId: user.id }),
+    db.ritual.findFirst({ where: { status: "published", activeFrom: { lte: now }, activeUntil: { gte: now } }, include: { responses: { where: { userId: user.id }, select: { content: true }, take: 1 } }, orderBy: { activeFrom: "desc" } }),
   ]);
   const articles = sortEditorially(rawArticles);
   const visibleLoungeContent = loungeContent.filter((item) => !isAutomaticLoungeContent(item.statusLabel));
@@ -93,6 +95,7 @@ export default async function LoungePage() {
       notification={notification}
       galleryPosts={galleryRows.slice(0, 16).map((post) => serializeGalleryPost(post, user.id))}
       galleryHasMore={galleryRows.length > 16}
+      activeRitual={activeRitual ? { id: activeRitual.id, title: activeRitual.title, prompt: activeRitual.prompt, response: activeRitual.responses[0]?.content ?? null } : null}
     />
   );
 }

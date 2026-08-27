@@ -9,7 +9,7 @@ import { normalizeSearchText, scoreSearchDocument, type SearchLanguage } from "@
 
 export type OffSearchResult = {
   id: string;
-  type: "article" | "gallery" | "library" | "signal" | "resource" | "note";
+  type: "article" | "gallery" | "library" | "signal" | "resource" | "note" | "conversation";
   title: string;
   excerpt?: string;
   thumbnail?: string;
@@ -69,7 +69,7 @@ export async function searchOffContent(rawQuery: string, preferredLanguage: Sear
   if (normalizeSearchText(query).length < 2) return [];
 
   const db = getDb();
-  const [articles, galleryPosts, loungeItems] = await Promise.all([
+  const [articles, galleryPosts, loungeItems, conversations] = await Promise.all([
     db.article.findMany({
       where: { status: "published", category: { notIn: [...INTERNAL_CONTENT_CATEGORIES] } },
       select: { id: true, title: true, slug: true, excerpt: true, content: true, coverImage: true, category: true, keywords: true, featured: true, publishedAt: true },
@@ -84,6 +84,11 @@ export async function searchOffContent(rawQuery: string, preferredLanguage: Sear
       where: { status: "published", type: { in: ["LIBRARY", "SIGNAL", "RESOURCE", "NATHALIE_NOTE"] } },
       select: { id: true, type: true, title: true, description: true, content: true, keywords: true, publishedAt: true },
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }], take: 300,
+    }),
+    db.editorialConversation.findMany({
+      where: { status: "published" },
+      select: { id: true, question: true, introduction: true, themes: true, publishedAt: true },
+      orderBy: [{ featured: "desc" }, { publishedAt: "desc" }], take: 200,
     }),
   ]);
 
@@ -116,6 +121,23 @@ export async function searchOffContent(rawQuery: string, preferredLanguage: Sear
         id: item.id, type: LOUNGE_RESULT_TYPES[item.type as keyof typeof LOUNGE_RESULT_TYPES], title: getPlainTextPreview(item.title, 120),
         excerpt: matchingSnippet(match.matchedTerms, item.description ?? "", item.content ?? "") || undefined, category: item.type,
         href: item.type === "LIBRARY" ? "/lounge#biblioteca" : "/lounge",
+      } };
+    }),
+    ...conversations.map((conversation) => {
+      const match = scoreSearchDocument(query, {
+        title: conversation.question,
+        excerpt: conversation.introduction ?? "",
+        category: "Conversaciones OFF",
+        keywords: conversation.themes,
+        body: conversation.introduction ?? "",
+      }, preferredLanguage);
+      return { score: match.score, date: conversation.publishedAt?.getTime() ?? 0, result: {
+        id: conversation.id,
+        type: "conversation" as const,
+        title: getPlainTextPreview(conversation.question, 120),
+        excerpt: matchingSnippet(match.matchedTerms, conversation.introduction ?? "", conversation.question) || undefined,
+        category: "Conversaciones OFF",
+        href: `/lounge/community#conversation-${conversation.id}`,
       } };
     }),
   ];

@@ -42,6 +42,8 @@ export type SocialCommentData = {
   canDelete: boolean;
   replyCount: number;
   replies: SocialCommentData[];
+  featured?: boolean;
+  pinned?: boolean;
 };
 
 export type CommunityFeedItem = {

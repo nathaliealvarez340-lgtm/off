@@ -56,6 +56,19 @@ enum ConnectionStatus {
   DECLINED
 }
 
+enum OffIrlEventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum OffIrlRsvpStatus {
+  GOING
+  WAITLIST
+  CANCELLED
+}
+
 model Article {
   id               String                   @id @default(cuid())
   title            String
@@ -65,6 +78,7 @@ model Article {
   coverImage       String
   category         String
   keywords         String[]                 @default([])
+  themes           String[]                 @default([])
   author           String                   @default("Nathalie Garcia")
   readTime         String
   publishedAt      DateTime?
@@ -76,6 +90,8 @@ model Article {
   topicSuggestions TopicSuggestion[]
   completions      ArticleCompletion[]
   readingProgress  ArticleReadingProgress[]
+  highlights       ArticleHighlight[]
+  conversationRefs EditorialConversation[]
 }
 
 model LoungeContent {
@@ -186,16 +202,17 @@ model Subscriber {
 }
 
 model User {
-  id                    String                   @id @default(cuid())
+  id                    String                           @id @default(cuid())
   name                  String
-  email                 String                   @unique
+  email                 String                           @unique
   passwordHash          String
   accessCodeHash        String?
-  accessCodeLookup      String?                  @unique
-  role                  Role                     @default(USER)
-  preferredLanguage     String                   @default("es")
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
+  accessCodeLookup      String?                          @unique
+  role                  Role                             @default(USER)
+  preferredLanguage     String                           @default("es")
+  askOffPersonalContext Boolean                          @default(false)
+  createdAt             DateTime                         @default(now())
+  updatedAt             DateTime                         @updatedAt
   sessions              Session[]
   comments              Comment[]
   topicSuggestions      TopicSuggestion[]
@@ -207,19 +224,25 @@ model User {
   notifications         Notification[]
   galleryLikes          GalleryPostLike[]
   galleryComments       GalleryPostComment[]
-  gallerySharesSent     GalleryPostShare[]       @relation("GallerySharesSent")
-  gallerySharesReceived GalleryPostShare[]       @relation("GallerySharesReceived")
+  gallerySharesSent     GalleryPostShare[]               @relation("GallerySharesSent")
+  gallerySharesReceived GalleryPostShare[]               @relation("GallerySharesReceived")
   communityPosts        CommunityPost[]
   communityPostLikes    CommunityPostLike[]
   communityComments     CommunityComment[]
   communityCommentLikes CommunityCommentLike[]
-  connectionsRequested  MemberConnection[]       @relation("ConnectionRequester")
-  connectionsReceived   MemberConnection[]       @relation("ConnectionReceiver")
+  connectionsRequested  MemberConnection[]               @relation("ConnectionRequester")
+  connectionsReceived   MemberConnection[]               @relation("ConnectionReceiver")
   achievements          MemberAchievement[]
   achievementReactions  AchievementReaction[]
-  blocksCreated         MemberBlock[]            @relation("Blocker")
-  blocksReceived        MemberBlock[]            @relation("Blocked")
+  blocksCreated         MemberBlock[]                    @relation("Blocker")
+  blocksReceived        MemberBlock[]                    @relation("Blocked")
   socialReports         SocialReport[]
+  articleHighlights     ArticleHighlight[]
+  ritualResponses       RitualResponse[]
+  editorialReplies      EditorialConversationReply[]
+  editorialReplyLikes   EditorialConversationReplyLike[]
+  askOffConversations   AskOffConversation[]
+  offIrlRsvps           OffIrlRsvp[]
 }
 
 model Notification {
@@ -480,4 +503,170 @@ model SocialReport {
   @@index([status, createdAt])
   @@index([targetType, targetId])
   @@index([reporterId])
+}
+
+model ArticleHighlight {
+  id           String   @id @default(cuid())
+  userId       String
+  articleId    String
+  selectedText String
+  blockId      String?
+  startOffset  Int?
+  endOffset    Int?
+  prefix       String?
+  suffix       String?
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article      Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, articleId])
+  @@index([userId, updatedAt])
+}
+
+model EditorialConversation {
+  id            String                       @id @default(cuid())
+  internalTitle String
+  question      String
+  introduction  String?
+  themes        String[]                     @default([])
+  status        String                       @default("draft")
+  publishedAt   DateTime?
+  closesAt      DateTime?
+  featured      Boolean                      @default(false)
+  articleId     String?
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+  article       Article?                     @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  replies       EditorialConversationReply[]
+
+  @@index([status, publishedAt])
+  @@index([featured, publishedAt])
+}
+
+model EditorialConversationReply {
+  id             String                           @id @default(cuid())
+  conversationId String
+  userId         String
+  parentId       String?
+  content        String
+  status         CommentStatus                    @default(PUBLISHED)
+  featured       Boolean                          @default(false)
+  pinned         Boolean                          @default(false)
+  createdAt      DateTime                         @default(now())
+  updatedAt      DateTime                         @updatedAt
+  conversation   EditorialConversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User                             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent         EditorialConversationReply?      @relation("EditorialReplyThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        EditorialConversationReply[]     @relation("EditorialReplyThread")
+  likes          EditorialConversationReplyLike[]
+
+  @@index([conversationId, createdAt])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model EditorialConversationReplyLike {
+  id        String                     @id @default(cuid())
+  replyId   String
+  userId    String
+  createdAt DateTime                   @default(now())
+  reply     EditorialConversationReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([replyId, userId])
+  @@index([replyId])
+  @@index([userId])
+}
+
+model Ritual {
+  id          String           @id @default(cuid())
+  title       String
+  prompt      String
+  themes      String[]         @default([])
+  activeFrom  DateTime
+  activeUntil DateTime
+  status      String           @default("draft")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  responses   RitualResponse[]
+
+  @@index([status, activeFrom, activeUntil])
+}
+
+model RitualResponse {
+  id        String   @id @default(cuid())
+  ritualId  String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ritual    Ritual   @relation(fields: [ritualId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ritualId, userId])
+  @@index([userId, updatedAt])
+}
+
+model AskOffConversation {
+  id                 String          @id @default(cuid())
+  userId             String
+  title              String
+  usePersonalContext Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages           AskOffMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model AskOffMessage {
+  id             String             @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  sources        Json?
+  createdAt      DateTime           @default(now())
+  conversation   AskOffConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model OffIrlEvent {
+  id               String            @id @default(cuid())
+  title            String
+  description      String
+  locationName     String?
+  city             String?
+  country          String?
+  startAt          DateTime
+  endAt            DateTime
+  capacity         Int?
+  image            String?
+  status           OffIrlEventStatus @default(DRAFT)
+  registrationOpen Boolean           @default(false)
+  publishedAt      DateTime?
+  externalMapUrl   String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  rsvps            OffIrlRsvp[]
+
+  @@index([status, startAt])
+}
+
+model OffIrlRsvp {
+  id        String           @id @default(cuid())
+  eventId   String
+  userId    String
+  status    OffIrlRsvpStatus @default(GOING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  event     OffIrlEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+  @@index([userId])
 }

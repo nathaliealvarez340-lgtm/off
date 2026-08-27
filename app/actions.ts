@@ -1330,3 +1330,32 @@ export async function moderateSocialContentAction(formData: FormData) {
   revalidatePath("/lounge/community");
   revalidatePath("/lounge");
 }
+
+function themeValues(formData: FormData) {
+  return stringValue(formData, "themes").split(",").map((value) => value.trim()).filter(Boolean).slice(0, 15);
+}
+
+export async function saveEditorialConversationAction(formData: FormData) {
+  await requireAdmin(); const id = stringValue(formData, "id"); const question = stringValue(formData, "question").slice(0, 500); const internalTitle = stringValue(formData, "internalTitle").slice(0, 160); if (!question || !internalTitle) return;
+  const status = stringValue(formData, "status") === "published" ? "published" : "draft"; const data = { internalTitle, question, introduction: stringValue(formData, "introduction").slice(0, 1000) || null, themes: themeValues(formData), status, featured: formData.get("featured") === "on", publishedAt: status === "published" ? new Date() : null, closesAt: stringValue(formData, "closesAt") ? new Date(stringValue(formData, "closesAt")) : null };
+  if (id) await getDb().editorialConversation.updateMany({ where: { id }, data }); else await getDb().editorialConversation.create({ data }); revalidatePath("/admin/intelligence"); revalidatePath("/lounge/community");
+}
+
+export async function saveRitualAction(formData: FormData) {
+  await requireAdmin(); const id = stringValue(formData, "id"); const title = stringValue(formData, "title").slice(0, 160); const prompt = stringValue(formData, "prompt").slice(0, 600); if (!title || !prompt) return; const activeFrom = new Date(stringValue(formData, "activeFrom")); const activeUntil = new Date(stringValue(formData, "activeUntil")); if (Number.isNaN(activeFrom.getTime()) || Number.isNaN(activeUntil.getTime())) return; const data = { title, prompt, themes: themeValues(formData), activeFrom, activeUntil, status: stringValue(formData, "status") === "published" ? "published" : "draft" }; if (id) await getDb().ritual.updateMany({ where: { id }, data }); else await getDb().ritual.create({ data }); revalidatePath("/admin/intelligence"); revalidatePath("/lounge");
+}
+
+export async function saveOffIrlEventAction(formData: FormData) {
+  await requireAdmin(); const id = stringValue(formData, "id"); const title = stringValue(formData, "title").slice(0, 160); const description = stringValue(formData, "description").slice(0, 3000); const startAt = new Date(stringValue(formData, "startAt")); const endAt = new Date(stringValue(formData, "endAt")); if (!title || !description || Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) return; const requested = stringValue(formData, "status"); const status = requested === "PUBLISHED" || requested === "CANCELLED" || requested === "COMPLETED" ? requested : "DRAFT"; const data = { title, description, locationName: stringValue(formData, "locationName") || null, city: stringValue(formData, "city") || null, country: stringValue(formData, "country") || null, startAt, endAt, capacity: Number(stringValue(formData, "capacity")) || null, image: stringValue(formData, "image") || null, externalMapUrl: stringValue(formData, "externalMapUrl") || null, status: status as "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED", registrationOpen: formData.get("registrationOpen") === "on", publishedAt: status === "PUBLISHED" ? new Date() : null }; if (id) await getDb().offIrlEvent.updateMany({ where: { id }, data }); else await getDb().offIrlEvent.create({ data }); revalidatePath("/admin/intelligence");
+}
+
+export async function moderateEditorialReplyAction(formData: FormData) { await requireAdmin(); const id = stringValue(formData, "id"); const action = stringValue(formData, "moderation"); if (action === "hide") await getDb().editorialConversationReply.updateMany({ where: { id }, data: { status: "PENDING" } }); else if (action === "feature") await getDb().editorialConversationReply.updateMany({ where: { id }, data: { featured: true } }); else if (action === "pin") await getDb().editorialConversationReply.updateMany({ where: { id }, data: { pinned: true } }); else if (action === "delete") await getDb().editorialConversationReply.deleteMany({ where: { id } }); revalidatePath("/admin/intelligence"); revalidatePath("/lounge/community"); }
+
+export async function assignArticleThemesAction(formData: FormData) {
+  await requireAdmin();
+  const id = stringValue(formData, "articleId");
+  if (!id) return;
+  await getDb().article.updateMany({ where: { id }, data: { themes: themeValues(formData) } });
+  revalidatePath("/admin/intelligence");
+  revalidatePath("/lounge/map");
+}
