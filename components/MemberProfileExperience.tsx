@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
+import { useRef, useState } from "react";
 import { LocalDate } from "@/components/LocalDate";
 import type { UiLanguage } from "@/lib/ui-i18n";
 import { mobileCopy } from "@/mobile/mobileCopy";
@@ -34,13 +35,51 @@ export function MemberProfileExperience({
 }) {
   const copy = mobileCopy[language];
   const reducedMotion = useReducedMotion();
+  const cardsRef = useRef<HTMLDivElement | null>(null);
+  const [activeCard, setActiveCard] = useState(0);
   const badge = badges.at(-1);
   const metrics = [
     { label: copy.timeInvested, value: activeTime },
-    { label: copy.articlesCompleted, value: completedCount > 0 ? String(completedCount) : copy.noReadingsYet },
-    { label: copy.badges, value: badges.length > 0 ? String(badges.length) : copy.noBadgesYet },
+    {
+      label: copy.articlesCompleted,
+      value: completedCount > 0 ? String(completedCount) : copy.noReadingsYet,
+    },
+    {
+      label: copy.badges,
+      value: badges.length > 0 ? String(badges.length) : copy.noBadgesYet,
+    },
     { label: copy.memberSince, value: <LocalDate value={memberSince} /> },
   ];
+
+  function updateActiveCard() {
+    const container = cardsRef.current;
+    if (!container) return;
+    const center = container.scrollLeft + container.clientWidth / 2;
+    const cards = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-profile-card]"),
+    ).sort((first, second) => first.offsetLeft - second.offsetLeft);
+    const closest = cards.reduce(
+      (best, card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - center);
+        return distance < best.distance ? { index, distance } : best;
+      },
+      { index: 0, distance: Number.POSITIVE_INFINITY },
+    );
+    setActiveCard(closest.index);
+  }
+
+  function showCard(index: number) {
+    const cards = Array.from(
+      cardsRef.current?.querySelectorAll<HTMLElement>("[data-profile-card]") ??
+        [],
+    ).sort((first, second) => first.offsetLeft - second.offsetLeft);
+    cards[index]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }
 
   return (
     <motion.section
@@ -56,8 +95,15 @@ export function MemberProfileExperience({
         <h2>{copy.profileTitle}</h2>
       </header>
 
-      <div className="member-progress-timeline" aria-label={copy.progressTimeline}>
-        <svg viewBox="0 0 1000 96" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <div
+        className="member-progress-timeline"
+        aria-label={copy.progressTimeline}
+      >
+        <svg
+          viewBox="0 0 1000 96"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
+        >
           <path d="M125 56 C210 12 290 86 375 44 S540 8 625 28 S790 84 875 50" />
           <circle cx="125" cy="56" r="7" />
           <circle cx="375" cy="44" r="7" />
@@ -81,38 +127,89 @@ export function MemberProfileExperience({
         </div>
       </div>
 
-      <div className="member-profile-grid">
-        <div className="member-profile-story">
+      <div
+        className="member-profile-grid"
+        ref={cardsRef}
+        onScroll={updateActiveCard}
+      >
+        <div className="member-profile-story" data-profile-card="story">
           <p>{copy.loungeCopy}</p>
           <dl>
-            <div><dt>{copy.memberSince}</dt><dd><LocalDate value={memberSince} /></dd></div>
-            <div><dt>{copy.offId}</dt><dd>#{memberNumber}</dd></div>
-            <div><dt>{copy.membershipBadge}</dt><dd>{badge ?? copy.noBadgesYet}</dd></div>
+            <div>
+              <dt>{copy.memberSince}</dt>
+              <dd>
+                <LocalDate value={memberSince} />
+              </dd>
+            </div>
+            <div>
+              <dt>{copy.offId}</dt>
+              <dd>#{memberNumber}</dd>
+            </div>
+            <div>
+              <dt>{copy.membershipBadge}</dt>
+              <dd>{badge ?? copy.noBadgesYet}</dd>
+            </div>
           </dl>
         </div>
 
-        <div className={badge ? "off-member-badge has-badge" : "off-member-badge is-empty"}>
+        <div
+          className={
+            badge ? "off-member-badge has-badge" : "off-member-badge is-empty"
+          }
+          data-profile-card="badge"
+        >
           <span>{copy.membershipBadge}</span>
           <img src="/logo/logo-off.png" alt="OFF" />
           <strong>{badge ?? copy.noBadgesYet}</strong>
           <small>OFF MEMBER · #{memberNumber}</small>
         </div>
 
-        <div className="member-current-reading">
+        <div className="member-current-reading" data-profile-card="reading">
           <span>{copy.currentReading}</span>
           {currentReading ? (
             <Link href={currentReading.href}>
-              <img src={currentReading.coverImage || "/images/cap1-off.webp"} alt="" />
+              <img
+                src={currentReading.coverImage || "/images/cap1-off.webp"}
+                alt=""
+              />
               <div>
-                <small>{currentReading.readTime}{currentReading.progress > 0 ? ` · ${currentReading.progress}%` : ""}</small>
+                <small>
+                  {currentReading.readTime}
+                  {currentReading.progress > 0
+                    ? ` · ${currentReading.progress}%`
+                    : ""}
+                </small>
                 <h3>{currentReading.title}</h3>
                 <p>{currentReading.excerpt}</p>
-                {currentReading.progress > 0 ? <span className="member-reading-progress"><i style={{ width: `${currentReading.progress}%` }} /></span> : null}
+                {currentReading.progress > 0 ? (
+                  <span className="member-reading-progress">
+                    <i style={{ width: `${currentReading.progress}%` }} />
+                  </span>
+                ) : null}
                 <strong>{copy.continueReading}</strong>
               </div>
             </Link>
-          ) : <p className="member-reading-empty">{copy.noCurrentReading}</p>}
+          ) : (
+            <p className="member-reading-empty">{copy.noCurrentReading}</p>
+          )}
         </div>
+      </div>
+      <div
+        className="member-profile-carousel-dots"
+        aria-label={copy.profileTitle}
+      >
+        {[copy.currentReading, copy.lounge, copy.membershipBadge].map(
+          (label, index) => (
+            <button
+              className={activeCard === index ? "is-active" : ""}
+              type="button"
+              aria-label={label}
+              aria-current={activeCard === index ? "true" : undefined}
+              onClick={() => showCard(index)}
+              key={label}
+            />
+          ),
+        )}
       </div>
     </motion.section>
   );

@@ -1,6 +1,17 @@
 "use client";
 
-import { BookOpen, Brain, Globe2, LogOut, Map as MapIcon, MessageCircle, Search, Sparkles, UserRound, UsersRound } from "lucide-react";
+import {
+  BookOpen,
+  Brain,
+  Globe2,
+  LogOut,
+  Map as MapIcon,
+  MessageCircle,
+  Search,
+  Sparkles,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -38,6 +49,7 @@ export function LoungeBottomNavigation({
   const [languageOpen, setLanguageOpen] = useState(false);
   const [observedSection, setObservedSection] = useState("");
   const languageDialogRef = useRef<HTMLDivElement | null>(null);
+  const navigationRef = useRef<HTMLElement | null>(null);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
   const items = [
     { href: targets.library, label: copy.library, icon: BookOpen },
@@ -57,17 +69,29 @@ export function LoungeBottomNavigation({
       .map((href) => document.getElementById(href.slice(1)))
       .filter(Boolean) as HTMLElement[];
     if (!sections.length) return;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible?.target.id) setObservedSection(visible.target.id);
-    }, { rootMargin: "-28% 0px -58% 0px", threshold: [0.05, 0.25, 0.5] });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setObservedSection(visible.target.id);
+      },
+      { rootMargin: "-28% 0px -58% 0px", threshold: [0.05, 0.25, 0.5] },
+    );
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [activeSection, targets.library, targets.more, targets.profile, targets.self]);
+  }, [
+    activeSection,
+    targets.library,
+    targets.more,
+    targets.profile,
+    targets.self,
+  ]);
 
   useEffect(() => {
     if (!languageOpen) return;
-    const firstButton = languageDialogRef.current?.querySelector<HTMLButtonElement>("button");
+    const firstButton =
+      languageDialogRef.current?.querySelector<HTMLButtonElement>("button");
     firstButton?.focus();
 
     function closeOnEscape(event: KeyboardEvent) {
@@ -77,46 +101,122 @@ export function LoungeBottomNavigation({
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [languageOpen]);
 
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 769px)").matches) return;
+    const activeItem = navigationRef.current?.querySelector<HTMLElement>(
+      '[aria-current="location"]',
+    );
+    activeItem?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [resolvedActiveSection]);
+
   return (
     <>
-      <nav className="lounge-bottom-navigation" aria-label={copy.mobileLoungeNavigation}>
+      <nav
+        ref={navigationRef}
+        className="lounge-bottom-navigation"
+        aria-label={copy.mobileLoungeNavigation}
+      >
         {items.map(({ href, label, icon: Icon }) => {
           const current = resolvedActiveSection === href.slice(1);
           return (
-            <Link className={current ? "is-active" : ""} href={destination(href)} aria-current={current ? "location" : undefined} key={href}>
-              <Icon aria-hidden="true" /><span>{label}</span>
+            <Link
+              className={current ? "is-active" : ""}
+              href={destination(href)}
+              aria-current={current ? "location" : undefined}
+              key={href}
+            >
+              <Icon aria-hidden="true" />
+              <span>{label}</span>
             </Link>
           );
         })}
-        <Link className={resolvedActiveSection === "chat" ? "is-active" : ""} href="/mobile/chat">
-          <MessageCircle aria-hidden="true" /><span>{copy.chatKicker}</span>
+        <Link
+          className={resolvedActiveSection === "chat" ? "is-active" : ""}
+          href="/mobile/chat"
+          aria-current={
+            resolvedActiveSection === "chat" ? "location" : undefined
+          }
+        >
+          <MessageCircle aria-hidden="true" />
+          <span>{copy.chatKicker}</span>
         </Link>
-        <Link className={resolvedActiveSection === "community" ? "is-active" : ""} href="/lounge/community">
-          <UsersRound aria-hidden="true" /><span>{copy.community}</span>
+        <Link
+          className={resolvedActiveSection === "community" ? "is-active" : ""}
+          href="/lounge/community"
+          aria-current={
+            resolvedActiveSection === "community" ? "location" : undefined
+          }
+        >
+          <UsersRound aria-hidden="true" />
+          <span>{copy.community}</span>
         </Link>
-        <Link className={resolvedActiveSection === "map" ? "is-active" : ""} href="/lounge/map">
-          <MapIcon aria-hidden="true" /><span>{copy.myMap}</span>
+        <Link
+          className={resolvedActiveSection === "map" ? "is-active" : ""}
+          href="/lounge/map"
+          aria-current={
+            resolvedActiveSection === "map" ? "location" : undefined
+          }
+        >
+          <MapIcon aria-hidden="true" />
+          <span>{copy.myMap}</span>
         </Link>
         <button
           ref={searchButtonRef}
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("off-open-search", { detail: { opener: searchButtonRef.current } }))}
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("off-open-search", {
+                detail: { opener: searchButtonRef.current },
+              }),
+            )
+          }
         >
-          <Search aria-hidden="true" /><span>{copy.search}</span>
+          <Search aria-hidden="true" />
+          <span>{copy.search}</span>
         </button>
-        <button type="button" onClick={() => setLanguageOpen(true)} aria-haspopup="dialog" aria-expanded={languageOpen}>
-          <Globe2 aria-hidden="true" /><span>{copy.language}</span>
+        <button
+          type="button"
+          onClick={() => setLanguageOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={languageOpen}
+        >
+          <Globe2 aria-hidden="true" />
+          <span>{copy.language}</span>
         </button>
-        <Link className={resolvedActiveSection === targets.more.slice(1) ? "is-active" : ""} href={destination(targets.more)}>
-          <Sparkles aria-hidden="true" /><span>{copy.more}</span>
+        <Link
+          className={
+            resolvedActiveSection === targets.more.slice(1) ? "is-active" : ""
+          }
+          href={destination(targets.more)}
+          aria-current={
+            resolvedActiveSection === targets.more.slice(1)
+              ? "location"
+              : undefined
+          }
+        >
+          <Sparkles aria-hidden="true" />
+          <span>{copy.more}</span>
         </Link>
         <form action={logoutAction}>
-          <button type="submit"><LogOut aria-hidden="true" /><span>{copy.exit}</span></button>
+          <button type="submit">
+            <LogOut aria-hidden="true" />
+            <span>{copy.exit}</span>
+          </button>
         </form>
       </nav>
 
       {languageOpen ? (
-        <div className="lounge-language-backdrop" role="presentation" onMouseDown={() => setLanguageOpen(false)}>
+        <div
+          className="lounge-language-backdrop"
+          role="presentation"
+          onMouseDown={() => setLanguageOpen(false)}
+        >
           <div
             className="lounge-language-dialog"
             ref={languageDialogRef}
@@ -130,7 +230,10 @@ export function LoungeBottomNavigation({
               <button
                 className={language === option.code ? "is-active" : ""}
                 type="button"
-                onClick={() => { setLanguage(option.code); setLanguageOpen(false); }}
+                onClick={() => {
+                  setLanguage(option.code);
+                  setLanguageOpen(false);
+                }}
                 key={option.code}
               >
                 {option.label}
